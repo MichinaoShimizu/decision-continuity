@@ -67,7 +67,7 @@ description: Capture, find, and explain organizational decisions as decision rec
 
 ## 追記と決め直し
 
-結果はコメントで追記する。崩れた前提は本文の `premises` に `broken: true` と日付を付ける。それ以外の本文（決めたこと、理由、前提の文）は書き換えない。決め直すときは新しい DR を作り、本文に「#番号 を置き換える」と書く。古い DR は「outdated」で閉じ、新しい番号へのリンクをコメントする。
+結果はコメントで追記する。崩れた前提は、本文の前提の行に「（崩れた：日付）」を添え、記録データの `premises` に `broken: true` と日付を付ける。それ以外の本文（決めたこと、理由、前提の文）は書き換えない。決め直すときは新しい DR を作り、本文に「#番号 を置き換える」と書く。古い DR は「outdated」で閉じ、新しい番号へのリンクをコメントする。
 
 ## 守ること
 
@@ -88,13 +88,48 @@ description: Capture, find, and explain organizational decisions as decision rec
 - **番号**：Discussion の番号がそのまま DR 番号（例：#42）。採番はしない。
 - **タイトル**：何を決めたかが分かる一行。
 - **関係**：項目として持つのは `superseded_by`（置き換え）と `approved_via`（使った決め方）だけ。前提にしている決定や関連する決定は、本文に `#番号` を書く。リンクは GitHub が両方向に付ける。
-- **本文**：先頭に下の型の YAML をコードブロックで置き、その後に `rationale` の本文を書く。
+- **本文**：人が読む部分を先に、記録データ（YAML）を最後に折りたたんで置く。形は下の「本文の書き方」。
 - **状態**：開いている＝有効。置き換えたら「outdated」で閉じる。やめたら「resolved」で閉じ、理由をコメントする。
 - **Q&A**：答えが付いた質問は「拾う」に回し、新しい DR の `sources` に `asked` としてその Q&A を入れる。
-- **書き方**：GraphQL を使える環境ならそのまま書く。使えない環境で GitHub Actions を起動できるなら、ワークフロー `discussion`（`.github/workflows/discussion.yml`）を起動する。新しい DR は `action: create` と `category`（`decisions` / `decision-flows` / `q-a`）・`title`・`body`、追記は `action: comment` と `number`・`body`。起動したら、実行結果に出る番号を確かめてから「保存した」と伝える。
+- **書き方**：GraphQL を使える環境ならそのまま書く。使えない環境で GitHub Actions を起動できるなら、ワークフロー `discussion`（`.github/workflows/discussion.yml`）を起動する。新しい DR は `action: create` と `category`（`decisions` / `decision-flows` / `q-a`）・`title`・`body`、追記は `action: comment` と `number`・`body`。前提の印など本文を直すときは `action: update` と `number`・`body`（本文全体を送る）。起動したら、実行結果に出る番号を確かめてから「保存した」と伝える。
 - **書けないとき**：Discussions に書く手段がない環境では、タイトルと本文をそのまま貼れる形で返し、「まだ保存していません」と明記する。ほかのリポジトリに書いて代わりにしない。
 
-### 本文先頭の型
+### 本文の書き方
+
+読む人のために、決めたことを一行目に置く。記録データは最後に `<details>` で折りたたむ。
+
+````markdown
+**（決めたこと：一文）**
+
+| 決めた人 | 決済チームのチームリード |
+|---|---|
+| 承認 | セキュリティ責任者 |
+| 使った決め方 | #12 |
+| 影響範囲 | チーム内・すぐ戻せる |
+| 決めた日 | 2026-10-03 |
+
+**なぜ**
+（理由。重い判断なら他の案、反対意見、リスクを引き受けた人も）
+
+**前提（崩れたら見直す）**
+- （前提）
+
+**元の場所**：（リンク）
+
+<details><summary>記録データ</summary>
+
+```yaml
+（下の型）
+```
+
+</details>
+````
+
+- 表の値は人が読む言葉で書く（`config.yaml` の roles の表示名、「部署横断・戻すのに手間」など）。分からない値は「不明」。
+- 空の行（承認がない、決め方を使っていない）は省く。
+- 拾った記録（`entry: auto`）は一行目の下に「> 拾った内容です。元の場所と合わせて読んでください。」と添える。
+
+### 記録データの型
 
 ```yaml
 kind: decision            # decision | flow（誰が決める・承認するかの決め方）

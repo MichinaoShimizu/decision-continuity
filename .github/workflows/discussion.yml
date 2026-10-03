@@ -4,10 +4,10 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: "create（新しい DR）または comment（既存の DR に追記）"
+        description: "create（新しい DR）、comment（既存の DR に追記）、update（既存の DR の本文を置き換え）"
         required: true
         type: choice
-        options: [create, comment]
+        options: [create, comment, update]
       category:
         description: "create のとき：カテゴリの slug か名前（Decisions / Decision flows / Q&A）"
         required: false
@@ -16,7 +16,7 @@ on:
         description: "create のとき：タイトル"
         required: false
       number:
-        description: "comment のとき：Discussion の番号"
+        description: "comment / update のとき：Discussion の番号"
         required: false
       body:
         description: "本文（Markdown）"
@@ -50,6 +50,14 @@ jobs:
               if (!cat) { core.setFailed(`category not found: ${env.CATEGORY}. available: ${nodes.map(c => `${c.slug} (${c.name})`).join(', ')}`); return; }
               const d = await github.graphql(`mutation($repo:ID!,$cat:ID!,$title:String!,$body:String!){createDiscussion(input:{repositoryId:$repo,categoryId:$cat,title:$title,body:$body}){discussion{number url}}}`, { repo: r.repository.id, cat: cat.id, title: env.TITLE, body: env.BODY });
               core.notice(`created #${d.createDiscussion.discussion.number} ${d.createDiscussion.discussion.url}`);
+            } else if (env.ACTION === 'update') {
+              const n = parseInt(env.NUMBER, 10);
+              if (!n) { core.setFailed('number is required for update'); return; }
+              const r = await github.graphql(`query($owner:String!,$repo:String!,$n:Int!){repository(owner:$owner,name:$repo){discussion(number:$n){id url}}}`, { owner, repo, n });
+              const input = { discussionId: r.repository.discussion.id, body: env.BODY };
+              if (env.TITLE) input.title = env.TITLE;
+              await github.graphql(`mutation($input:UpdateDiscussionInput!){updateDiscussion(input:$input){discussion{url}}}`, { input });
+              core.notice(`updated #${n} ${r.repository.discussion.url}`);
             } else {
               const n = parseInt(env.NUMBER, 10);
               if (!n) { core.setFailed('number is required for comment'); return; }
