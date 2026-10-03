@@ -55,9 +55,9 @@ cases:
       DR-012 set a 3-second timeout because the vendor answered within 2 seconds. The vendor now takes 4 seconds at peak, so we moved to 5 seconds.
     must:
       - create a new DR that supersedes DR-012
-      - mark DR-012 superseded and its broken premise
+      - comment on DR-012 with the broken premise and the new DR number, and close it as outdated
     must_not:
-      - rewrite DR-012's original rationale or premise text
+      - edit DR-012's body
 
   - id: odr-sensitive-weight
     input: |

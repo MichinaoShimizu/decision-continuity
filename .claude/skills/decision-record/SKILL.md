@@ -67,7 +67,7 @@ description: Capture, find, and explain organizational decisions as decision rec
 
 ## 追記と決め直し
 
-結果はコメントで追記する。崩れた前提は、本文の前提の行に「（崩れた：日付）」を添え、記録データの `premises` に `broken: true` と日付を付ける。それ以外の本文（決めたこと、理由、前提の文）は書き換えない。決め直すときは新しい DR を作り、本文に「#番号 を置き換える」と書く。古い DR は「outdated」で閉じ、新しい番号へのリンクをコメントする。
+記録は追記だけで育てる。本文は投稿したあと書き換えない。結果も崩れた前提も、コメントで追記する（例：「**前提が崩れた**（YYYY-MM-DD）：組織長が承認の判断を期限内に返せる → 3週間返らない例が続いた」）。決め直すときは新しい DR を作り、本文に「#番号 を置き換える」と書く。古い DR には新しい番号へのリンクをコメントし、「outdated」で閉じる。閉じる手段がない環境では、閉じてほしい番号を人に伝える。
 
 ## 守ること
 
@@ -91,7 +91,7 @@ description: Capture, find, and explain organizational decisions as decision rec
 - **本文**：人が読む部分を先に、記録データ（YAML）を最後に折りたたんで置く。形は下の「本文の書き方」。
 - **状態**：開いている＝有効。置き換えたら「outdated」で閉じる。やめたら「resolved」で閉じ、理由をコメントする。
 - **Q&A**：答えが付いた質問は「拾う」に回し、新しい DR の `sources` に `asked` としてその Q&A を入れる。
-- **書き方**：GraphQL を使える環境ならそのまま書く。使えない環境で GitHub Actions を起動できるなら、ワークフロー `discussion`（`.github/workflows/discussion.yml`）を起動する。新しい DR は `action: create` と `category`（`decisions` / `decision-flows` / `q-a`）・`title`・`body`、追記は `action: comment` と `number`・`body`。前提の印など本文を直すときは `action: update` と `number`・`body`（本文全体を送る）。起動したら、実行結果に出る番号を確かめてから「保存した」と伝える。
+- **書き方**：GraphQL を使える環境ならそのまま書く。使えない環境で GitHub Actions を起動できるなら、ワークフロー `discussion`（`.github/workflows/discussion.yml`）を起動する。新しい DR は `action: create` と `category`（`decisions` / `decision-flows` / `q-a`）・`title`・`body`、追記は `action: comment` と `number`・`body`。起動したら、実行結果に出る番号を確かめてから「保存した」と伝える。
 - **書けないとき**：Discussions に書く手段がない環境では、タイトルと本文をそのまま貼れる形で返し、「まだ保存していません」と明記する。ほかのリポジトリに書いて代わりにしない。
 
 ### 本文の書き方
@@ -145,7 +145,7 @@ scope: team               # team | multi_team | cross_department | company
 reversibility: easy       # easy | costly | irreversible
 touches_sensitive: false  # セキュリティ・個人情報・権限・監視や通知・ログに触れる
 decision: ""
-premises: []              # [{text, broken, broken_at}]
+premises: []              # [text] 崩れたらコメントで追記
 sources: []               # [{type, url}] type: chat|meeting|pr|ticket|approval|asked|manual
 unconfirmed: []           # 元に書かれていなかった項目のキー
 ```
