@@ -87,6 +87,7 @@ description: Capture, find, and explain organizational decisions as decision rec
 
 - **番号**：Discussion の番号がそのまま DR 番号（例：#42）。採番はしない。
 - **タイトル**：何を決めたかが分かる一行。
+- **関係**：項目として持つのは `superseded_by`（置き換え）と `approved_via`（使った決め方）だけ。前提にしている決定や関連する決定は、本文に `#番号` を書く。リンクは GitHub が両方向に付ける。
 - **本文**：先頭に下の型の YAML をコードブロックで置き、その後に `rationale` の本文を書く。
 - **状態**：開いている＝有効。置き換えたら「outdated」で閉じる。やめたら「resolved」で閉じ、理由をコメントする。
 - **Q&A**：答えが付いた質問は「拾う」に回し、新しい DR の `sources` に `asked` としてその Q&A を入れる。
