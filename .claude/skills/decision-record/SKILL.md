@@ -24,7 +24,7 @@ description: Capture, find, and explain organizational decisions as decision rec
 ## 拾う
 
 1. 決定だけを抜き出す。雑談、ブレインストーミング、検討中の話、AI が出しただけの案は決定にしない。迷ったら「これは決定ですか？」と聞く。
-2. 決めた人は名前ではなく役割（`config.yaml` の roles）と組織で書く。元に名前しかなければ役割に置き換え、分からなければ `unconfirmed` に入れる。人の異動や退職があっても記録が古くならないようにするため。決めた日と元の場所も埋める。貼られた文章や本人の発言も元の場所として扱い、URL がなければ `unconfirmed` に入れる。
+2. 決めた人は名前ではなく役割（`config.yaml` の roles）と組織で書く。最終的に決めた役割を `decided_by` に（複数で決めたなら全員）、決める前に承認した役割を `approved_by` に承認した順で入れる。元に名前しかなければ役割に置き換え、分からなければ `unconfirmed` に入れる。人の異動や退職があっても記録が古くならないようにするため。決めた日と元の場所も埋める。貼られた文章や本人の発言も元の場所として扱い、URL がなければ `unconfirmed` に入れる。
 3. 状態は元の場所の事実から写す。承認、マージ、「決めた」「入れた」などの報告があれば `accepted`。「〜しよう」「〜する予定」だけなら `proposed`。
 4. 「誰が決める・承認するか」を定めたものは `kind: flow`。決定がどの決め方を通ったか分かれば `approved_via` にその番号を入れる。
 5. 元に書かれていないことは埋めない。項目のキーを `unconfirmed` に入れる。
@@ -63,7 +63,7 @@ description: Capture, find, and explain organizational decisions as decision rec
 
 ## 聞く
 
-記録だけを根拠に答え、使った DR 番号を必ず示す。「誰の承認で決まる？」には `kind: flow` を優先して使う。「これ自分で決めていい？」には、似た領域・影響範囲の判断を過去に誰が決めてきたかを示し、最後の判断は本人と組織長に委ねる。`auto` の記録を使うときは「拾った記録では」と添え、崩れた前提がある記録は「見直しが必要」と添える。記録がなければ、`config.yaml` の roles か担当チームから聞く相手を挙げ、分からなければ質問者に「この領域の持ち主は誰か」を聞く。
+記録だけを根拠に答え、使った DR 番号を必ず示す。「誰の承認で決まる？」には `kind: flow` を優先して使う。「これ自分で決めていい？」には、似た領域・影響範囲の判断を過去にどの役割が決め（`decided_by`）、どの役割が承認してきたか（`approved_by`）を示し、最後の判断は本人と組織長に委ねる。`auto` の記録を使うときは「拾った記録では」と添え、崩れた前提がある記録は「見直しが必要」と添える。記録がなければ、`config.yaml` の roles か担当チームから聞く相手を挙げ、分からなければ質問者に「この領域の持ち主は誰か」を聞く。
 
 ## 追記と決め直し
 
@@ -103,9 +103,8 @@ approved_via: null        # 通った決め方の DR 番号（例：#12）
 superseded_by: null
 entry: explicit           # explicit: 人が追加 | auto: 仕組みや AI が拾った
 decided_at: null          # YYYY-MM-DD
-decider:
-  role: ""                # config.yaml の roles のキー
-  org: ""                 # どの組織か
+decided_by: []            # 最終的に決めた役割 [{role, org}]。複数なら全員で決めた
+approved_by: []           # 決める前に承認した役割 [{role, org}]（承認した順）
 domain: technology        # technology | product | organization | business
 scope: team               # team | multi_team | cross_department | company
 reversibility: easy       # easy | costly | irreversible

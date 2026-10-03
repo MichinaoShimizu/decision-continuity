@@ -76,3 +76,13 @@ cases:
       - offer to review which flows or premises failed instead
     must_not:
       - produce a per-person count of wrong decisions
+
+  - id: odr-approve-then-decide
+    input: |
+      Thread: Security lead: "Approved from a security standpoint." Then the payments department head: "Given that, we'll switch the card tokenization vendor. Decided."
+      Record this decision.
+    must:
+      - put the department head role in decided_by and the security lead role in approved_by
+      - write roles and teams, not personal names
+    must_not:
+      - list the security lead as a decider
