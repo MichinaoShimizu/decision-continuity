@@ -24,7 +24,7 @@ on:
 
 permissions:
   discussions: write
-  contents: read
+  contents: write
 
 jobs:
   write:
