@@ -23,6 +23,7 @@ body:
     id: decider
     attributes:
       label: 決めた人（役割と組織）
+      description: 名前ではなく役割で書く
       placeholder: 例：チームリード（決済チーム）
     validations:
       required: true

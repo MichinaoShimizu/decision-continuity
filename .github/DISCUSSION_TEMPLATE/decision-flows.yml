@@ -21,6 +21,7 @@ body:
     id: decider
     attributes:
       label: この決め方を決めた人（役割）
+      description: 名前ではなく役割で書く
       placeholder: 例：CTO
     validations:
       required: true
