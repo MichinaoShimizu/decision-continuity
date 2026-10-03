@@ -1,0 +1,57 @@
+name: discussion
+# decision-record スキルが Discussions に書くための入口。GraphQL を直接使えない環境から起動する。
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "create（新しい DR）または comment（既存の DR に追記）"
+        required: true
+        type: choice
+        options: [create, comment]
+      category:
+        description: "create のとき：カテゴリの slug（decisions / decision-flows / q-a）"
+        required: false
+        default: decisions
+      title:
+        description: "create のとき：タイトル"
+        required: false
+      number:
+        description: "comment のとき：Discussion の番号"
+        required: false
+      body:
+        description: "本文（Markdown）"
+        required: true
+
+permissions:
+  discussions: write
+  contents: read
+
+jobs:
+  write:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        env:
+          ACTION: ${{ inputs.action }}
+          CATEGORY: ${{ inputs.category }}
+          TITLE: ${{ inputs.title }}
+          NUMBER: ${{ inputs.number }}
+          BODY: ${{ inputs.body }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const env = process.env;
+            if (env.ACTION === 'create') {
+              if (!env.TITLE) core.setFailed('title is required for create');
+              const r = await github.graphql(`query($owner:String!,$repo:String!){repository(owner:$owner,name:$repo){id discussionCategories(first:25){nodes{id slug}}}}`, { owner, repo });
+              const cat = r.repository.discussionCategories.nodes.find(c => c.slug === env.CATEGORY);
+              if (!cat) { core.setFailed(`category not found: ${env.CATEGORY}`); return; }
+              const d = await github.graphql(`mutation($repo:ID!,$cat:ID!,$title:String!,$body:String!){createDiscussion(input:{repositoryId:$repo,categoryId:$cat,title:$title,body:$body}){discussion{number url}}}`, { repo: r.repository.id, cat: cat.id, title: env.TITLE, body: env.BODY });
+              core.notice(`created #${d.createDiscussion.discussion.number} ${d.createDiscussion.discussion.url}`);
+            } else {
+              const n = parseInt(env.NUMBER, 10);
+              if (!n) { core.setFailed('number is required for comment'); return; }
+              const r = await github.graphql(`query($owner:String!,$repo:String!,$n:Int!){repository(owner:$owner,name:$repo){discussion(number:$n){id url}}}`, { owner, repo, n });
+              await github.graphql(`mutation($id:ID!,$body:String!){addDiscussionComment(input:{discussionId:$id,body:$body}){comment{url}}}`, { id: r.repository.discussion.id, body: env.BODY });
+              core.notice(`commented on #${n} ${r.repository.discussion.url}`);
+            }

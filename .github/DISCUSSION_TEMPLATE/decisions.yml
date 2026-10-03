@@ -1,0 +1,68 @@
+title: ""
+body:
+  - type: markdown
+    attributes:
+      value: |
+        決めたことを残します。タイトルは「何を決めたか」が分かる一行にしてください。
+        人事（評価・異動・処遇・個人の情報）に関わる判断はここに書かないでください。
+  - type: textarea
+    id: decision
+    attributes:
+      label: 決めたこと
+      description: 一文で
+    validations:
+      required: true
+  - type: textarea
+    id: rationale
+    attributes:
+      label: なぜ
+      description: 複数チームに影響するなら、他の案と後回しになるものも。部署横断なら、使った決め方・反対意見・リスクを引き受けた人も。
+    validations:
+      required: true
+  - type: input
+    id: decider
+    attributes:
+      label: 決めた人（役割と組織）
+      placeholder: 例：チームリード（決済チーム）
+    validations:
+      required: true
+  - type: input
+    id: decided_at
+    attributes:
+      label: 決めた日
+      placeholder: YYYY-MM-DD
+  - type: dropdown
+    id: scope
+    attributes:
+      label: 影響範囲
+      options: [チーム内, 複数チーム, 部署横断, 全社]
+    validations:
+      required: true
+  - type: dropdown
+    id: reversibility
+    attributes:
+      label: 戻しやすさ
+      options: [すぐ戻せる, 戻すのに手間, 戻せない]
+    validations:
+      required: true
+  - type: checkboxes
+    id: sensitive
+    attributes:
+      label: センシティブ
+      options:
+        - label: セキュリティ・個人情報・権限・監視や通知・ログに触れる
+  - type: input
+    id: approved_via
+    attributes:
+      label: 使った決め方
+      placeholder: 例：#12
+  - type: textarea
+    id: premises
+    attributes:
+      label: 前提（崩れたら見直す）
+      description: 1行に1つ
+  - type: input
+    id: source
+    attributes:
+      label: 元の場所
+      placeholder: Slack・議事録・PR のリンク
