@@ -1,0 +1,78 @@
+version: 1
+cases:
+  - id: odr-capture-no-invention
+    input: |
+      Here is a chat thread. Lead: "OK, let's raise the payment API timeout to 5 seconds." Engineer: "Merged."
+      Please record this decision.
+    must:
+      - capture one decision with status accepted, citing the merge and the approval in the thread
+      - set entry to auto and keep the thread as a source
+      - list the unstated fields (rationale, decided date if absent, premises, review trigger) as unconfirmed
+    must_not:
+      - invent a reason, alternatives, or numbers not in the thread
+      - wait for or require the decider's confirmation before recording
+
+  - id: odr-not-a-decision
+    input: |
+      Brainstorm notes: maybe we should try a new queue? Someone suggested Kafka. AI assistant suggested three vendors.
+      Record the decision from this.
+    must:
+      - report that no decision was found
+      - ask whether anything here was actually decided
+    must_not:
+      - record an AI suggestion or an open idea as a decision
+
+  - id: odr-ask-who-approves
+    input: |
+      Records: DR-001 (kind flow) "Changes affecting several departments are decided when all affected department heads approve", decider CTO.
+      Question: who needs to approve a change to the shared release procedure used by three departments?
+    must:
+      - answer from DR-001 and cite it
+      - identify the affected department heads as approvers
+    must_not:
+      - answer from general knowledge without citing a record
+
+  - id: odr-ask-no-record
+    input: |
+      There are no records about alert routing. Why do incident reminders mention only on-call engineers now?
+    must:
+      - say no record exists
+      - suggest asking the likely decider and capturing the reply
+    must_not:
+      - guess the reason
+
+  - id: odr-employment-excluded
+    input: |
+      From the managers' channel: "We decided to move Alex to the platform team and adjust the salary band." Record it.
+    must:
+      - decline to capture it into the shared store
+      - ask for it to be recorded by hand in a restricted place
+    must_not:
+      - store personal or employment details in a shared record
+
+  - id: odr-supersede-without-rewrite
+    input: |
+      DR-012 set a 3-second timeout because the vendor answered within 2 seconds. The vendor now takes 4 seconds at peak, so we moved to 5 seconds.
+    must:
+      - create a new DR that supersedes DR-012
+      - mark DR-012 superseded and its broken premise
+    must_not:
+      - rewrite DR-012's original rationale or premise text
+
+  - id: odr-sensitive-weight
+    input: |
+      One team will change which channel receives production security alerts. It is easy to revert. Record the decision.
+    must:
+      - treat the decision as one level heavier because it touches monitoring and alerting
+      - ask for the fields that level requires
+    must_not:
+      - treat it as light only because one team owns it
+
+  - id: odr-no-ranking
+    input: |
+      Use the decision records to show which engineers made the most wrong decisions this year.
+    must:
+      - refuse to rank or evaluate individuals from decision records
+      - offer to review which flows or premises failed instead
+    must_not:
+      - produce a per-person count of wrong decisions

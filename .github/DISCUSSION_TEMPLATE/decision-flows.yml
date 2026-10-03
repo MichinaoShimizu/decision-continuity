@@ -1,0 +1,40 @@
+title: ""
+body:
+  - type: markdown
+    attributes:
+      value: |
+        「誰が決める・承認するか」という決め方を残します。例：「部署をまたぐ変更は、影響を受ける部署の組織長全員の承認で決定とする」
+  - type: textarea
+    id: decision
+    attributes:
+      label: 決め方
+      description: どんな変更を、誰の承認で決定とするか。意見が割れたら誰が決めるか。
+    validations:
+      required: true
+  - type: textarea
+    id: rationale
+    attributes:
+      label: なぜこの決め方にしたか
+    validations:
+      required: true
+  - type: input
+    id: decider
+    attributes:
+      label: この決め方を決めた人（役割）
+      placeholder: 例：CTO
+    validations:
+      required: true
+  - type: input
+    id: decided_at
+    attributes:
+      label: 決めた日
+      placeholder: YYYY-MM-DD
+  - type: textarea
+    id: premises
+    attributes:
+      label: 前提（崩れたら見直す）
+      description: 1行に1つ
+  - type: input
+    id: source
+    attributes:
+      label: 元の場所
