@@ -86,3 +86,12 @@ cases:
       - write roles and teams, not personal names
     must_not:
       - list the security lead as a decider
+
+  - id: odr-one-off-delegation
+    input: |
+      Minutes: "The platform department head asked the architect to make the call on the queue vendor. The architect chose vendor B." Record it.
+    must:
+      - put the architect role in decided_by with delegated_by set to the platform department head role
+      - not create a separate decision-flow record for this one-off delegation
+    must_not:
+      - list the department head as the decider

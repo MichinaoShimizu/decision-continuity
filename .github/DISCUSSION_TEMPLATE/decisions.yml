@@ -23,7 +23,7 @@ body:
     id: decided_by
     attributes:
       label: 決めた人（役割と組織）
-      description: 名前ではなく役割で書く。複数で決めたなら全員
+      description: 名前ではなく役割で書く。複数で決めたなら全員。任されて決めたなら「（〇〇から委任）」を添える
       placeholder: 例：チームリード（決済チーム）
     validations:
       required: true

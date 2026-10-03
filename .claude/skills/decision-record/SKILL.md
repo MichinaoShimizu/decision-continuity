@@ -24,7 +24,7 @@ description: Capture, find, and explain organizational decisions as decision rec
 ## 拾う
 
 1. 決定だけを抜き出す。雑談、ブレインストーミング、検討中の話、AI が出しただけの案は決定にしない。迷ったら「これは決定ですか？」と聞く。
-2. 決めた人は名前ではなく役割（`config.yaml` の roles）と組織で書く。最終的に決めた役割を `decided_by` に（複数で決めたなら全員）、決める前に承認した役割を `approved_by` に承認した順で入れる。元に名前しかなければ役割に置き換え、分からなければ `unconfirmed` に入れる。人の異動や退職があっても記録が古くならないようにするため。決めた日と元の場所も埋める。貼られた文章や本人の発言も元の場所として扱い、URL がなければ `unconfirmed` に入れる。
+2. 決めた人は名前ではなく役割（`config.yaml` の roles）と組織で書く。最終的に決めた役割を `decided_by` に（複数で決めたなら全員）、決める前に承認した役割を `approved_by` に承認した順で入れる。任された人が決めたときは、決まった種類の判断をずっと任せているなら委譲の決め方の記録を `approved_via` に入れ、この件だけ任されたなら `decided_by` のその人に `delegated_by`（任せた役割）を添える。元に名前しかなければ役割に置き換え、分からなければ `unconfirmed` に入れる。人の異動や退職があっても記録が古くならないようにするため。決めた日と元の場所も埋める。貼られた文章や本人の発言も元の場所として扱い、URL がなければ `unconfirmed` に入れる。
 3. 状態は元の場所の事実から写す。承認、マージ、「決めた」「入れた」などの報告があれば `accepted`。「〜しよう」「〜する予定」だけなら `proposed`。
 4. 「誰が決める・承認するか」を定めたものは `kind: flow`。決定がどの決め方を通ったか分かれば `approved_via` にその番号を入れる。
 5. 元に書かれていないことは埋めない。項目のキーを `unconfirmed` に入れる。
@@ -103,7 +103,7 @@ approved_via: null        # 通った決め方の DR 番号（例：#12）
 superseded_by: null
 entry: explicit           # explicit: 人が追加 | auto: 仕組みや AI が拾った
 decided_at: null          # YYYY-MM-DD
-decided_by: []            # 最終的に決めた役割 [{role, org}]。複数なら全員で決めた
+decided_by: []            # 最終的に決めた役割 [{role, org, delegated_by?}]。複数なら全員で決めた。この件だけ任されたなら delegated_by: {role, org}
 approved_by: []           # 決める前に承認した役割 [{role, org}]（承認した順）
 domain: technology        # technology | product | organization | business
 scope: team               # team | multi_team | cross_department | company
