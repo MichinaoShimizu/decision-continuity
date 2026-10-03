@@ -91,6 +91,7 @@ description: Capture, find, and explain organizational decisions as decision rec
 - **本文**：先頭に下の型の YAML をコードブロックで置き、その後に `rationale` の本文を書く。
 - **状態**：開いている＝有効。置き換えたら「outdated」で閉じる。やめたら「resolved」で閉じ、理由をコメントする。
 - **Q&A**：答えが付いた質問は「拾う」に回し、新しい DR の `sources` に `asked` としてその Q&A を入れる。
+- **書き方**：GraphQL を使える環境ならそのまま書く。使えない環境で GitHub Actions を起動できるなら、ワークフロー `discussion`（`.github/workflows/discussion.yml`）を起動する。新しい DR は `action: create` と `category`（`decisions` / `decision-flows` / `q-a`）・`title`・`body`、追記は `action: comment` と `number`・`body`。起動したら、実行結果に出る番号を確かめてから「保存した」と伝える。
 - **書けないとき**：Discussions に書く手段がない環境では、タイトルと本文をそのまま貼れる形で返し、「まだ保存していません」と明記する。ほかのリポジトリに書いて代わりにしない。
 
 ### 本文先頭の型
