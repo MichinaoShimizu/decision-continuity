@@ -1,6 +1,6 @@
 # decision-record スキルの設定。手順は .claude/skills/decision-record/SKILL.md。
 store: github-discussions     # このリポジトリの Discussions（Decisions / Decision flows / Q&A）
-roles:                        # decider.role に使うキー。表記ゆれを防ぐため、ここから選ぶ
+roles:                        # decided_by / approved_by の role に使うキー。表記ゆれを防ぐため、ここから選ぶ
   cto: CTO
   vpoe: VPoE
   exec_meeting: 経営会議

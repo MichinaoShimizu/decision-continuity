@@ -20,12 +20,19 @@ body:
     validations:
       required: true
   - type: input
-    id: decider
+    id: decided_by
     attributes:
       label: 決めた人（役割と組織）
+      description: 名前ではなく役割で書く。複数で決めたなら全員。任されて決めたなら「（〇〇から委任）」を添える
       placeholder: 例：チームリード（決済チーム）
     validations:
       required: true
+  - type: input
+    id: approved_by
+    attributes:
+      label: 決める前に承認した人（役割と組織）
+      description: 承認した順に。いなければ空欄
+      placeholder: 例：セキュリティ責任者 → 組織長（決済部）
   - type: input
     id: decided_at
     attributes:

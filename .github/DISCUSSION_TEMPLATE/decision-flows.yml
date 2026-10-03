@@ -18,9 +18,10 @@ body:
     validations:
       required: true
   - type: input
-    id: decider
+    id: decided_by
     attributes:
       label: この決め方を決めた人（役割）
+      description: 名前ではなく役割で書く
       placeholder: 例：CTO
     validations:
       required: true

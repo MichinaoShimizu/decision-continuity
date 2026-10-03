@@ -9,7 +9,7 @@ on:
         type: choice
         options: [create, comment]
       category:
-        description: "create のとき：カテゴリの slug（decisions / decision-flows / q-a）"
+        description: "create のとき：カテゴリの slug か名前（Decisions / Decision flows / Q&A）"
         required: false
         default: decisions
       title:
@@ -43,9 +43,11 @@ jobs:
             const env = process.env;
             if (env.ACTION === 'create') {
               if (!env.TITLE) core.setFailed('title is required for create');
-              const r = await github.graphql(`query($owner:String!,$repo:String!){repository(owner:$owner,name:$repo){id discussionCategories(first:25){nodes{id slug}}}}`, { owner, repo });
-              const cat = r.repository.discussionCategories.nodes.find(c => c.slug === env.CATEGORY);
-              if (!cat) { core.setFailed(`category not found: ${env.CATEGORY}`); return; }
+              const r = await github.graphql(`query($owner:String!,$repo:String!){repository(owner:$owner,name:$repo){id discussionCategories(first:25){nodes{id slug name}}}}`, { owner, repo });
+              const nodes = r.repository.discussionCategories.nodes;
+              const want = (env.CATEGORY || '').toLowerCase();
+              const cat = nodes.find(c => c.slug.toLowerCase() === want || c.name.toLowerCase() === want);
+              if (!cat) { core.setFailed(`category not found: ${env.CATEGORY}. available: ${nodes.map(c => `${c.slug} (${c.name})`).join(', ')}`); return; }
               const d = await github.graphql(`mutation($repo:ID!,$cat:ID!,$title:String!,$body:String!){createDiscussion(input:{repositoryId:$repo,categoryId:$cat,title:$title,body:$body}){discussion{number url}}}`, { repo: r.repository.id, cat: cat.id, title: env.TITLE, body: env.BODY });
               core.notice(`created #${d.createDiscussion.discussion.number} ${d.createDiscussion.discussion.url}`);
             } else {
