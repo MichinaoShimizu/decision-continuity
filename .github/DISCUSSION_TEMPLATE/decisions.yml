@@ -73,3 +73,20 @@ body:
     attributes:
       label: 元の場所
       placeholder: Slack・議事録・PR のリンク
+  - type: input
+    id: repos
+    attributes:
+      label: 関係するコードのリポジトリ（repos）
+      description: コードに関係する決定だけ。全リポジトリなら [all]
+      placeholder: "[payment-api]"
+  - type: input
+    id: paths
+    attributes:
+      label: 関係するパス（paths）
+      placeholder: "[src/payment/]"
+  - type: input
+    id: keywords
+    attributes:
+      label: 変更に出てきそうな言葉（keywords）
+      description: 決定の文に出てこないのに、変更の側に出てくる識別子や言い換え
+      placeholder: "[MAX_RETRIES, retry]"

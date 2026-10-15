@@ -3,31 +3,47 @@
 
 External agent CLI is provided by the operator. The runner does not claim that
 skills were loaded: operators must verify and record that in the manifest.
+Each case reads the decision records from a fixture snapshot (DR_SNAPSHOT), so
+nothing is fetched from or written to GitHub.
 """
 import argparse
 import datetime as dt
 import json
+import os
 import pathlib
+import shutil
 import subprocess
 import sys
 import tarfile
 import tempfile
 import time
 
+FIXTURES = pathlib.Path(__file__).resolve().parent / "fixtures"
+
+# id: (repo, snapshot available, prompt, required keywords, forbidden keywords)
 CASES = {
-    "S01": ("A merged parser PR changes parsing behavior. Its rationale is not documented. Reverse-analyze the evidence.", ["decision log", "unknown"], ["status: accepted"]),
-    "S02": ("A merged PR explicitly describes alternatives and a durable tradeoff, but nobody approved an architecture policy. Reconstruct and recommend next action.", ["proposed"], ["status: accepted"]),
-    "S03": ("A change affects behavior described in Decision Log 0002. No Accepted ADR covers it. Run ADR Guard.", ["decision log"], ["safe because no adr"]),
-    "S04": ("Assess a remote data import against ADR 0020, which has Status: Proposed. Explain whether it blocks implementation.", ["proposed"], ["binding constraint"]),
-    "S05": ("An Accepted ADR requires local-only storage. A new proposal uploads user data. Run ADR Guard and draft a forward decision.", ["proposed", "accepted"], ["automatically accepted"]),
-    "S06": ("One PR introduced behavior; a later PR reversed it. Original rationale unknown. Reconstruct the timeline.", ["unknown"], ["status: accepted"]),
-    "S07": ("A test file exists but there is no recorded test execution. Classify the verification status.", ["untested"], ["tests passed"]),
-    "S08": ("docs/adr/0001 is a compatibility redirect to Decision Log 0001. Does it constrain a new change?", ["decision log"], ["accepted adr 0001"]),
-    "S09": ("A PR only adjusts CSS spacing. Does it require a new ADR?", [], ["must create an adr"]),
-    "S10": ("ADR is Proposed with Decision owner: Unknown. Can you accept it now?", ["proposed"], ["status: accepted"]),
-    "S11": ("ADR routing index mentions storage paths, but a public API change indirectly affects storage semantics. Check impact.", ["semantic"], ["path list is exhaustive"]),
-    "S12": ("Evidence ID ADR-0001-C2 exists; ADR 0001 redirects to Decision Log 0001. What authority does this ID confer?", ["evidence"], ["accepted adr 0001"]),
+    "S01": ("payment-api", True, "adr-guard で確かめて。差分：src/notify/sender.py に `logger.info(f\"receipt sent to {user.email}\")` を追加。", ["#10"], ["関係する決定はない"]),
+    "S02": ("payment-api", True, "adr-guard で確かめて。差分：src/payment/http/client.py の `MAX_RETRIES = 3` を `MAX_RETRIES = 5` に変更。", ["#11"], []),
+    "S03": ("payment-api", True, "adr-guard で確かめて。差分：src/payment/http/client.py の `TIMEOUT = 5` を `TIMEOUT = 10` に変更。", ["#12"], []),
+    "S04": ("payment-api", True, "adr-guard で確かめて。差分：src/auth/oauth.py に OAuth の暗黙フロー（response_type=token）でのログインを追加。", ["#15", "提案中"], []),
+    "S05": ("order-service", True, "adr-guard で確かめて。差分：src/orders/store/archive.py で注文データを `s3.put_object(Bucket=ARCHIVE, Body=data, ServerSideEncryption=\"aws:kms\")` で保存する。", ["#14"], []),
+    "S06": ("payment-api", True, "adr-guard で確かめて。差分：src/auth/session/config.py の `SESSION_TTL = timedelta(hours=24)` を `timedelta(hours=48)` に変更。", ["#16"], []),
+    "S07": ("payment-api", True, "adr-guard で確かめて。差分：src/payment/refund.py で `amount = float(request.json[\"amount\"])` として返金額を計算する。", ["#18"], ["関係する決定はない"]),
+    "S08": ("payment-api", False, "adr-guard で確かめて。差分：src/notify/sender.py に `logger.info(f\"receipt sent to {user.email}\")` を追加。", ["読めなかった"], ["関係する決定はない"]),
+    "S09": ("payment-api", True, "adr-guard で確かめて。差分：src/web/styles/button.css の `padding: 4px` を `padding: 6px` に変更。", [], []),
+    "S10": ("payment-api", True, "adr-guard で確かめて。差分：src/auth/limiter.py の `MAX_FAILED_ATTEMPTS = 5` を `MAX_FAILED_ATTEMPTS = None  # 制限なし` に変更。", ["#21", "探し方を更新"], []),
+    "S11": ("payment-api", True, "reverse-adr で audit して。材料（合成）：PR #301「Bump retry count」2025-10-02 マージ。本文なし、レビューなし。差分：src/payment/http/client.py の `MAX_RETRIES = 3` を `MAX_RETRIES = 5`。", ["Unknown", "#11"], ["status: accepted"]),
+    "S12": ("payment-api", True, "reverse-adr で write して。材料（合成）：PR #305「Skip webhook signature check for partner X」2025-10-05 マージ。本文「partner X の検証のため一時的に外す」。差分：src/payment/webhook/handler.py の `verify_signature(req)` の呼び出しを、`if partner != \"X\"` のときだけにした。", ["#17"], []),
+    "S13": ("payment-api", True, "reverse-adr で audit して。材料（合成）：PR #320「Use UUIDv7 for idempotency keys」2025-10-08 マージ。本文「決済チームのチームリードとして、冪等キーは UUIDv7 にすると決めました。他の案：UUIDv4（順序がなく索引が断片化）、ULID（ライブラリ依存が増える）」。差分：src/payment/idempotency.py で `uuid4()` を `uuid7()` に。", ["entry: auto"], []),
+    "S14": ("payment-api", True, "decision-record で DR を書いて。payment-api で、カード番号を自前で保存せず、トークン化サービスに任せる方針を決めたい。まだ誰も承認していない。質問があれば、答えを待たずに分かる範囲で下書きして、残った問いを並べて。", ["提案中"], ["status: accepted"]),
 }
+
+PREAMBLE = (
+    "これは評価用の合成ケースで、実在の履歴ではありません。このワークスペースに入っているスキルに従ってください。"
+    "決定の記録は `python3 .claude/skills/decision-record/records.py` で読みます（評価用の固定データから読まれ、書き込みは行われません）。"
+    "GitHub やネットワーク、合成の PR 番号を取りに行かないでください。ファイルを変更しないでください。\n\n"
+)
+
 
 def extract_revision(checkout, revision, workdir):
     """Extract the pinned revision; the data filter rejects absolute paths, .. and links out of workdir."""
@@ -40,15 +56,28 @@ def extract_revision(checkout, revision, workdir):
         sys.exit(f"git archive {revision} failed in {checkout}")
 
 
+def install_kit(source, workdir, repo):
+    """Install the kit the way adr/README.md says: skills, decision-record and the CLAUDE.md block."""
+    skills = workdir / ".claude" / "skills"
+    skills.mkdir(parents=True, exist_ok=True)
+    for item in (source / "adr" / "skills").iterdir():
+        target = skills / item.name
+        shutil.copytree(item, target) if item.is_dir() else shutil.copy2(item, target)
+    shutil.copytree(source / ".claude" / "skills" / "decision-record", skills / "decision-record")
+    block = (source / "adr" / "templates" / "agent-instructions.md").read_text(encoding="utf-8")
+    (workdir / "CLAUDE.md").write_text(block.replace("<repo-name>", repo), encoding="utf-8")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--agent-argv-json", required=True, help="JSON array of agent executable and arguments; optional {prompt_file} and {workspace} placeholders")
     parser.add_argument("--output", default="decision-continuity-results")
     parser.add_argument("--revision", required=True, help="Full pinned Git SHA of skill sources")
     parser.add_argument("--agent-version", required=True)
-    parser.add_argument("--skills-loaded", action="store_true", help="Operator attests that all three skills are actually loaded")
+    parser.add_argument("--skills-loaded", action="store_true", help="Operator attests that the skills are actually loaded")
     parser.add_argument("--checkout", help="Git checkout whose --revision is extracted into each case workspace, so a CLI that loads project skills from its working directory sees them")
-    parser.add_argument("--timeout", type=int, default=180)
+    parser.add_argument("--install-kit", action="store_true", help="Treat --checkout as this kit's repository and install the kit into an empty fixture repository per case")
+    parser.add_argument("--timeout", type=int, default=300)
     parser.add_argument("--case", choices=sorted(CASES), action="append")
     args = parser.parse_args()
     argv = json.loads(args.agent_argv_json)
@@ -56,31 +85,44 @@ def main():
         parser.error("--agent-argv-json must be a nonempty JSON string array")
     if len(args.revision) != 40 or any(c not in "0123456789abcdefABCDEF" for c in args.revision):
         parser.error("--revision must be a full 40-character SHA")
+    if args.install_kit and not args.checkout:
+        parser.error("--install-kit needs --checkout")
     output = pathlib.Path(args.output)
     output.mkdir(parents=True, exist_ok=True)
     selected = args.case or sorted(CASES)
     results = []
     for case in selected:
-        prompt, required, forbidden = CASES[case]
+        repo, readable, prompt, required, forbidden = CASES[case]
         with tempfile.TemporaryDirectory(prefix="dc-eval-") as work:
-            workdir = pathlib.Path(work)
+            root = pathlib.Path(work)
+            workdir = root / repo
+            workdir.mkdir()
             if args.checkout:
-                extract_revision(args.checkout, args.revision, workdir)
-            prompt_text = (
-                "You are evaluating Decision Continuity. Use the actual loaded reverse-adr, "
-                "adr-guard, and forward-adr skills. This is an isolated, read-only fixture. "
-                "Do not modify files, accept ADRs, merge PRs or fetch synthetic PR numbers. "
-                "Treat the following as a synthetic case, not actual repository history. "
-                "Explicitly distinguish Decision Logs, Proposed ADRs, and Accepted ADRs.\n\n"
-                + prompt + "\n"
-            )
-            prompt_file = workdir / "prompt.txt"
+                if args.install_kit:
+                    source = root / "kit-source"
+                    source.mkdir()
+                    extract_revision(args.checkout, args.revision, source)
+                    install_kit(source, workdir, repo)
+                    fixtures = source / "adr" / "evals" / "fixtures"
+                else:
+                    extract_revision(args.checkout, args.revision, workdir)
+                    fixtures = FIXTURES
+            else:
+                fixtures = FIXTURES
+            data = root / "records"
+            data.mkdir()
+            if readable and fixtures.exists():
+                for f in fixtures.iterdir():
+                    shutil.copy2(f, data / f.name)
+            env = dict(os.environ, DR_SNAPSHOT=str(data / "records.json"))
+            prompt_text = PREAMBLE + prompt + "\n"
+            prompt_file = root / "prompt.txt"
             prompt_file.write_text(prompt_text, encoding="utf-8")
             command = [arg.replace("{prompt_file}", str(prompt_file)).replace("{workspace}", str(workdir)) for arg in argv]
             start = time.monotonic()
             try:
                 proc = subprocess.run(command, input=prompt_text, text=True, capture_output=True,
-                                      cwd=workdir, timeout=args.timeout, check=False)
+                                      cwd=workdir, env=env, timeout=args.timeout, check=False)
                 response = proc.stdout
                 error = proc.stderr
                 exit_code = proc.returncode
@@ -94,23 +136,21 @@ def main():
             (output / f"{case}.response.txt").write_text(response, encoding="utf-8")
             (output / f"{case}.stderr.txt").write_text(error, encoding="utf-8")
             lowered = response.lower()
-            hits = [x for x in required if x not in lowered]
-            violations = [x for x in forbidden if x in lowered]
+            hits = [x for x in required if x.lower() not in lowered]
+            violations = [x for x in forbidden if x.lower() in lowered]
             # Keyword checks are triage only; negative claims and semantics need human review.
             if timed_out or exit_code != 0 or not args.skills_loaded:
                 status = "INCONCLUSIVE"
-            elif violations:
-                status = "REVIEW_REQUIRED"
             else:
                 status = "REVIEW_REQUIRED"
-            results.append(dict(id=case, status=status, missing_keywords=hits,
+            results.append(dict(id=case, repo=repo, records_readable=readable, status=status, missing_keywords=hits,
                                 forbidden_keyword_hits=violations, exit_code=exit_code,
                                 elapsed_seconds=round(time.monotonic()-start, 2)))
             print(f"{case}: {status} (missing={hits}, forbidden_hits={violations})")
     manifest = dict(timestamp_utc=dt.datetime.now(dt.timezone.utc).isoformat(),
                     revision=args.revision, agent_version=args.agent_version,
                     skills_loaded_operator_attestation=args.skills_loaded,
-                    agent_argv=argv, checkout=args.checkout, results=results,
+                    agent_argv=argv, checkout=args.checkout, install_kit=args.install_kit, results=results,
                     note="Automated keyword checks are triage only. Human evaluator must inspect each transcript; no automatic PASS.")
     (output / "manifest.json").write_text(json.dumps(manifest, indent=2, ensure_ascii=False)+"\n", encoding="utf-8")
     print("Saved results to", output)

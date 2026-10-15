@@ -9,7 +9,7 @@ on:
         type: choice
         options: [create, comment]
       category:
-        description: "create のとき：カテゴリの slug か名前（Decisions / Decision flows / Q&A）"
+        description: "create のとき：カテゴリの slug か名前（Decisions / Decision flows / Decision logs / Q&A）"
         required: false
         default: decisions
       title:
