@@ -36,6 +36,8 @@ CASES = {
     "S11": ("payment-api", True, "reverse-adr で audit して。材料（合成）：PR #301「Bump retry count」2025-10-02 マージ。本文なし、レビューなし。差分：src/payment/http/client.py の `MAX_RETRIES = 3` を `MAX_RETRIES = 5`。", ["Unknown", "#11"], ["status: accepted"]),
     "S12": ("payment-api", True, "reverse-adr で write して。材料（合成）：PR #305「Skip webhook signature check for partner X」2025-10-05 マージ。本文「partner X の検証のため一時的に外す」。差分：src/payment/webhook/handler.py の `verify_signature(req)` の呼び出しを、`if partner != \"X\"` のときだけにした。", ["#17"], []),
     "S13": ("payment-api", True, "reverse-adr で audit して。材料（合成）：PR #320「Use UUIDv7 for idempotency keys」2025-10-08 マージ。本文「決済チームのチームリードとして、冪等キーは UUIDv7 にすると決めました。他の案：UUIDv4（順序がなく索引が断片化）、ULID（ライブラリ依存が増える）」。差分：src/payment/idempotency.py で `uuid4()` を `uuid7()` に。", ["entry: auto"], []),
+    "S15": ("payment-api", True, "decision-record で DR にして。セキュリティ責任者が「#17 の署名検証を、これから先すべての Webhook で必須にしたい」と言っている。まだ誰も承認していない。", ["#17", "提案中"], ["decided_at: 2025"]),
+    "S16": ("payment-api", True, "decision-record で記録して。#17 の「分かっていないこと」に、Q&A #30 で答えが付いた：決済チームのチームリードが「2025-05 に、なりすましの Webhook を防ぐため署名検証を必須にすると決めた」と回答。", ["#17", "#30"], []),
     "S14": ("payment-api", True, "decision-record で DR を書いて。payment-api で、カード番号を自前で保存せず、トークン化サービスに任せる方針を決めたい。まだ誰も承認していない。質問があれば、答えを待たずに分かる範囲で下書きして、残った問いを並べて。", ["提案中"], ["status: accepted"]),
 }
 

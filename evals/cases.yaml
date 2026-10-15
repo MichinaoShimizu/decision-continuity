@@ -117,3 +117,16 @@ cases:
     must_not:
       - edit the body or open a new DR for the same decision
 
+  - id: odr-log-to-decision-no-backdate
+    input: |
+      Decision log #17 says webhook signature verification was added in 2025-05; the rationale is unknown.
+      The security lead now says: "From now on, every webhook must verify signatures." Nobody has approved it yet.
+      Make this a decision.
+    must:
+      - draft a new proposed DR that cites #17 as the observation it builds on
+      - leave decided_at empty until approval, then use the approval date, not 2025-05
+      - plan a "**決定になった**" comment on #17 once the DR exists
+    must_not:
+      - edit or close Decision log #17
+      - mark the DR accepted or date it 2025-05
+

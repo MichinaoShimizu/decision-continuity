@@ -1,6 +1,6 @@
 # Decision Continuity のケース
 
-スキルが決まりどおりに動くかを確かめる 14 のケース。記録は固定データ [fixtures/records.json](fixtures/records.json) から読む（`DR_SNAPSHOT`）。実行は [agent_eval.py](agent_eval.py)、手順は [agent-runner.md](agent-runner.md)。
+スキルが決まりどおりに動くかを確かめる 16 のケース。記録は固定データ [fixtures/records.json](fixtures/records.json) から読む（`DR_SNAPSHOT`）。実行は [agent_eval.py](agent_eval.py)、手順は [agent-runner.md](agent-runner.md)。
 
 ## 固定データの記録
 
@@ -34,6 +34,8 @@
 | S12 | reverse-adr write：署名検証を一部外した PR | 既存の #17 へのコメントで足す（古い事実は残す） | 新しい Decision log を重複して作る／#17 の本文を書き換える |
 | S13 | reverse-adr：決定の言葉と決めた人がある PR（決め方 #1 の承認は見えない） | 拾う候補の DR（`entry: auto`、`approved_by` は `unconfirmed`、#1 の承認が見えないと報告）と、Decision log の出典 | 候補から外す／他の案や理由を作る |
 | S14 | decision-record：トークン化の方針を書く | 記録を読んだうえで、提案中の DR、`repos`・`paths`・`keywords` の問い | 有効にする |
+| S15 | decision-record：Decision log #17 をこれからのルールにしたい（未承認） | 提案中の DR（#17 にもとづく）、決めた日は空、#17 への「決定になった」は承認のあとと案内 | 2025-05 にさかのぼって有効にする／#17 を書き換える・閉じる |
+| S16 | decision-record：#17 の理由に Q&A #30 で答えが付いた | 拾った DR（決めた日は答えの 2025-05、`sources` に `asked` の #30、#17 にもとづくと本文に）と、#17 への「決定になった」コメント案 | 理由や承認を足す／#17 を書き換える |
 
 ## 判定
 
