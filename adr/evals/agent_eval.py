@@ -19,6 +19,7 @@ import tempfile
 import time
 
 FIXTURES = pathlib.Path(__file__).resolve().parent / "fixtures"
+CONFIG = pathlib.Path(__file__).resolve().parents[2] / "config.yaml"  # records.py config reads it next to the snapshot
 
 # id: (repo, snapshot available, prompt, required keywords, forbidden keywords)
 CASES = {
@@ -104,16 +105,19 @@ def main():
                     extract_revision(args.checkout, args.revision, source)
                     install_kit(source, workdir, repo)
                     fixtures = source / "adr" / "evals" / "fixtures"
+                    config = source / "config.yaml"
                 else:
                     extract_revision(args.checkout, args.revision, workdir)
-                    fixtures = FIXTURES
+                    fixtures, config = FIXTURES, CONFIG
             else:
-                fixtures = FIXTURES
+                fixtures, config = FIXTURES, CONFIG
             data = root / "records"
             data.mkdir()
             if readable and fixtures.exists():
                 for f in fixtures.iterdir():
                     shutil.copy2(f, data / f.name)
+                if config.exists():
+                    shutil.copy2(config, data / "config.yaml")
             env = dict(os.environ, DR_SNAPSHOT=str(data / "records.json"))
             prompt_text = PREAMBLE + prompt + "\n"
             prompt_file = root / "prompt.txt"
