@@ -66,6 +66,7 @@
 - **スキル**：`decision-record`（`.claude/skills/` と `.kiro/skills/`）
 - **設定**：`config.yaml`（役割の一覧、拾ってよいチャンネルなど）
 - **評価ケース**：`evals/cases.yaml`
+- **ADR キット**：`adr/`。コードのリポジトリに設計判断を残すための別の仕組み（[adr/README.md](adr/README.md)）
 
 ## 使い方
 
