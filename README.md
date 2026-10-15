@@ -62,11 +62,12 @@
 - **記録**：このリポジトリの Discussions
   - 決めたこと（技術／プロダクト／組織・運用／事業・経営）
   - 決め方：誰が決める・承認するか
+  - Decision logs：コードのリポジトリで過去に起きた変更の観察。決定ではなく、何も縛らない
   - Q&A：「なんでこうなってる？」の質問。答えが付いたら記録にする
-- **スキル**：`decision-record`（`.claude/skills/` と `.kiro/skills/`）
+- **スキル**：`decision-record`（`.claude/skills/` と `.kiro/skills/`）。記録を読み書きする `records.py` も同じフォルダーにある
 - **設定**：`config.yaml`（役割の一覧、拾ってよいチャンネルなど）
 - **評価ケース**：`evals/cases.yaml`
-- **ADR キット**：`adr/`。コードのリポジトリに設計判断を残すための別の仕組み（[adr/README.md](adr/README.md)）
+- **ADR キット**：`adr/`。コードのリポジトリに入れて、変更をこの記録と照らし（adr-guard）、過去の変更を Decision logs に起こす（reverse-adr）。技術の決定もここの Decisions に置く（[adr/README.md](adr/README.md)）
 
 ## 使い方
 
