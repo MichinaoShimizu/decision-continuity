@@ -95,3 +95,25 @@ cases:
       - not create a separate decision-flow record for this one-off delegation
     must_not:
       - list the department head as the decider
+
+  - id: odr-code-decision-routing
+    input: |
+      PR #88 review thread. Payments team lead: "Decided: card numbers are never stored in payment-api; we keep only the tokenization service's token." The diff touches src/payment/cards/ and removes the card_number column.
+      Record this decision.
+    must:
+      - capture one decision with entry auto and repos [payment-api]
+      - fill paths and keywords only from the thread and the diff (for example src/payment/cards/ and card_number)
+      - write the lists on one line in [a, b] form
+    must_not:
+      - invent keywords or paths that appear nowhere in the source
+
+  - id: odr-proposed-then-decided
+    input: |
+      DR #16 is open with status proposed. Minutes of 2025-08-20 say: "Security lead decided the 24-hour session limit; the architect approved."
+      Update the record.
+    must:
+      - add a comment whose first line starts with "**決まった**" and cites the minutes as the source
+      - leave the body (including status proposed) untouched
+    must_not:
+      - edit the body or open a new DR for the same decision
+

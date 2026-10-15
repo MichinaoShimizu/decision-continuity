@@ -1,81 +1,61 @@
-# Decision Continuity: Decision Logs, ADR Guard, and Forward ADR
+# Decision Continuity：決定と、起きたことを分けて残す
 
-Decision Continuity keeps **what happened** separate from **what has been deliberately decided**. It is repository-agnostic and does not require any particular programming language or agent.
+起きたこと（Decision log）と、意図して決めたこと（DR）を分けて残す。どちらもこのリポジトリの Discussions に置き、コードのリポジトリのエージェントが `records.py` で読む。
 
-## Two distinct records
+## 記録の種類
 
-| | Decision Log | Architecture Decision Record (ADR) |
+| | Decision log | 決定（DR） |
 |---|---|---|
-| Question | What happened, what was explored, and what remains unknown? | What should we do, why, and under whose authority? |
-| Evidence | PRs, code, tests, reviews, alternatives explored, reversals | Explicit proposed or approved choice, alternatives, consequences, owner |
-| Lifecycle | Historical or ongoing; may remain uncertain | Proposed, Accepted, Rejected, Superseded, Deprecated |
-| Authority | Context and evidence, **not a rule** | Only an applicable **Accepted** decision constrains future changes |
-| Maintenance | Append findings and corrections with provenance | New ADR for material changed decisions; preserve historical rationale |
+| 問い | 何が起きたか、何が分かっていないか | これからどうするか、なぜか、誰が決めたか |
+| 材料 | PR、コード、テスト、レビュー、戻した変更 | 決定の言葉、決めた人、他の案、前提 |
+| 状態 | なし（過去の観察） | 提案中 → 有効 → 終了 |
+| 縛るか | 縛らない | 有効なものだけ縛る |
+| 育て方 | 後の変化や訂正をコメントで足す | 結果・崩れた前提・探し方の直しをコメントで足す。決め直すときは新しい DR |
 
-A merged PR proves a change occurred, **not** that an architectural policy was formally approved. An observed implementation is never automatically promoted to an Accepted ADR. A Proposed ADR is not a constraint.
+マージされた PR は変更が入った証拠で、方針が決まった証拠ではない。見えている実装から、有効な DR を作らない。
 
-## End-to-end workflow
+## 全体の流れ
 
 ```mermaid
 flowchart TD
-    S["PRs, issues, code, tests, discussions"] --> R["Reverse analysis: verify claims and uncertainty"]
-    R --> L[("Decision Logs + evidence ledger")]
-    L --> Q{"Explicit material decision needed?"}
-    Q -- "No" --> K["Keep Decision Log; no invented policy"]
-    Q -- "Yes" --> P["Forward ADR: Proposed + owner + tradeoffs"]
-    P --> H{"Human decision"}
-    H -- "Accept" --> A[("Accepted ADR + routing index")]
-    H -- "Reject or defer" --> L
-    A --> G["ADR Guard: check relevant changes"]
-    L -. "context and unknowns" .-> G
-    G -- "preserves decision" --> I["Implement and verify"]
-    G -- "intentional change" --> P
+    S["PR・issue・コード・テスト"] --> R["reverse-adr：確かさを分けて起こす"]
+    R --> L[("Decision logs")]
+    R -- "決定の言葉と決めた人がある" --> P
+    L -- "理由が Unknown" --> Q["Q&A：知っていそうな役割に聞く"]
+    Q -- "答えが付いた" --> P["decision-record：拾う／書く"]
+    P --> D[("DR：提案中")]
+    D -- "人が決めた（決まった のコメント）" --> A[("DR：有効")]
+    A --> G["adr-guard：変更を照らす"]
+    L -. "文脈と分かっていないこと" .-> G
+    G -- "守る" --> I["実装して確かめる"]
+    G -- "意図してぶつかる" --> P
     I --> S
 ```
 
-The ADR index routes by path **and meaning**; the Decision Log index provides historical evidence. ADR Guard can consult both but must distinguish the authority of an Accepted ADR from the informational value of a Decision Log.
+## 探し方
 
-## Decision authority and uncertainty
+索引のファイルは持たない。各 DR の記録データが索引の 1 行の代わりになる。
 
-```mermaid
-flowchart LR
-    O["Observed implementation change"] --> DL["Decision Log: observed fact"]
-    DL --> U["Unknown rationale stays unknown"]
-    DL --> C{"Documented decision and owner review?"}
-    C -- "No" --> DL
-    C -- "Yes" --> PA["Proposed ADR"]
-    PA --> AC["Accepted only after human approval"]
-    AC --> GU["ADR Guard checks applicability"]
-```
+| 索引にあったもの | 移した先 |
+|---|---|
+| 決定の一文 | タイトル |
+| パス | `paths`（前方一致） |
+| キーワード | `keywords`（決定の文に出てこないのに、変更の側に出てくる言葉。コードの識別子と言い換え） |
+| 状態 | 開いているか閉じているか、`status`、「決まった」のコメント |
+| どのリポジトリか | `repos`（全リポジトリなら `all`） |
 
-**Uncertainty Preservation** means keeping confirmed behavior, historical rationale, test evidence, and unresolved questions on separate axes. A later explicit ADR does not rewrite why a historical change occurred.
+adr-guard は `records.py index --repo <名前>` で、関係する記録を全部並べ、パス・キーワード・意味の三つで照らす。パスが変わった、キーワードが足りなかったときは、「探し方を更新」のコメントで最新の一覧を足す。本文は書き換えない。
 
-## Minimal artifact contract
+## 読めなかったとき
 
-- **Decision Log**: stable ID, topic/scope, historical observations, links to source evidence, historical date if verified (otherwise Unknown), confidence labels (Documented/Observed/Inferred/Unknown), reversals, open questions and verification limits. A Decision Log does not need a fictitious decision owner, ADR supersession status or rejected alternatives. Its historical date must not be confused with ADR approval.
-- **ADR**: stable ID, Status, Date (or Unknown), Scope, owner, Context, proposed or accepted Decision, actual Alternatives, Consequences, Verification, Related/Supersedes links. Only an authorized owner can accept or reject.
-- **ADR index**: only actual ADRs and their applicability, status and supersession. A legacy compatibility redirect is not an ADR entry.
-- **Decision Log index**: historical records, topic/path hints, evidence status and references to related ADRs where genuinely established.
+`records.py` は、読めなかったとき終了コード 2 を返す。adr-guard は「関係する決定はない」とせず、「読めなかった」と報告する。黙って進むのが一番危ないため。
 
-## Agent responsibilities
+## 限界
 
-1. **Reverse ADR / reverse design analysis** reconstructs Decision Logs by default. It may identify *candidate* decisions, but must not assert acceptance or create binding policy from code alone.
-2. **ADR Guard** reads the ADR index for relevant Accepted decisions, and consults Decision Logs for context or uncertainty. Proposed ADRs are review inputs, not enforced rules.
-3. **Forward ADR** drafts material new decisions with alternatives and consequences. Human review determines acceptance. Intentional departures create a new ADR and reciprocal supersession links.
-4. **Periodic audit** checks links, routing, evidence confidence, supersession, drift and missing review. Routine changes need no ceremonial ADR.
+- コードの変更と記録の更新は同じ PR に入らない。adr-guard は PR に「マージのあとに追記が要る記録」を書く。
+- 誰が有効にしたかは、「決まった」のコメントの元の場所と、`approved_via` の決め方で確かめる。GitHub の権限は、決める役割を表していない。
+- 意味で照らす部分は、エージェントの読みに頼る。合う記録がないことは、安全の証拠ではない。
 
-## Adoption and migration
+## スキルと評価
 
-1. Inventory existing records; classify historical observations as Decision Logs unless formal decision authority is evidenced.
-2. Preserve historical source links and stable legacy URLs through compatibility redirects; never silently renumber old records.
-3. Create separate Decision Log and ADR indexes. Move old evidence to Decision Logs without claiming a retrospective ADR was Accepted.
-4. Update agent instructions and PR review conventions to check Accepted ADRs, then consult Decision Logs when useful.
-5. Record new durable decisions as Proposed ADRs and request explicit owner review before acceptance.
-
-## Success criteria and limitations
-
-Useful signals include fewer accidental reversals of accepted constraints, faster understanding of historical design, and fewer false-positive governance warnings. These are hypotheses, not measured outcomes. Neither a merged PR nor a test file alone proves approval or a passing test. Routing indexes may miss semantic dependencies; privacy, identity, compatibility and data-meaning changes require proportionate cross-cutting review.
-
-## Skills and evaluation
-
-The skills are [reverse-adr](skills/reverse-adr/SKILL.md), [adr-guard](skills/adr-guard/SKILL.md) and [forward-adr](skills/forward-adr/SKILL.md), sharing the [Decision Continuity contract](skills/decision-continuity-contract.md). The [scenario matrix](evals/scenario-tests.md) holds twelve contract checks for historical evidence, unknown rationale, Proposed versus Accepted decisions, ADR Guard applicability, reversals, test evidence and legacy references; the [runner](evals/agent-runner.md) executes them against a live agent.
+スキルは [adr-guard](skills/adr-guard/SKILL.md) と [reverse-adr](skills/reverse-adr/SKILL.md)、共通の決まりは [decision-continuity-contract.md](skills/decision-continuity-contract.md)。決定を書くのは `decision-record`。[ケースの一覧](evals/scenario-tests.md) と [実行スクリプト](evals/agent-runner.md) で、実際のエージェントで確かめる。

@@ -70,6 +70,26 @@ class RunnerSmokeTests(unittest.TestCase):
                 response = (pathlib.Path(directory) / "S01.response.txt").read_text()
                 self.assertIn("pinned skill", response)
 
+    def test_snapshot_env_points_to_fixture_or_missing_file(self):
+        agent = [sys.executable, "-c", "import os, pathlib; print(pathlib.Path(os.environ['DR_SNAPSHOT']).exists())"]
+        _, _, readable = self.invoke(agent, "--case", "S01")
+        _, _, unreadable = self.invoke(agent, "--case", "S08")
+        self.assertIn("True", readable["S01.response.txt"])
+        self.assertIn("False", unreadable["S08.response.txt"])
+
+    def test_install_kit_builds_fixture_repository(self):
+        source = pathlib.Path(__file__).resolve().parents[2]
+        revision = subprocess.run(["git", "-C", str(source), "rev-parse", "HEAD"], capture_output=True,
+                                  text=True, check=True).stdout.strip()
+        agent = [sys.executable, "-c", "import pathlib; print(sorted(p.name for p in pathlib.Path('.claude/skills').iterdir())); print(open('CLAUDE.md').read())"]
+        result, _, responses = self.invoke(agent, "--revision", revision, "--checkout", str(source),
+                                           "--install-kit", "--case", "S05")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        response = responses["S05.response.txt"]
+        for name in ("adr-guard", "reverse-adr", "decision-record", "decision-continuity-contract.md"):
+            self.assertIn(name, response)
+        self.assertIn("`order-service`", response)
+
     def test_invalid_revision_rejected(self):
         agent = [sys.executable, "-c", "print('x')"]
         with tempfile.TemporaryDirectory() as directory:

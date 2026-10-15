@@ -1,0 +1,43 @@
+title: "[リポジトリ名] 何が変わったか"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        過去に起きた変更の観察を残します。決定ではなく、何も縛りません。ふつうは reverse-adr スキルが書きます。
+        理由が記録に書かれていなければ「Unknown」と書き、推測で埋めないでください。
+  - type: textarea
+    id: observed
+    attributes:
+      label: 起きたこと
+      description: いつ、何が、どう変わったか。PR・コミットのリンクと一緒に
+    validations:
+      required: true
+  - type: textarea
+    id: rationale
+    attributes:
+      label: 書かれていた理由
+      description: 記録に書かれていなければ Unknown
+    validations:
+      required: true
+  - type: textarea
+    id: unknowns
+    attributes:
+      label: 分かっていないこと
+  - type: input
+    id: repos
+    attributes:
+      label: repos
+      placeholder: "[payment-api]"
+    validations:
+      required: true
+  - type: input
+    id: paths
+    attributes:
+      label: paths
+      placeholder: "[src/payment/http/]"
+  - type: input
+    id: keywords
+    attributes:
+      label: keywords
+      description: 差分に出てくる識別子や言い換え
+      placeholder: "[MAX_RETRIES, retry]"
