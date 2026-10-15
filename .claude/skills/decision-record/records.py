@@ -5,7 +5,7 @@
   records.py show NUMBER                   本文とコメント全部
   records.py config                        記録のリポジトリの config.yaml
   records.py create --category NAME --title TITLE --body-file FILE
-  records.py comment NUMBER --body-file FILE
+  records.py comment NUMBER --body-file FILE   （FILE が - なら標準入力）
 
 記録のリポジトリは --store、環境変数 DR_STORE、このファイルの隣の STORE の順で決める。
 環境変数 DR_SNAPSHOT に JSON のパスがあれば、GitHub ではなくそれを読み、書き込みはしない（評価用）。
@@ -187,6 +187,10 @@ def cmd_config(args):
     print(gh(["api", f"repos/{owner}/{name}/contents/config.yaml", "-H", "Accept: application/vnd.github.raw"]))
 
 
+def read_body(path):
+    return sys.stdin.read() if path == "-" else pathlib.Path(path).read_text(encoding="utf-8")
+
+
 def write(args, mutation_text):
     if os.environ.get("DR_SNAPSHOT"):
         print("（評価中のため書いていない。書く内容）\n" + mutation_text)
@@ -195,7 +199,7 @@ def write(args, mutation_text):
 
 
 def cmd_create(args):
-    body = pathlib.Path(args.body_file).read_text(encoding="utf-8")
+    body = read_body(args.body_file)
     if write(args, f"create [{args.category}] {args.title}\n\n{body}") is not None:
         return 0
     owner, name = store(args)
@@ -214,7 +218,7 @@ def cmd_create(args):
 
 
 def cmd_comment(args):
-    body = pathlib.Path(args.body_file).read_text(encoding="utf-8")
+    body = read_body(args.body_file)
     if write(args, f"comment #{args.number}\n\n{body}") is not None:
         return 0
     owner, name = store(args)

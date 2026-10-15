@@ -60,7 +60,7 @@ PR のタイトルと要約で、設計・データの意味・認証・個人�
 
 ### 5. 書く（`write` のときだけ）
 
-`python3 .claude/skills/decision-record/records.py create --category "Decision logs" --title "[<リポジトリ名>] <何が変わったか>" --body-file <ファイル>`、追記は `records.py comment <番号> --body-file <ファイル>`。投稿したら出てきた番号を確かめてから「保存した」と言う。書けないときは、貼れる形で返して「まだ保存していません」と書く。
+`python3 .claude/skills/decision-record/records.py create --category "Decision logs" --title "[<リポジトリ名>] <何が変わったか>" --body-file <ファイル>`、追記は `records.py comment <番号> --body-file <ファイル>`。ファイルを作れないときは `--body-file -` で本文を標準入力から渡す。投稿したら出てきた番号を確かめてから「保存した」と言う。書けないときは、貼れる形で返して「まだ保存していません」と書く。
 
 #### Decision log の本文
 
