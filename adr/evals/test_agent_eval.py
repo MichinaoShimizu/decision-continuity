@@ -74,6 +74,9 @@ class RunnerSmokeTests(unittest.TestCase):
         agent = [sys.executable, "-c", "import os, pathlib; print(pathlib.Path(os.environ['DR_SNAPSHOT']).exists())"]
         _, _, readable = self.invoke(agent, "--case", "S01")
         _, _, unreadable = self.invoke(agent, "--case", "S08")
+        config = [sys.executable, "-c", "import os, pathlib; print(pathlib.Path(os.environ['DR_SNAPSHOT']).with_name('config.yaml').read_text())"]
+        _, _, with_config = self.invoke(config, "--case", "S14")
+        self.assertIn("roles:", with_config["S14.response.txt"])
         self.assertIn("True", readable["S01.response.txt"])
         self.assertIn("False", unreadable["S08.response.txt"])
 
