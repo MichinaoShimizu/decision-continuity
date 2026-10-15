@@ -114,6 +114,10 @@ def effective(rec):
     notes = []
     for c in rec.get("comments", []):
         body = c["body"].lstrip()
+        first = body.split("\n", 1)[0].replace("*", "").strip()
+        for mark in (ROUTING_MARK, DECIDED_MARK, PREMISE_MARK):
+            if first.startswith(mark.strip("*")):
+                body = mark + body.split(mark.strip("*"), 1)[1]
         if body.startswith(ROUTING_MARK):
             data.update(parse_fields(body, LIST_KEYS))
             notes.append(f"探し方を更新 {c['created_at'][:10]}")

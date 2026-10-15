@@ -31,7 +31,7 @@ description: Capture, find, and explain organizational decisions as decision rec
 4. 「誰が決める・承認するか」を定めたものは `kind: flow`。決定がどの決め方を通ったか分かれば `approved_via` にその番号を入れる。
 5. 元に書かれていないことは埋めない。項目のキーを `unconfirmed` に入れる。
 6. 拾ったものは `entry: auto`。本人の確認は待たない。人が会話で伝えてきた決定は `entry: explicit`、元の場所は `manual`。
-7. PR のマージは「変更が入った」証拠で、「方針として決めた」証拠ではない。PR から拾うのは、PR やレビューに決定の言葉（「〜にする」「〜と決めた」）と決めた人がいるときだけ。変更しか分からないものは DR にせず、`reverse-adr` の Decision log にする。
+7. PR のマージは「変更が入った」証拠で、「方針として決めた」証拠ではない。PR から拾うのは、PR やレビューに決定の言葉（「〜にする」「〜と決めた」）と決めた人がいるときだけ。変更しか分からないものは DR にせず、`reverse-adr` の Decision log にする。決め方（`kind: flow`）が求める承認が元の場所に見えなくても、拾うことはやめない。見えない承認は `approved_by` を `unconfirmed` に入れ、「#番号 の決め方の承認が見えない」と添える。決め方を守ったかどうかは人が判断する。
 8. コードに関係する決定なら、`repos`・`paths`・`keywords` を元に書かれている範囲で埋める（下の「探し方」）。
 
 ## 入り方
@@ -95,7 +95,7 @@ Decision logs カテゴリの記録には状態がない。過去の観察で、
 
 記録は追記だけで育てる。本文は投稿したあと書き換えない。結果も崩れた前提も、コメントで追記する（例：「**前提が崩れた**（YYYY-MM-DD）：組織長が承認の判断を期限内に返せる → 3週間返らない例が続いた」）。
 
-コメントの一行目を次の印で始めると、本文の記録データに重ねて読まれる。それ以外のコメントは状態を変えない。
+コメントの一行目を次の印で始めると、本文の記録データに重ねて読まれる。それ以外のコメントは状態を変えない。本文の `status: proposed` は、決まったあともそのまま残る（本文は書き換えない）。直す必要はない。
 
 - **決まった**：提案中の DR が決まったとき。「**決まった**（YYYY-MM-DD）：決めた人（役割）、承認した人、元の場所」。元の場所に承認の事実がないなら書かない。
 - **探し方を更新**：パスが変わった、キーワードが足りなかったとき。変える項目だけを、**最新の一覧まるごと**で書く。
@@ -129,8 +129,8 @@ Decision logs カテゴリの記録には状態がない。過去の観察で、
 - **本文**：人が読む部分を先に、記録データ（YAML）を最後に折りたたんで置く。形は下の「本文の書き方」。
 - **状態**：上の「状態」のとおり。置き換えたら「outdated」で閉じる。やめたら「resolved」で閉じ、理由をコメントする。
 - **Q&A**：答えが付いた質問は「拾う」に回し、新しい DR の `sources` に `asked` としてその Q&A を入れる。
-- **読み方**：このフォルダーの `records.py` を使う。`index --repo <名前>` で探すための一覧、`show <番号>` で本文とコメント、`config` で記録のリポジトリの `config.yaml`。終了コード 2 は「読めなかった」で、「記録がない」ではない。
-- **書き方**：`records.py create --category <名前> --title <タイトル> --body-file <ファイル>`、追記は `records.py comment <番号> --body-file <ファイル>`（`gh` でログインしていれば書ける）。GraphQL を使える環境ならそのまま書いてもよい。使えない環境で GitHub Actions を起動できるなら、ワークフロー `discussion`（`.github/workflows/discussion.yml`）を起動する。新しい DR は `action: create` と `category`（`decisions` / `decision-flows` / `decision-logs` / `q-a`）・`title`・`body`、追記は `action: comment` と `number`・`body`。起動したら、実行結果に出る番号を確かめてから「保存した」と伝える。
+- **読み方**：リポジトリのルートで `python3 .claude/skills/decision-record/records.py <コマンド>` を実行する（絶対パスにしない。許可の設定がこの形で書かれている）。`index --repo <名前>` で探すための一覧、`show <番号>` で本文とコメント、`config` で記録のリポジトリの `config.yaml`。終了コード 2 は「読めなかった」で、「記録がない」ではない。
+- **書き方**：`python3 .claude/skills/decision-record/records.py create --category <名前> --title <タイトル> --body-file <ファイル>`、追記は同じく `comment <番号> --body-file <ファイル>`（`gh` でログインしていれば書ける）。GraphQL を使える環境ならそのまま書いてもよい。使えない環境で GitHub Actions を起動できるなら、ワークフロー `discussion`（`.github/workflows/discussion.yml`）を起動する。新しい DR は `action: create` と `category`（`decisions` / `decision-flows` / `decision-logs` / `q-a`）・`title`・`body`、追記は `action: comment` と `number`・`body`。起動したら、実行結果に出る番号を確かめてから「保存した」と伝える。
 - **書けないとき**：Discussions に書く手段がない環境では、タイトルと本文をそのまま貼れる形で返し、「まだ保存していません」と明記する。ほかのリポジトリに書いて代わりにしない。
 
 ### 本文の書き方
