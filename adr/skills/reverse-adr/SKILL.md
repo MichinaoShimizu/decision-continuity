@@ -58,6 +58,8 @@ PR のタイトルと要約で、設計・データの意味・認証・個人�
 | 大事な変更なのに理由が Unknown | Decision log の「分かっていないこと」に問いを書く。`write` では、知っていそうな役割に向けた Q&A を一つ立ててよい（Decision log の番号を書く） |
 | 有効な DR とぶつかる | 報告の先頭。DR にはコメントしない（人が決める） |
 
+Decision log を決定にする道筋は `decision-record` の「Decision log から決定にする」。reverse-adr は Decision log を DR に書き換えない。
+
 ### 5. 書く（`write` のときだけ）
 
 `python3 .claude/skills/decision-record/records.py create --category "Decision logs" --title "[<リポジトリ名>] <何が変わったか>" --body-file <ファイル>`、追記は `records.py comment <番号> --body-file <ファイル>`。ファイルを作れないときは `--body-file -` で本文を標準入力から渡す。投稿したら出てきた番号を確かめてから「保存した」と言う。書けないときは、貼れる形で返して「まだ保存していません」と書く。

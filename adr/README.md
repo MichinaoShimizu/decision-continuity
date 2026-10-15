@@ -29,7 +29,7 @@
 | `skills/reverse-adr/` | PR・issue・コード・テストから、過去の変更を Decision log に起こす |
 | `skills/decision-continuity-contract.md` | スキルが共通で守るルール |
 | `templates/agent-instructions.md` | `CLAUDE.md` に足す指示 |
-| `evals/` | スキルを試す 14 のケース、固定データ、実行の手順、実行スクリプト |
+| `evals/` | スキルを試す 16 のケース、固定データ、実行の手順、実行スクリプト |
 
 新しい決定を書くこと、決め直すことは `decision-record`（`.claude/skills/decision-record/`）の「書く」「決め直す」が受け持つ。記録を読み書きするのは同じフォルダーの `records.py`。
 
@@ -47,7 +47,8 @@
 - 「この変更、決定とぶつからない？」→ adr-guard
 - 「この方針を変えたいので DR にして」→ decision-record（書く）
 - 「認証まわりがなぜこうなったか、履歴から起こして」→ reverse-adr（audit / write）
+- 「この Decision log の形を、これからのルールにしたい」→ decision-record（Decision log から決定にする）
 
 ## 評価
 
-[evals/scenario-tests.md](evals/scenario-tests.md) の 14 のケースで、スキルが決まりどおりに動くかを確かめる。記録は固定データ（`evals/fixtures/`）から読むので、GitHub には触れない。実際のエージェントで回すときは [evals/agent-runner.md](evals/agent-runner.md)。実行スクリプトのテストは、`adr/evals/` を変えた PR で GitHub Actions が回す。
+[evals/scenario-tests.md](evals/scenario-tests.md) の 16 のケースで、スキルが決まりどおりに動くかを確かめる。記録は固定データ（`evals/fixtures/`）から読むので、GitHub には触れない。実際のエージェントで回すときは [evals/agent-runner.md](evals/agent-runner.md)。実行スクリプトのテストは、`adr/evals/` を変えた PR で GitHub Actions が回す。
