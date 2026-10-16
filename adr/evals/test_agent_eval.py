@@ -89,7 +89,7 @@ class RunnerSmokeTests(unittest.TestCase):
                                            "--install-kit", "--case", "S05")
         self.assertEqual(result.returncode, 0, result.stderr)
         response = responses["S05.response.txt"]
-        for name in ("adr-guard", "reverse-adr", "decision-record", "decision-continuity-contract.md"):
+        for name in ("adr-guard", "decision-log", "decision-record", "decision-continuity-contract.md"):
             self.assertIn(name, response)
         self.assertIn("`order-service`", response)
 
@@ -109,7 +109,7 @@ class KiroTemplateTests(unittest.TestCase):
     """Kiro 用の薄い SKILL.md が、正本と同じ name と description を持つかを確かめる。"""
     ROOT = pathlib.Path(__file__).resolve().parents[2]
     SOURCES = {"adr-guard": "adr/skills/adr-guard/SKILL.md",
-               "reverse-adr": "adr/skills/reverse-adr/SKILL.md",
+               "decision-log": "adr/skills/decision-log/SKILL.md",
                "decision-record": ".claude/skills/decision-record/SKILL.md"}
 
     @staticmethod

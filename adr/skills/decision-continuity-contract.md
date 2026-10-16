@@ -1,6 +1,6 @@
 # Decision Continuity — 共通の決まり
 
-`adr-guard`・`reverse-adr`・`decision-record` が守る。
+`adr-guard`・`decision-log`・`decision-record` が守る。
 
 ## 記録の種類
 

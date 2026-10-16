@@ -7,7 +7,7 @@ description: Capture, find, and explain organizational decisions as decision rec
 
 組織の誰かが決めたことと、「誰が決める・承認するか」という決め方を、あとから探せる形で残す。記録（DR）は記録のリポジトリ（このリポジトリ。ほかのリポジトリからはこのフォルダーの `STORE` に書いたもの）の `records/` に、1 件 1 ファイルの Markdown で置く。答えはユーザーの言葉で返す。
 
-コードのリポジトリでは、ADR キット（`adr/`）の `adr-guard` がこの記録を読んで変更を確かめ、`reverse-adr` が過去の変更を Decision logs に起こす。
+コードのリポジトリでは、ADR キット（`adr/`）の `adr-guard` がこの記録を読んで変更を確かめ、`decision-log` が過去の変更を Decision logs に起こす。
 
 ## モード
 
@@ -32,7 +32,7 @@ description: Capture, find, and explain organizational decisions as decision rec
 4. 「誰が決める・承認するか」を定めたものは `kind: flow`。決定がどの決め方を通ったか分かれば `approved_via` にその番号を入れる。
 5. 元に書かれていないことは埋めない。項目のキーを `unconfirmed` に入れる。
 6. 拾ったものは `entry: auto`。本人の確認は待たない。人が会話で伝えてきた決定は `entry: explicit`、元の場所は `manual`。
-7. PR のマージは「変更が入った」証拠で、「方針として決めた」証拠ではない。PR から拾うのは、PR やレビューに決定の言葉（「〜にする」「〜と決めた」）と決めた人がいるときだけ。変更しか分からないものは DR にせず、`reverse-adr` の Decision log にする。決め方（`kind: flow`）が求める承認が元の場所に見えなくても、拾うことはやめない。見えない承認は `approved_by` を `unconfirmed` に入れ、「#番号 の決め方の承認が見えない」と添える。決め方を守ったかどうかは人が判断する。
+7. PR のマージは「変更が入った」証拠で、「方針として決めた」証拠ではない。PR から拾うのは、PR やレビューに決定の言葉（「〜にする」「〜と決めた」）と決めた人がいるときだけ。変更しか分からないものは DR にせず、`decision-log` の Decision log にする。決め方（`kind: flow`）が求める承認が元の場所に見えなくても、拾うことはやめない。見えない承認は `approved_by` を `unconfirmed` に入れ、「#番号 の決め方の承認が見えない」と添える。決め方を守ったかどうかは人が判断する。
 8. コードに関係する決定なら、`repos`・`paths`・`keywords` を元に書かれている範囲で埋める（下の「探し方」）。
 
 ## 入り方
@@ -135,7 +135,7 @@ Decision log はずっと Decision log のまま。書き換えも終了もし�
 |---|---|
 | 決めたこと | `records/decisions/`（Decisions） |
 | 決め方（kind: flow） | `records/decision-flows/`（Decision flows） |
-| 過去に起きた変更の観察（縛らない） | `records/decision-logs/`（Decision logs。書式は `reverse-adr`） |
+| 過去に起きた変更の観察（縛らない） | `records/decision-logs/`（Decision logs。書式は `decision-log`） |
 | 「なんで？」の質問 | `records/questions/`（Q&A） |
 
 - **番号**：ファイル名の先頭の 4 桁（`0042.md`、`0042-no-pii-in-logs.md`）がそのまま DR 番号（例：#42）。番号はフォルダーをまたいだ通し番号で、`records.py create` が次の番号を振る。手で作るときも、いちばん大きい番号の次にする。

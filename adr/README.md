@@ -26,7 +26,7 @@
 | 場所 | 中身 |
 |---|---|
 | `skills/adr-guard/` | 変更が有効な決定とぶつからないかを確かめる |
-| `skills/reverse-adr/` | PR・issue・コード・テストから、過去の変更を Decision log に起こす。`SKILL.md` 1 枚で、どのリポジトリでも動く |
+| `skills/decision-log/` | PR・issue・コード・テストから、過去の変更を Decision log に起こす。`SKILL.md` 1 枚で、どのリポジトリでも動く |
 | `skills/decision-continuity-contract.md` | スキルが共通で守るルール |
 | `templates/agent-instructions.md` | `CLAUDE.md`（Kiro なら steering）に足す指示 |
 | `templates/kiro/` | Kiro 用の薄い `SKILL.md`。中身は `.claude/skills/` の正本を読むように言うだけ |
@@ -41,15 +41,17 @@
 1. `adr/skills/` の中身と、このリポジトリの `.claude/skills/decision-record/` を、`.claude/skills/` に写す。ここが正本で、`records.py` もここに置く。Kiro も使うなら、`templates/kiro/` の中身を `.kiro/skills/` に写す（正本を指すだけの薄いファイルなので、中身を二重に持たない）。`decision-record/STORE` に記録のリポジトリ（`owner/decision-records`）が書いてある。
 2. `templates/agent-instructions.md` の内容を `CLAUDE.md`（Kiro なら steering）に足し、`<repo-name>` をそのリポジトリの名前にする。
 3. 記録のリポジトリを `git clone` できるようにしておく（非公開なら git の認証を通す）。`records.py` は読むたびにキャッシュへ最新を取ってくる。読めないと adr-guard は「読めなかった」と報告する。
-4. 記録を書く（reverse-adr の `write` など）なら、記録のリポジトリを手元にクローンし、`--store <パス>` か環境変数 `DR_STORE` でそのパスを渡す。
+4. 記録を書く（decision-log の `write` など）なら、記録のリポジトリを手元にクローンし、`--store <パス>` か環境変数 `DR_STORE` でそのパスを渡す。
 
-reverse-adr だけを使うなら、`adr/skills/reverse-adr/SKILL.md` を対象のリポジトリに写すだけでよい。写す先は Claude Code なら `.claude/skills/reverse-adr/SKILL.md`、Kiro なら `.kiro/skills/reverse-adr/SKILL.md`（両方使うなら両方）。`records.py` がなければ、既存の Decision log を `docs/decision-logs/` から読み、`write` でもそこに書く（形は組織の記録と同じなので、あとで移せる）。
+decision-log は以前 `reverse-adr` という名前だった。入れてあるなら、フォルダーを `decision-log` に置き換える。
+
+decision-log だけを使うなら、`adr/skills/decision-log/SKILL.md` を対象のリポジトリに写すだけでよい。写す先は Claude Code なら `.claude/skills/decision-log/SKILL.md`、Kiro なら `.kiro/skills/decision-log/SKILL.md`（両方使うなら両方）。`records.py` がなければ、既存の Decision log を `docs/decision-logs/` から読み、`write` でもそこに書く（形は組織の記録と同じなので、あとで移せる）。
 
 ## 使い方
 
 - 「この変更、決定とぶつからない？」→ adr-guard
 - 「この方針を変えたいので DR にして」→ decision-record（書く）
-- 「認証まわりがなぜこうなったか、履歴から起こして」→ reverse-adr（audit / write）
+- 「認証まわりがなぜこうなったか、履歴から起こして」→ decision-log（audit / write）
 - 「この Decision log の形を、これからのルールにしたい」→ decision-record（Decision log から決定にする）
 
 ## 評価
