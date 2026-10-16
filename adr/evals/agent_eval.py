@@ -33,7 +33,7 @@ CASES = {
     "S08": ("payment-api", False, "adr-guard で確かめて。差分：src/notify/sender.py に `logger.info(f\"receipt sent to {user.email}\")` を追加。", ["読めなかった"], ["関係する決定はない"]),
     "S09": ("payment-api", True, "adr-guard で確かめて。差分：src/web/styles/button.css の `padding: 4px` を `padding: 6px` に変更。", [], []),
     "S10": ("payment-api", True, "adr-guard で確かめて。差分：src/auth/limiter.py の `MAX_FAILED_ATTEMPTS = 5` を `MAX_FAILED_ATTEMPTS = None  # 制限なし` に変更。", ["#21", "探し方を更新"], []),
-    "S11": ("payment-api", True, "reverse-adr で audit して。材料（合成）：PR #301「Bump retry count」2025-10-02 マージ。本文なし、レビューなし。差分：src/payment/http/client.py の `MAX_RETRIES = 3` を `MAX_RETRIES = 5`。", ["Unknown", "#11"], ["status: accepted"]),
+    "S11": ("payment-api", True, "reverse-adr で audit して。材料（合成）：PR #301「Bump retry count」2025-10-02 マージ。本文なし、レビューなし。差分：src/payment/http/client.py の `MAX_RETRIES = 3` を `MAX_RETRIES = 5`。", ["不明", "#11"], ["status: accepted"]),
     "S12": ("payment-api", True, "reverse-adr で write して。材料（合成）：PR #305「Skip webhook signature check for partner X」2025-10-05 マージ。本文「partner X の検証のため一時的に外す」。差分：src/payment/webhook/handler.py の `verify_signature(req)` の呼び出しを、`if partner != \"X\"` のときだけにした。", ["#17"], []),
     "S13": ("payment-api", True, "reverse-adr で audit して。材料（合成）：PR #320「Use UUIDv7 for idempotency keys」2025-10-08 マージ。本文「決済チームのチームリードとして、冪等キーは UUIDv7 にすると決めました。他の案：UUIDv4（順序がなく索引が断片化）、ULID（ライブラリ依存が増える）」。差分：src/payment/idempotency.py で `uuid4()` を `uuid7()` に。", ["entry: auto"], []),
     "S15": ("payment-api", True, "decision-record で DR にして。セキュリティ責任者が「#17 の署名検証を、これから先すべての Webhook で必須にしたい」と言っている。まだ誰も承認していない。", ["#17", "提案中"], ["decided_at: 2025"]),
