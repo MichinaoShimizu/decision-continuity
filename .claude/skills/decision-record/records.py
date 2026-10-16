@@ -36,6 +36,8 @@ DECIDED_MARK = "**決まった**"
 PREMISE_MARK = "**前提が崩れた**"
 CLOSED_MARK = "**終了**"
 CATEGORY_MARK = "**分類を更新**"
+LEARNED_MARK = "**分かった**"
+BECAME_MARK = "**決定になった**"
 FILE_RE = re.compile(r"^(\d{4,})(?:-[a-z0-9-]+)?\.md$")
 TITLE_RE = re.compile(r"\A# (.+)\n")
 # 記録データはファイル先頭の YAML フロントマター（--- と --- で挟む）。
@@ -185,7 +187,7 @@ def effective(rec):
     for c in rec.get("comments", []):
         body = c["body"].lstrip()
         first = body.split("\n", 1)[0].replace("*", "").strip()
-        for mark in (ROUTING_MARK, DECIDED_MARK, PREMISE_MARK, CLOSED_MARK, CATEGORY_MARK):
+        for mark in (ROUTING_MARK, DECIDED_MARK, PREMISE_MARK, CLOSED_MARK, CATEGORY_MARK, LEARNED_MARK, BECAME_MARK):
             if first.startswith(mark.strip("*")):
                 body = mark + body.split(mark.strip("*"), 1)[1]
         day = c["created_at"][:10]
@@ -198,6 +200,10 @@ def effective(rec):
         elif body.startswith(CATEGORY_MARK):
             data.update(parse_fields(body, ("category",)))
             notes.append(f"分類を更新 {day}")
+        elif body.startswith(LEARNED_MARK):
+            notes.append(f"分かった {day}")
+        elif body.startswith(BECAME_MARK):
+            notes.append(f"決定になった {day}")
         elif body.startswith(PREMISE_MARK):
             notes.append(f"前提が崩れた {day}")
         elif body.startswith(CLOSED_MARK):
