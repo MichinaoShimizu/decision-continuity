@@ -47,7 +47,7 @@ Decision log は過去の観察である。決定ではなく、何も縛らな�
 6. 見た目の変更、ふつうのバグ修正、定期的な更新（依存の更新など）は Decision log にしない。
 7. 「テストが通った」と書くには、そのコミットで実際に動かした結果が要る。テストのファイルがあるだけでは足りない。
 8. 決定を作らない。決定を有効にしない。既存の決定を終わらせない。どれも人が決める。
-9. 秘密情報と個人情報を写さない。人は GitHub（GitLab）のアカウント名でだけ書き、本名やメールアドレスは書かない。リンクは、開いて確かめたものだけを書く。
+9. 秘密情報と個人情報を写さない。人は GitHub（GitLab）のアカウント名でだけ書き、本名やメールアドレスは書かない。リンクは、実在を確かめたものだけを書く（PR は API の出力、コミットは手元の git で確かめる）。
 
 ## 速く回す
 
@@ -234,12 +234,12 @@ Decision log を決定に書き換えない。決定にするのは人であり�
 
 | リポジトリ | payment-api |
 |---|---|
-| 時期 | 2025-03（PR #101）〜 |
+| 時期 | 2025-03（[PR #101](https://github.com/example/payment-api/pull/101)）〜 |
 | 理由 | Unknown（記録に書かれていない） |
-| 基準のコミット | `abc1234` |
+| 基準のコミット | [`abc1234`](https://github.com/example/payment-api/commit/abc1234) |
 
 **起きたこと**
-- 2025-03-04 Observed：リトライの上限が 3 から 5 になった（PR #101、`src/payment/http/client.py`）。
+- 2025-03-04 Observed：リトライの上限が 3 から 5 になった（[PR #101](https://github.com/example/payment-api/pull/101)、`src/payment/http/client.py`）。
 
 **関わった人**（Observed。決めた人ではない）
 - 2025-03-03 PR 作成：@alice
@@ -247,7 +247,7 @@ Decision log を決定に書き換えない。決定にするのは人であり�
 - 2025-03-04 マージ：@bob
 
 **確かめたこと**
-- C1 `untested`：リトライの上限は 5。H：PR #101 ／ C：`src/payment/http/client.py:12` @`abc1234` ／ T：なし
+- C1 `untested`：リトライの上限は 5。H：[PR #101](https://github.com/example/payment-api/pull/101) ／ C：[`src/payment/http/client.py:12` @`abc1234`](https://github.com/example/payment-api/blob/abc1234/src/payment/http/client.py#L12) ／ T：なし
 
 **書かれていた理由と他の案**
 書かれていない。
@@ -255,7 +255,7 @@ Decision log を決定に書き換えない。決定にするのは人であり�
 **分かっていないこと**
 - なぜ 5 にしたか。障害対応か、相手先の要望か（@alice に聞く）。
 
-**元の場所**：（PR・コミットのパーマリンク）
+**元の場所**：[PR #101](https://github.com/example/payment-api/pull/101)、[`9f8e7d6`](https://github.com/example/payment-api/commit/9f8e7d6)
 
 **関係する記録**：（関係する決定や Decision log の番号。なければこの行を書かない）
 
@@ -273,6 +273,12 @@ keywords: [MAX_RETRIES, retry, backoff]
 ````
 
 本文の書き方：
+
+- **リンク**
+  - PR（MR）、issue、コミット、コードの行は、Markdown のリンクで書く。番号やハッシュだけの文字列にしない。
+  - PR は `[PR #101](https://github.com/<owner>/<repo>/pull/101)`、コミットは `` [`abc1234`](https://github.com/<owner>/<repo>/commit/<完全なハッシュ>) `` の形にする。GitLab は `/-/merge_requests/101` と `/-/commit/<ハッシュ>` を使う。
+  - コードの行は、ブランチ名ではなくコミットのハッシュで固定したリンクにする（`/blob/<ハッシュ>/<パス>#L12`）。ブランチ名のリンクは、あとで別の行を指すようになる。
+  - PR の URL は、`gh`（API）の出力の `url` をそのまま使う。コミットとコードの行の URL は、`git remote get-url origin` のホストと `<owner>/<repo>` から作り、ハッシュが手元の git に実在することを確かめてから書く（守ること 9）。リモートがないか、ホストが分からないときは、リンクにせず文字列のまま書き、「リンクなし」と添える。
 
 - **関わった人**
   - PR の作成、承認したレビュー、マージを、日付の古い順に 1 行ずつ書く。日付と人は、PR のデータ（`createdAt`・`author`、`reviews` の `APPROVED`・`submittedAt`、`mergedAt`・`mergedBy`）にあるものだけを書く。
