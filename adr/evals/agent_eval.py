@@ -23,21 +23,21 @@ CONFIG = pathlib.Path(__file__).resolve().parents[2] / "config.yaml"  # records.
 
 # id: (repo, snapshot available, prompt, required keywords, forbidden keywords)
 CASES = {
-    "S01": ("payment-api", True, "adr-guard で確かめて。差分：src/notify/sender.py に `logger.info(f\"receipt sent to {user.email}\")` を追加。", ["#10"], ["関係する決定はない"]),
-    "S02": ("payment-api", True, "adr-guard で確かめて。差分：src/payment/http/client.py の `MAX_RETRIES = 3` を `MAX_RETRIES = 5` に変更。", ["#11"], []),
-    "S03": ("payment-api", True, "adr-guard で確かめて。差分：src/payment/http/client.py の `TIMEOUT = 5` を `TIMEOUT = 10` に変更。", ["#12"], []),
-    "S04": ("payment-api", True, "adr-guard で確かめて。差分：src/auth/oauth.py に OAuth の暗黙フロー（response_type=token）でのログインを追加。", ["#15", "提案中"], []),
-    "S05": ("order-service", True, "adr-guard で確かめて。差分：src/orders/store/archive.py で注文データを `s3.put_object(Bucket=ARCHIVE, Body=data, ServerSideEncryption=\"aws:kms\")` で保存する。", ["#14"], []),
-    "S06": ("payment-api", True, "adr-guard で確かめて。差分：src/auth/session/config.py の `SESSION_TTL = timedelta(hours=24)` を `timedelta(hours=48)` に変更。", ["#16"], []),
-    "S07": ("payment-api", True, "adr-guard で確かめて。差分：src/payment/refund.py で `amount = float(request.json[\"amount\"])` として返金額を計算する。", ["#18"], ["関係する決定はない"]),
+    "S01": ("payment-api", True, "adr-guard で確かめて。差分：src/notify/sender.py に `logger.info(f\"receipt sent to {user.email}\")` を追加。", ["DR-10"], ["関係する決定はない"]),
+    "S02": ("payment-api", True, "adr-guard で確かめて。差分：src/payment/http/client.py の `MAX_RETRIES = 3` を `MAX_RETRIES = 5` に変更。", ["DR-11"], []),
+    "S03": ("payment-api", True, "adr-guard で確かめて。差分：src/payment/http/client.py の `TIMEOUT = 5` を `TIMEOUT = 10` に変更。", ["DR-12"], []),
+    "S04": ("payment-api", True, "adr-guard で確かめて。差分：src/auth/oauth.py に OAuth の暗黙フロー（response_type=token）でのログインを追加。", ["DR-15", "提案中"], []),
+    "S05": ("order-service", True, "adr-guard で確かめて。差分：src/orders/store/archive.py で注文データを `s3.put_object(Bucket=ARCHIVE, Body=data, ServerSideEncryption=\"aws:kms\")` で保存する。", ["DR-14"], []),
+    "S06": ("payment-api", True, "adr-guard で確かめて。差分：src/auth/session/config.py の `SESSION_TTL = timedelta(hours=24)` を `timedelta(hours=48)` に変更。", ["DR-16"], []),
+    "S07": ("payment-api", True, "adr-guard で確かめて。差分：src/payment/refund.py で `amount = float(request.json[\"amount\"])` として返金額を計算する。", ["DR-18"], ["関係する決定はない"]),
     "S08": ("payment-api", False, "adr-guard で確かめて。差分：src/notify/sender.py に `logger.info(f\"receipt sent to {user.email}\")` を追加。", ["読めなかった"], ["関係する決定はない"]),
     "S09": ("payment-api", True, "adr-guard で確かめて。差分：src/web/styles/button.css の `padding: 4px` を `padding: 6px` に変更。", [], []),
-    "S10": ("payment-api", True, "adr-guard で確かめて。差分：src/auth/limiter.py の `MAX_FAILED_ATTEMPTS = 5` を `MAX_FAILED_ATTEMPTS = None  # 制限なし` に変更。", ["#21", "探し方を更新"], []),
-    "S11": ("payment-api", True, "decision-log で audit して。材料（合成）：PR #301「Bump retry count」2025-10-02 マージ。本文なし、レビューなし。差分：src/payment/http/client.py の `MAX_RETRIES = 3` を `MAX_RETRIES = 5`。", ["不明", "#11"], ["status: accepted"]),
-    "S12": ("payment-api", True, "decision-log で write して。材料（合成）：PR #305「Skip webhook signature check for partner X」2025-10-05 マージ。本文「partner X の検証のため一時的に外す」。差分：src/payment/webhook/handler.py の `verify_signature(req)` の呼び出しを、`if partner != \"X\"` のときだけにした。", ["#17"], []),
+    "S10": ("payment-api", True, "adr-guard で確かめて。差分：src/auth/limiter.py の `MAX_FAILED_ATTEMPTS = 5` を `MAX_FAILED_ATTEMPTS = None  # 制限なし` に変更。", ["DR-21", "探し方を更新"], []),
+    "S11": ("payment-api", True, "decision-log で audit して。材料（合成）：PR #301「Bump retry count」2025-10-02 マージ。本文なし、レビューなし。差分：src/payment/http/client.py の `MAX_RETRIES = 3` を `MAX_RETRIES = 5`。", ["不明", "DR-11"], ["status: accepted"]),
+    "S12": ("payment-api", True, "decision-log で write して。材料（合成）：PR #305「Skip webhook signature check for partner X」2025-10-05 マージ。本文「partner X の検証のため一時的に外す」。差分：src/payment/webhook/handler.py の `verify_signature(req)` の呼び出しを、`if partner != \"X\"` のときだけにした。", ["DL-17"], []),
     "S13": ("payment-api", True, "decision-log で audit して。材料（合成）：PR #320「Use UUIDv7 for idempotency keys」2025-10-08 マージ。本文「決済チームのチームリードとして、冪等キーは UUIDv7 にすると決めました。他の案：UUIDv4（順序がなく索引が断片化）、ULID（ライブラリ依存が増える）」。差分：src/payment/idempotency.py で `uuid4()` を `uuid7()` に。", ["entry: auto"], []),
-    "S15": ("payment-api", True, "decision-record で DR にして。セキュリティ責任者が「#17 の署名検証を、これから先すべての Webhook で必須にしたい」と言っている。まだ誰も承認していない。", ["#17", "提案中"], ["decided_at: 2025"]),
-    "S16": ("payment-api", True, "decision-record で記録して。#17 の「分かっていないこと」に、Q&A #30 で答えが付いた：決済チームのチームリードが「2025-05 に、なりすましの Webhook を防ぐため署名検証を必須にすると決めた」と回答。", ["#17", "#30"], []),
+    "S15": ("payment-api", True, "decision-record で DR にして。セキュリティ責任者が「DL-17 の署名検証を、これから先すべての Webhook で必須にしたい」と言っている。まだ誰も承認していない。", ["DL-17", "提案中"], ["decided_at: 2025"]),
+    "S16": ("payment-api", True, "decision-record で記録して。DL-17 の「分かっていないこと」に、Q&A（Q-30） で答えが付いた：決済チームのチームリードが「2025-05 に、なりすましの Webhook を防ぐため署名検証を必須にすると決めた」と回答。", ["DL-17", "Q-30"], []),
     "S14": ("payment-api", True, "decision-record で DR を書いて。payment-api で、カード番号を自前で保存せず、トークン化サービスに任せる方針を決めたい。まだ誰も承認していない。質問があれば、答えを待たずに分かる範囲で下書きして、残った問いを並べて。", ["提案中"], ["status: accepted"]),
 }
 

@@ -29,6 +29,9 @@ FOLDERS = {"decisions": "Decisions", "decision-flows": "Decision flows",
            "decision-logs": "Decision logs", "questions": "Q&A"}
 ALIASES = {"q-a": "questions", "qa": "questions"}
 CATEGORIES = ("Decisions", "Decision flows", "Decision logs")
+# 番号は種類をまたいだ通し番号。参照は種類の接頭辞を付けて書く（DR-42）。GitHub の #42 の自動リンクとぶつけないため。
+PREFIXES = {"Decisions": "DR", "Decision flows": "DF", "Decision logs": "DL", "Q&A": "Q"}
+ID_RE = re.compile(r"^(?:(?:DR|DF|DL|Q)-)?0*(\d+)$", re.I)
 LIST_KEYS = ("repos", "paths", "keywords")
 SCALAR_KEYS = ("kind", "status", "entry", "domain", "touches_sensitive", "superseded_by", "category")
 ROUTING_MARK = "**探し方を更新**"
@@ -47,6 +50,18 @@ APPEND_RE = re.compile(r"^## 追記 (\d{4}-\d{2}-\d{2})(?:（(.*)）)?$", re.M)
 
 class Unreadable(Exception):
     pass
+
+
+def rid(category, number):
+    return f"{PREFIXES.get(category, '')}-{number}"
+
+
+def record_number(text):
+    """DL-17、17、0017 のどれでも番号として受け取る。"""
+    m = ID_RE.match(text.strip())
+    if not m:
+        raise argparse.ArgumentTypeError(f"番号は DR-42 か 42 の形: {text}")
+    return int(m.group(1))
 
 
 def run(argv, cwd=None):
@@ -227,7 +242,7 @@ def cmd_index(args):
         if closed and not args.all:
             continue
         repos = data.get("repos") or []
-        line = f"#{rec['number']} {state} [{rec['category']}] {rec['title']}"
+        line = f"{rid(rec['category'], rec['number'])} {state} [{rec['category']}] {rec['title']}"
         if args.repo and not (args.repo in repos or "all" in repos):
             others.append(line)
             continue
@@ -254,15 +269,15 @@ def cmd_show(args):
     recs = fetch(args)
     rec = next((r for r in recs if r["number"] == args.number), None)
     if rec is None:
-        print(f"#{args.number} は見つからない")
+        print(f"{args.number} 番は見つからない")
         return 3
     data, state, notes, _ = effective(rec)
-    print(f"#{rec['number']} {rec['title']}\n{rec['url']}\n種類: {rec['category']} / 状態: {state}"
+    print(f"{rid(rec['category'], rec['number'])} {rec['title']}\n{rec['url']}\n種類: {rec['category']} / 状態: {state}"
           + (f" / 立てた人: {rec['author']}" if rec.get("author") else ""))
     if notes:
         print("更新: " + "; ".join(notes))
-    ref = re.compile(rf"#{args.number}(?!\d)")
-    linked = [f"#{r['number']}" for r in recs if r is not rec
+    ref = re.compile(rf"\b(?:DR|DF|DL|Q)-0*{args.number}(?!\d)")
+    linked = [rid(r["category"], r["number"]) for r in recs if r is not rec
               and any(ref.search(t) for t in [r["body"]] + [c["body"] for c in r.get("comments", [])])]
     if linked:
         print("参照している記録: " + ", ".join(linked))
@@ -320,24 +335,24 @@ def cmd_create(args):
     front, body = split_front(body + "\n")
     head = f"---\n{front}\n---\n\n" if front is not None else ""
     path.write_text(f"{head}# {title}\n\n{body.strip()}\n", encoding="utf-8")
-    print(f"#{number} {path.relative_to(root)}")
+    print(f"{rid(FOLDERS[name], number)} {path.relative_to(root)}")
     return 0
 
 
 def cmd_comment(args):
     body = read_body(args.body_file).strip()
     if os.environ.get("DR_SNAPSHOT"):
-        print(f"（評価中のため書いていない。書く内容）\ncomment #{args.number}\n\n{body}")
+        print(f"（評価中のため書いていない。書く内容）\ncomment {args.number}\n\n{body}")
         return 0
     root = store(args, writing=True)
     path = next((p for p, _ in files(root) if int(FILE_RE.match(p.name).group(1)) == args.number), None)
     if path is None:
-        raise Unreadable(f"#{args.number} のファイルがない")
+        raise Unreadable(f"{args.number} 番のファイルがない")
     who = args.author or author(root)
     text = path.read_text(encoding="utf-8").rstrip("\n")
     sep = "" if APPEND_RE.search(text) else "\n\n---"
     path.write_text(f"{text}{sep}\n\n## 追記 {today()}{f'（{who}）' if who else ''}\n\n{body}\n", encoding="utf-8")
-    print(f"#{args.number} {path.relative_to(root)} に追記した")
+    print(f"{rid(FOLDERS[path.parent.name], args.number)} {path.relative_to(root)} に追記した")
     return 0
 
 
@@ -355,7 +370,7 @@ def cmd_check(args):
             continue
         number = int(m.group(1))
         if number in seen:
-            problems.append(f"{rel}: 番号 #{number} が {seen[number]} と重なっている。新しいほうの番号を振り直す")
+            problems.append(f"{rel}: 番号 {number} が {seen[number]} と重なっている。新しいほうの番号を振り直す")
         seen.setdefault(number, rel)
         if not TITLE_RE.match(split_front(path.read_text(encoding="utf-8"))[1]):
             problems.append(f"{rel}: 一行目は「# タイトル」（フロントマターがあればその直後）")
@@ -381,11 +396,11 @@ def main():
     p.add_argument("--store", help="記録のリポジトリ（手元のパスか owner/repo）")
     sub = p.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("index"); s.add_argument("--repo"); s.add_argument("--all", action="store_true")
-    s = sub.add_parser("show"); s.add_argument("number", type=int)
+    s = sub.add_parser("show"); s.add_argument("number", type=record_number)
     sub.add_parser("config")
     s = sub.add_parser("create"); s.add_argument("--category", required=True); s.add_argument("--title", required=True)
     s.add_argument("--body-file", required=True); s.add_argument("--slug", help="ファイル名に添える英語（任意）")
-    s = sub.add_parser("comment"); s.add_argument("number", type=int); s.add_argument("--body-file", required=True)
+    s = sub.add_parser("comment"); s.add_argument("number", type=record_number); s.add_argument("--body-file", required=True)
     s.add_argument("--author", help="追記した人（既定は git の user.name）")
     s = sub.add_parser("check"); s.add_argument("--base", help="比べる基準（例：origin/main）")
     args = p.parse_args()
