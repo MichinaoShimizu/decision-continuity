@@ -29,7 +29,7 @@
   "state_reason": null,
   "category": "Decisions",
   "author": "dr-bot",
-  "body": "**決済 API の呼び出しのリトライは最大 3 回、指数バックオフ**\n\n| 決めた人 | チームリード（決済チーム） |\n|---|---|\n| 承認 | アーキテクト |\n| 使った決め方 | #1 |\n| 決めた日 | 2025-03-01 |\n\n**なぜ**\n決済代行会社の規約で、短時間の再送が多いと不正検知に引っかかる。4 回以上は二重課金の調査が増えた。\n\n<details><summary>記録データ</summary>\n\n```yaml\nkind: decision\nstatus: accepted\nentry: explicit\ndomain: technology\nscope: multi_team\nrepos: [payment-api]\npaths: [src/payment/client/]\nkeywords: [MAX_RETRIES, retry, backoff]\n```\n\n</details>\n",
+  "body": "**決済 API の呼び出しのリトライは最大 3 回、指数バックオフ**\n\n| 決めた人 | チームリード（決済チーム） |\n|---|---|\n| 承認 | アーキテクト |\n| 使った決め方 | DF-1 |\n| 決めた日 | 2025-03-01 |\n\n**なぜ**\n決済代行会社の規約で、短時間の再送が多いと不正検知に引っかかる。4 回以上は二重課金の調査が増えた。\n\n<details><summary>記録データ</summary>\n\n```yaml\nkind: decision\nstatus: accepted\nentry: explicit\ndomain: technology\nscope: multi_team\nrepos: [payment-api]\npaths: [src/payment/client/]\nkeywords: [MAX_RETRIES, retry, backoff]\n```\n\n</details>\n",
   "comments": [
    {
     "author": "tl-payment",
@@ -64,7 +64,7 @@
     "author": "architect",
     "created_at": "2025-06-01T00:00:00Z",
     "url": "https://github.com/example-org/decision-records/discussions/13#c0",
-    "body": "#14 に置き換えた。"
+    "body": "DR-14 に置き換えた。"
    }
   ]
  },
@@ -104,7 +104,7 @@
     "author": "sec-lead",
     "created_at": "2025-08-20T00:00:00Z",
     "url": "https://github.com/example-org/decision-records/discussions/16#c0",
-    "body": "**決まった**（2025-08-20）：決めた人 セキュリティ責任者、承認 アーキテクト（#1 の決め方）、元の場所 https://example.com/minutes/2025-08-20"
+    "body": "**決まった**（2025-08-20）：決めた人 セキュリティ責任者、承認 アーキテクト（DF-1 の決め方）、元の場所 https://example.com/minutes/2025-08-20"
    }
   ]
  },
