@@ -1,13 +1,13 @@
 ---
-name: reverse-adr
+name: decision-log
 description: "Reconstruct evidence-backed Decision Logs from any code repository's history (PRs/MRs, issues, reviews, commits and code) without inventing rationale or approvals. Works on its own in any repository; if the decision-record kit (records.py) is installed it reads and writes the organization's records instead. Use when asked to recover historical decisions, explain how a design evolved, find reversals, or bootstrap decision records. Supports 'audit' (read-only, default) and 'write'. 過去の変更から Decision log を起こす（認証まわりがなぜこうなったか履歴から起こして）。"
 ---
 
-# reverse-adr：過去の変更を、根拠のある範囲で Decision log に書き起こす
+# decision-log：過去の変更を、根拠のある範囲で Decision log に書き起こす
 
 作業中のリポジトリの履歴から、何が起きたか、なぜか（記録にある範囲で）、いま何が本当か、何が分かっていないかを Decision log に書く。Decision log は過去の観察であり、決定ではなく、何も縛らない。決定は人が決めた方針で、このスキルは作らない。「記録」は決定と Decision log の総称、「主張」は「起きたこと」の 1 行（確かめられる一文）、「基準のコミット」は調べた時点の `HEAD` を指す。
 
-このファイルだけで動く。Claude Code は `.claude/skills/reverse-adr/`、Kiro は `.kiro/skills/reverse-adr/` に置く。
+このファイルだけで動く。Claude Code は `.claude/skills/decision-log/`、Kiro は `.kiro/skills/decision-log/` に置く。
 
 ## モード
 
@@ -90,7 +90,7 @@ description: "Reconstruct evidence-backed Decision Logs from any code repository
 ```markdown
 # Decision logs（<リポジトリ名>）
 
-> reverse-adr が各 Decision log から作り直す索引。手で直さない。過去の観察であり、何も縛らない。
+> decision-log が各 Decision log から作り直す索引。手で直さない。過去の観察であり、何も縛らない。
 
 ## 性能・信頼性（reliability）
 

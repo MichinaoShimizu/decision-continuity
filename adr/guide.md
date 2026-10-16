@@ -18,7 +18,7 @@
 
 ```mermaid
 flowchart TD
-    S["PR・issue・コード・テスト"] --> R["reverse-adr：確かさを分けて起こす"]
+    S["PR・issue・コード・テスト"] --> R["decision-log：確かさを分けて起こす"]
     R --> L[("Decision logs")]
     R -- "決定の言葉と決めた人がある" --> P
     L -- "理由が不明" --> Q["Q&A：知っていそうな役割に聞く"]
@@ -58,4 +58,4 @@ adr-guard は `records.py index --repo <名前>` で、関係する記録を全�
 
 ## スキルと評価
 
-スキルは [adr-guard](skills/adr-guard/SKILL.md) と [reverse-adr](skills/reverse-adr/SKILL.md)、共通の決まりは [decision-continuity-contract.md](skills/decision-continuity-contract.md)。決定を書くのは `decision-record`。[ケースの一覧](evals/scenario-tests.md) と [実行スクリプト](evals/agent-runner.md) で、実際のエージェントで確かめる。
+スキルは [adr-guard](skills/adr-guard/SKILL.md) と [decision-log](skills/decision-log/SKILL.md)、共通の決まりは [decision-continuity-contract.md](skills/decision-continuity-contract.md)。決定を書くのは `decision-record`。[ケースの一覧](evals/scenario-tests.md) と [実行スクリプト](evals/agent-runner.md) で、実際のエージェントで確かめる。
