@@ -4,7 +4,7 @@
   records.py index [--repo NAME] [--all]   探すための一覧（タイトル・状態・repos・paths・keywords）
   records.py show NUMBER                   本文と追記全部、この記録を参照している記録
   records.py config                        記録のリポジトリの config.yaml
-  records.py create --category NAME --title TITLE --body-file FILE   新しい記録のファイルを作る
+  records.py create --category NAME --title TITLE --body-file FILE   新しい記録のファイルを作る（FILE 先頭のフロントマターはファイルの先頭に置く）
   records.py comment NUMBER --body-file FILE   記録の末尾に追記する（FILE が - なら標準入力）
   records.py check [--base REF]            ファイル名・番号の重複・追記だけで育っているかを確かめる
 
@@ -38,6 +38,8 @@ CLOSED_MARK = "**終了**"
 CATEGORY_MARK = "**分類を更新**"
 FILE_RE = re.compile(r"^(\d{4,})(?:-[a-z0-9-]+)?\.md$")
 TITLE_RE = re.compile(r"\A# (.+)\n")
+# 記録データはファイル先頭の YAML フロントマター（--- と --- で挟む）。
+FRONT_RE = re.compile(r"\A---\n(.*?)\n---[ \t]*\n+", re.S)
 APPEND_RE = re.compile(r"^## 追記 (\d{4}-\d{2}-\d{2})(?:（(.*)）)?$", re.M)
 
 
@@ -98,8 +100,14 @@ def folder(category):
     raise Unreadable(f"種類 {category} がない（{', '.join(FOLDERS)} から選ぶ）")
 
 
+def split_front(text):
+    """先頭のフロントマターと、その後ろ（タイトルから）に分ける。フロントマターがなければ None。"""
+    m = FRONT_RE.match(text)
+    return (m.group(1), text[m.end():]) if m else (None, text)
+
+
 def parse_file(path, category):
-    text = path.read_text(encoding="utf-8")
+    front, text = split_front(path.read_text(encoding="utf-8"))
     m = TITLE_RE.match(text)
     title = m.group(1).strip() if m else path.stem
     rest = text[m.end():] if m else text
@@ -108,7 +116,7 @@ def parse_file(path, category):
     comments = []
     for i in range(1, len(parts), 3):
         comments.append(dict(author=parts[i + 1], created_at=parts[i], url=None, body=parts[i + 2].strip()))
-    return dict(number=int(FILE_RE.match(path.name).group(1)), title=title, url=None,
+    return dict(number=int(FILE_RE.match(path.name).group(1)), title=title, url=None, front=front,
                 closed=False, state_reason=None, category=category, author=None, body=body, comments=comments)
 
 
@@ -160,14 +168,18 @@ def parse_fields(text, keys):
     return found
 
 
-def record_data(body):
-    m = re.search(r"```ya?ml\s*\n(.*?)```", body, re.S)
-    return parse_fields(m.group(1), LIST_KEYS + SCALAR_KEYS) if m else {}
+def record_data(rec):
+    """フロントマターを読む。なければ本文の ```yaml ブロック（前の形）を読む。"""
+    text = rec.get("front")
+    if text is None:
+        m = re.search(r"```ya?ml\s*\n(.*?)```", rec["body"], re.S)
+        text = m.group(1) if m else ""
+    return parse_fields(text, LIST_KEYS + SCALAR_KEYS)
 
 
 def effective(rec):
     """本文の記録データに、追記の更新を古い順に重ねる。"""
-    data = record_data(rec["body"])
+    data = record_data(rec)
     notes = []
     closed, reason = rec["closed"], rec.get("state_reason")
     for c in rec.get("comments", []):
@@ -248,6 +260,8 @@ def cmd_show(args):
               and any(ref.search(t) for t in [r["body"]] + [c["body"] for c in r.get("comments", [])])]
     if linked:
         print("参照している記録: " + ", ".join(linked))
+    if rec.get("front") is not None:
+        print("\n---\n" + rec["front"] + "\n---")
     print("\n" + rec["body"])
     for c in rec.get("comments", []):
         who = f" {c['author']}" if c.get("author") else ""
@@ -297,7 +311,9 @@ def cmd_create(args):
     if not FILE_RE.match(path.name):
         raise Unreadable(f"--slug は英小文字・数字・ハイフンだけ: {args.slug}")
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(f"# {title}\n\n{body}\n", encoding="utf-8")
+    front, body = split_front(body + "\n")
+    head = f"---\n{front}\n---\n\n" if front is not None else ""
+    path.write_text(f"{head}# {title}\n\n{body.strip()}\n", encoding="utf-8")
     print(f"#{number} {path.relative_to(root)}")
     return 0
 
@@ -335,8 +351,8 @@ def cmd_check(args):
         if number in seen:
             problems.append(f"{rel}: 番号 #{number} が {seen[number]} と重なっている。新しいほうの番号を振り直す")
         seen.setdefault(number, rel)
-        if not TITLE_RE.match(path.read_text(encoding="utf-8")):
-            problems.append(f"{rel}: 一行目は「# タイトル」")
+        if not TITLE_RE.match(split_front(path.read_text(encoding="utf-8"))[1]):
+            problems.append(f"{rel}: 一行目は「# タイトル」（フロントマターがあればその直後）")
     if args.base:
         listed = run(["git", "-C", str(root), "ls-tree", "-r", "--name-only", args.base, "--", RECORDS])
         for rel in listed.split():
