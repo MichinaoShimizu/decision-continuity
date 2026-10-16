@@ -2,7 +2,8 @@
 """Decision log のフォルダーの索引 README.md を、フォルダーの Decision log 全部から作り直す。
 
   build_index.py <フォルダー> [--repo NAME]   README.md を書く
-  build_index.py <フォルダー> --check         README.md が最新かを確かめる（古ければ終了コード 1）
+  build_index.py <フォルダー> --check         README.md が最新で、各 Decision log の形が崩れていないかを確かめる
+                                             （どちらかが駄目なら終了コード 1）
 
 標準ライブラリだけを使う。records.py を使う置き場所では使わない（records.py index が毎回並べる）。
 """
@@ -59,7 +60,20 @@ def read_log(path):
             learned = True
     dates = CLAIM_DATE_RE.findall(section(body, "起きたこと"))
     reason = next((l.strip() for l in section(body, "理由").splitlines() if l.strip()), "")
-    return dict(number=int(FILE_RE.match(path.name).group(1)), file=path.name, title=title,
+    problems = []
+    if not front:
+        problems.append("フロントマターがない")
+    elif field(front, "kind") != "log":
+        problems.append("フロントマターの kind が log でない")
+    if (field(front, "category") or "other") not in dict(CATEGORIES):
+        problems.append(f"category が分類の一覧にない: {field(front, 'category')}")
+    if not title_m:
+        problems.append("タイトル（# の行）がない")
+    if not dates:
+        problems.append("「## 起きたこと」に `- C<番号> YYYY-MM-DD <状態>：` の行がない")
+    if not reason.startswith(("記録あり", "推測", "不明")):
+        problems.append("「## 理由」の 1 行目が「記録あり」「推測」「不明」で始まっていない")
+    return dict(problems=problems, number=int(FILE_RE.match(path.name).group(1)), file=path.name, title=title,
                 category=category if category in dict(CATEGORIES) else "other", retired=retired,
                 date=min(dates) if dates else None,
                 unknown=reason.startswith("不明") and not learned)
@@ -75,8 +89,11 @@ def order(log):
     return (log["date"] or "9999-99-99", log["number"])
 
 
-def build(folder, repo):
-    logs = [read_log(p) for p in sorted(folder.glob("*.md")) if FILE_RE.match(p.name)]
+def read_logs(folder):
+    return [read_log(p) for p in sorted(folder.glob("*.md")) if FILE_RE.match(p.name)]
+
+
+def build(logs, repo):
     out = [f"# Decision logs（{repo}）", "",
            "> decision-log が各 Decision log から作り直す索引。手で直さない。過去の観察であり、何も縛らない。"]
     for key, label in CATEGORIES:
@@ -107,18 +124,24 @@ def main():
     if not args.folder.is_dir():
         print(f"{args.folder} がない", file=sys.stderr)
         return 2
-    text = build(args.folder, args.repo or repo_name(args.folder))
+    logs = read_logs(args.folder)
+    text = build(logs, args.repo or repo_name(args.folder))
     target = args.folder / "README.md"
+    problems = [f"{l['file']}: {p}" for l in logs for p in l["problems"]]
+    for p in problems:
+        print(p)
     if args.check:
         current = target.read_text(encoding="utf-8") if target.exists() else ""
-        if current != text:
+        stale = current != text
+        if stale:
             print(f"{target} が古い。build_index.py {args.folder} で作り直す")
+        if stale or problems:
             return 1
-        print(f"{target} は最新")
+        print(f"{target} は最新で、{len(logs)} 件の Decision log に形の崩れはない")
         return 0
     target.write_text(text, encoding="utf-8")
-    print(f"{target} を作り直した（{text.count(chr(10) + '- ')} 件）")
-    return 0
+    print(f"{target} を作り直した（{len(logs)} 件、形の崩れ {len(problems)} 件）")
+    return 1 if problems else 0
 
 
 if __name__ == "__main__":

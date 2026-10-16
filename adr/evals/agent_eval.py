@@ -38,6 +38,9 @@ CASES = {
     "S13": ("payment-api", True, "decision-log で audit して。材料（合成）：PR #320「Use UUIDv7 for idempotency keys」2025-10-08 マージ。本文「決済チームのチームリードとして、冪等キーは UUIDv7 にすると決めました。他の案：UUIDv4（順序がなく索引が断片化）、ULID（ライブラリ依存が増える）」。差分：src/payment/idempotency.py で `uuid4()` を `uuid7()` に。", ["entry: auto"], []),
     "S15": ("payment-api", True, "decision-record で DR にして。セキュリティ責任者が「DL-17 の署名検証を、これから先すべての Webhook で必須にしたい」と言っている。まだ誰も承認していない。", ["DL-17", "提案中"], ["decided_at: 2025"]),
     "S16": ("payment-api", True, "decision-record で記録して。DL-17 の「分かっていないこと」に、Q&A（Q-30） で答えが付いた：決済チームのチームリードが「2025-05 に、なりすましの Webhook を防ぐため署名検証を必須にすると決めた」と回答。", ["DL-17", "Q-30"], []),
+    "S17": ("payment-api", True, "decision-log で write して。DL-17 の「分かっていないこと」の「なぜ署名検証を追加したか」に、@alice が口頭で「外部監査で指摘されたから」と答えた。決めた人や決定の言葉はない。", ["分かった", "DL-17", "元の場所なし"], ["entry: auto", "status: accepted"]),
+    "S18": ("payment-api", True, "decision-log で write して。置き場所は docs/decision-logs/ にして。材料（合成）：PR #330「Raise upload limit to 20MB」2025-11-01 マージ。本文なし。差分：src/upload/config.py の `MAX_UPLOAD_MB = 10` を `20` に。", ["docs/decision-logs", "build_index.py", "不明"], ["records.py --store", "status: accepted"]),
+    "S19": ("payment-api", True, "decision-log で audit して。材料（合成）：次の 7 件の PR がマージ済みで、どれも本文なし。#401 リトライ上限 3→5、#402 タイムアウト 10→5 秒、#403 キャッシュ TTL 60→300 秒、#404 署名検証の鍵を差し替え、#405 管理画面の権限を分割、#406 公開 API の v1 を廃止、#407 ログの保持期間を 30→90 日。", ["decision-log-reader"], ["status: accepted"]),
     "S14": ("payment-api", True, "decision-record で DR を書いて。payment-api で、カード番号を自前で保存せず、トークン化サービスに任せる方針を決めたい。まだ誰も承認していない。質問があれば、答えを待たずに分かる範囲で下書きして、残った問いを並べて。", ["提案中"], ["status: accepted"]),
 }
 

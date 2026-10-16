@@ -178,6 +178,19 @@ class BuildIndexTests(unittest.TestCase):
             (d / "README.md").write_text("old", encoding="utf-8")
             self.assertEqual(self.run_script(d, "--check").returncode, 1)
 
+    def test_reports_malformed_logs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            d = pathlib.Path(directory)
+            (d / "0001.md").write_text("# [demo] 形が崩れた log\n\n**起きたこと**\n- 上限が 5 に\n", encoding="utf-8")
+            built = self.run_script(d)
+            self.assertEqual(built.returncode, 1)
+            self.assertIn("0001.md: フロントマターがない", built.stdout)
+            self.assertIn("0001.md: 「## 起きたこと」", built.stdout)
+            self.assertIn("0001.md: 「## 理由」", built.stdout)
+            checked = self.run_script(d, "--check")
+            self.assertEqual(checked.returncode, 1)
+            self.assertNotIn("が古い", checked.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

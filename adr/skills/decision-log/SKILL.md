@@ -17,7 +17,6 @@ allowed-tools: Bash(git:*) Bash(gh:*) Bash(glab:*)
 | `audit`（既定） | 調べて、下書きと報告を返す。何も書かない |
 | `write` | `audit` のあと、ファイルに書く。頼まれたときだけ |
 | `scope=<パス｜サブシステム｜期間>` | 範囲を絞る。外したものを報告に書く |
-| `resume` | 前回の報告の続きから。確かめ済みのものはやり直さない |
 | `depth=<数>` | 差分とレビューまで読む候補の上限（既定 20）。残りは報告に番号で残す |
 
 ## 守ること
@@ -37,8 +36,8 @@ allowed-tools: Bash(git:*) Bash(gh:*) Bash(glab:*)
 
 | 順 | 条件 | 読む | 書く（`write`） |
 |---|---|---|---|
-| 1 | `.claude/skills/decision-record/records.py` がある（Kiro でもここ） | リポジトリのルートで `python3 .claude/skills/decision-record/records.py index --repo <リポジトリ名>` と `show <DL-17 などの番号>`（絶対パスにしない）。終了コード 2 は「読めなかった」 | 同じ `records.py` の `create` と `comment` |
-| 2 | 人が置き場所のパスを指定した | そのフォルダーの `*.md` | そのフォルダー |
+| 1 | 人が置き場所のパスを指定した | そのフォルダーの `*.md` | そのフォルダー |
+| 2 | `.claude/skills/decision-record/records.py` がある（Kiro でもここ） | リポジトリのルートで `python3 .claude/skills/decision-record/records.py index --repo <リポジトリ名>` と `show <DL-17 などの番号>`（絶対パスにしない）。終了コード 2 は「読めなかった」 | 同じ `records.py` の `create` と `comment` |
 | 3 | 1 も 2 もない | `docs/decision-logs/*.md`（あれば） | `docs/decision-logs/` |
 
 ## 分類
@@ -128,7 +127,7 @@ allowed-tools: Bash(git:*) Bash(gh:*) Bash(glab:*)
 [references/writing.md](references/writing.md) を読んでから書く。
 
 - **`records.py` があるとき**：記録のリポジトリの手元のクローンでブランチを切る。新規は `python3 .claude/skills/decision-record/records.py --store <クローン> create --category "Decision logs" --title "[<リポジトリ名>] <何が変わったか>" --body-file <ファイル>`、追記は `comment <DL-17 などの番号> --body-file <ファイル>`（ファイルを作れなければ `--body-file -`）。`records.py --store <クローン> check --base origin/<既定のブランチ>` が通るまで直す。
-- **それ以外のとき**：ファイルを作るか末尾に追記し、`python3 <このスキルのフォルダー>/scripts/build_index.py <置き場所>` で索引を作り直す。`--check` が通るまで直す。ブランチを切ってコミットし、PR（MR）を出す。出せなければコミットまでにして、そう伝える。
+- **それ以外のとき**：ファイルを作るか末尾に追記し、`python3 <このスキルのフォルダー>/scripts/build_index.py <置き場所>` で索引を作り直す。`--check` が通るまで直す（形の崩れた Decision log も名前を挙げて知らせる）。ブランチを切ってコミットし、PR（MR）を出す。出せなければコミットまでにして、そう伝える。
 
 書いたら番号・ファイル・PR のリンクを伝え、「マージで保存される」と伝える。書けないときは貼れる形で返し、「まだ保存していません」と書く。
 

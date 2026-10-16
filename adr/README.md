@@ -31,7 +31,7 @@
 | `templates/agent-instructions.md` | `CLAUDE.md`（Kiro なら steering）に足す指示 |
 | `agents/` | decision-log が候補を並行に読ませるサブエージェント `decision-log-reader`（Claude Code 用と Kiro 用） |
 | `templates/kiro/` | Kiro 用の薄い `SKILL.md`。中身は `.claude/skills/` の正本を読むように言うだけ |
-| `evals/` | スキルを試す 16 のケース、固定データ、実行の手順、実行スクリプト |
+| `evals/` | スキルを試す 19 のケース、固定データ、実行の手順、実行スクリプト |
 
 新しい決定を書くこと、決め直すことは `decision-record`（`.claude/skills/decision-record/`）の「書く」「決め直す」が受け持つ。記録を読み書きするのは同じフォルダーの `records.py`。
 
@@ -57,4 +57,4 @@ decision-log だけを使うなら、`adr/skills/decision-log/` をフォルダ�
 
 ## 評価
 
-[evals/scenario-tests.md](evals/scenario-tests.md) の 16 のケースで、スキルが決まりどおりに動くかを確かめる。記録は固定データ（`evals/fixtures/`）から読むので、GitHub には触れない。実際のエージェントで回すときは [evals/agent-runner.md](evals/agent-runner.md)。実行スクリプトのテストは、`adr/evals/` を変えた PR で GitHub Actions が回す。
+[evals/scenario-tests.md](evals/scenario-tests.md) の 19 のケースで、スキルが決まりどおりに動くかを確かめる。記録は固定データ（`evals/fixtures/`）から読むので、GitHub には触れない。実際のエージェントで回すときは [evals/agent-runner.md](evals/agent-runner.md)。実行スクリプトのテストは、`adr/evals/` を変えた PR で GitHub Actions が回す。
