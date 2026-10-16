@@ -18,7 +18,7 @@
 
 ```mermaid
 flowchart TD
-    S["PR・issue・コード・テスト"] --> R["decision-log：確かさを分けて起こす"]
+    S["PR・issue・コード"] --> R["decision-log：確かさを分けて起こす"]
     R --> L[("Decision logs")]
     R -- "決定の言葉と決めた人がある" --> P
     L -- "理由が不明" --> Q["Q&A：知っていそうな役割に聞く"]
