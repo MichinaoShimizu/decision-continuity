@@ -127,5 +127,18 @@ class KiroTemplateTests(unittest.TestCase):
                 self.assertIn(f".claude/skills/{name}/SKILL.md", path.read_text(encoding="utf-8"))
 
 
+class ReaderAgentTests(unittest.TestCase):
+    """Claude Code 用と Kiro 用の decision-log-reader が、同じ説明と同じ指示を持つかを確かめる。"""
+    ROOT = pathlib.Path(__file__).resolve().parents[2]
+
+    def test_both_readers_match(self):
+        parts = [(self.ROOT / f"adr/agents/{a}/decision-log-reader.md").read_text(encoding="utf-8").split("---", 2)
+                 for a in ("claude", "kiro")]
+        desc = [next(l for l in p[1].splitlines() if l.startswith("description:")) for p in parts]
+        self.assertEqual(desc[0], desc[1])
+        self.assertEqual(parts[0][2], parts[1][2])
+        self.assertIn("decision-log-reader", (self.ROOT / "adr/skills/decision-log/SKILL.md").read_text(encoding="utf-8"))
+
+
 if __name__ == "__main__":
     unittest.main()

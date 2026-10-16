@@ -60,13 +60,14 @@ def extract_revision(checkout, revision, workdir):
 
 
 def install_kit(source, workdir, repo):
-    """Install the kit the way adr/README.md says: skills, decision-record and the CLAUDE.md block."""
+    """Install the kit the way adr/README.md says: skills, decision-record, agents and the CLAUDE.md block."""
     skills = workdir / ".claude" / "skills"
     skills.mkdir(parents=True, exist_ok=True)
     for item in (source / "adr" / "skills").iterdir():
         target = skills / item.name
         shutil.copytree(item, target) if item.is_dir() else shutil.copy2(item, target)
     shutil.copytree(source / ".claude" / "skills" / "decision-record", skills / "decision-record")
+    shutil.copytree(source / "adr" / "agents" / "claude", workdir / ".claude" / "agents")
     block = (source / "adr" / "templates" / "agent-instructions.md").read_text(encoding="utf-8")
     (workdir / "CLAUDE.md").write_text(block.replace("<repo-name>", repo), encoding="utf-8")
 
