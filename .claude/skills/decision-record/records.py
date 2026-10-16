@@ -30,11 +30,12 @@ FOLDERS = {"decisions": "Decisions", "decision-flows": "Decision flows",
 ALIASES = {"q-a": "questions", "qa": "questions"}
 CATEGORIES = ("Decisions", "Decision flows", "Decision logs")
 LIST_KEYS = ("repos", "paths", "keywords")
-SCALAR_KEYS = ("kind", "status", "entry", "domain", "touches_sensitive", "superseded_by")
+SCALAR_KEYS = ("kind", "status", "entry", "domain", "touches_sensitive", "superseded_by", "category")
 ROUTING_MARK = "**探し方を更新**"
 DECIDED_MARK = "**決まった**"
 PREMISE_MARK = "**前提が崩れた**"
 CLOSED_MARK = "**終了**"
+CATEGORY_MARK = "**分類を更新**"
 FILE_RE = re.compile(r"^(\d{4,})(?:-[a-z0-9-]+)?\.md$")
 TITLE_RE = re.compile(r"\A# (.+)\n")
 APPEND_RE = re.compile(r"^## 追記 (\d{4}-\d{2}-\d{2})(?:（(.*)）)?$", re.M)
@@ -172,7 +173,7 @@ def effective(rec):
     for c in rec.get("comments", []):
         body = c["body"].lstrip()
         first = body.split("\n", 1)[0].replace("*", "").strip()
-        for mark in (ROUTING_MARK, DECIDED_MARK, PREMISE_MARK, CLOSED_MARK):
+        for mark in (ROUTING_MARK, DECIDED_MARK, PREMISE_MARK, CLOSED_MARK, CATEGORY_MARK):
             if first.startswith(mark.strip("*")):
                 body = mark + body.split(mark.strip("*"), 1)[1]
         day = c["created_at"][:10]
@@ -182,6 +183,9 @@ def effective(rec):
         elif body.startswith(DECIDED_MARK):
             data["status"] = "accepted"
             notes.append(f"決まった {day}" + (f" by {c['author']}" if c.get("author") else ""))
+        elif body.startswith(CATEGORY_MARK):
+            data.update(parse_fields(body, ("category",)))
+            notes.append(f"分類を更新 {day}")
         elif body.startswith(PREMISE_MARK):
             notes.append(f"前提が崩れた {day}")
         elif body.startswith(CLOSED_MARK):
@@ -213,6 +217,8 @@ def cmd_index(args):
         for key in LIST_KEYS:
             parts.append(f"{key}: {', '.join(data.get(key) or []) or '-'}")
         parts.append(f"entry: {data.get('entry') or '-'}")
+        if data.get("category"):
+            parts.append(f"category: {data['category']}")
         if data.get("touches_sensitive") == "true":
             parts.append("sensitive")
         if notes:

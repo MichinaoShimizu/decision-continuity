@@ -32,6 +32,53 @@ description: "Reconstruct evidence-backed Decision Logs from any code repository
 - 一行目は `# [<リポジトリ名>] <何が変わったか>`。その下に下の「Decision log の本文」。
 - 後から足すときは、ファイルの末尾に `## 追記 YYYY-MM-DD（書いた人）` の見出しで足す。最初の追記の前にだけ `---` を置く。前の行は書き換えない。
 - この形は組織の記録（`records/decision-logs/`）と同じなので、あとでそのまま移せる（番号は移す先で振り直す）。
+- 同じフォルダーに索引 `README.md` を置く（下の「索引」）。
+
+## 分類
+
+Decision log には、主な分類を一つだけ付ける（記録データの `category`）。迷ったら、変更がいちばん守ろうとしているものを選ぶ。どれにも当たらなければ `other`。
+
+| `category` | 見出し | 例 |
+|---|---|---|
+| `architecture` | 設計・構成 | 分割・統合、依存の向き、採用する技術、基盤の移行 |
+| `data` | データの意味・持ち方 | スキーマ、値の意味や単位、保存先、保持期間、移行 |
+| `security` | 認証・権限・セキュリティ | 認証方式、権限の境界、秘密情報、署名や検証 |
+| `privacy` | 個人情報 | 収集・ログ・送信先・マスキング |
+| `compatibility` | 互換性・外部との約束 | 公開 API、形式、バージョン、廃止 |
+| `reliability` | 性能・信頼性 | タイムアウト、リトライ、上限、キャッシュ、監視や通知 |
+| `release` | リリース・運用 | デプロイ手順、フラグ、環境、運用の手順 |
+| `product` | プロダクトの方針 | 仕様の線引き、やらないと決めたこと |
+| `other` | その他 | |
+
+分類を直すときは本文を書き換えず、一行目を `**分類を更新**（YYYY-MM-DD）`、次の行を `category: <新しい分類>` にした追記で足す。
+
+## 索引
+
+`records.py` を使うときは索引のファイルを持たない（`records.py index` が毎回並べる）。それ以外の置き場所では、`write` のたびにフォルダーの `README.md` を、そのフォルダーの Decision log 全部から**まるごと作り直す**。本文ではなく生成物なので、作り直してよい。手で直さない。
+
+- 分類は、本文の `category` に、`**分類を更新**` の追記を古い順に重ねたもの。`category` がなければ `other`。
+- 分類の表の順に見出しを並べ、Decision log のない分類は出さない。見出しの中は番号順。
+- 取り下げ（一行目が `**終了**` の追記がある）は、表の最後の「取り下げ」に移す。
+
+```markdown
+# Decision logs（<リポジトリ名>）
+
+> reverse-adr が各 Decision log から作り直す索引です。手で直さないでください。過去の観察で、何も縛りません。
+
+## 設計・構成（architecture）
+
+| # | 何が変わったか | 時期 | paths | 理由 |
+|---|---|---|---|---|
+| [0003](0003-auth-pkce.md) | 認可コードフローと PKCE に移った | 2025-03〜 | src/auth/ | Unknown |
+
+## 性能・信頼性（reliability）
+
+| # | 何が変わったか | 時期 | paths | 理由 |
+|---|---|---|---|---|
+| [0001](0001.md) | リトライの上限が 3 から 5 になった | 2025-03〜 | src/payment/http/ | Unknown |
+```
+
+「理由」は本文の表の「理由」を、Documented なら要約、そうでなければ `Unknown` と書く。
 
 ## 守ること
 
@@ -50,7 +97,7 @@ description: "Reconstruct evidence-backed Decision Logs from any code repository
 ### 0. 範囲と、すでにある記録
 
 1. リポジトリ名（`git remote get-url origin` の名前）、基準のコミット（`git rev-parse HEAD`）、範囲を決める。
-2. 「記録の置き場所」で、すでにある決定と Decision log を読む。
+2. 「記録の置き場所」で、すでにある決定と Decision log を読む。索引の `README.md` は参考にとどめ、Decision log のファイルそのものを読む（索引は古いことがある）。
 3. 履歴を集める。使えるものを上から使い、何を使ったかを報告に書く。
    - GitHub：`gh pr list --state merged --limit 1000 --json number,title,mergedAt,url`、`gh pr view <番号> --json body,comments,reviews,files`、`gh pr diff <番号>`。`gh` がなければ GitHub の MCP ツールや REST API。
    - GitLab：`glab mr list --merged`、`glab mr view <番号>`、`glab mr diff <番号>`。
@@ -59,7 +106,7 @@ description: "Reconstruct evidence-backed Decision Logs from any code repository
 
 ### 1. 候補を見つける
 
-タイトルと要約で、設計・データの意味・認証・個人情報・互換性・保存・性能・リリース・プロダクトの方針などに分ける。大事なもの、あいまいなもの、議論があったもの、戻されたものは、**実際の差分とレビュー**まで読む。一つの流れになっている変更はまとめ、別の判断は分ける。PR ごとに記録を作らない。
+タイトルと要約で、「分類」の表のどれに当たるかを分ける。大事なもの、あいまいなもの、議論があったもの、戻されたものは、**実際の差分とレビュー**まで読む。一つの流れになっている変更はまとめ、別の判断は分ける。PR ごとに記録を作らない。
 
 ### 2. 確かさを分けて起こす
 
@@ -94,7 +141,7 @@ Decision log を決定に書き換えない。決定にするのは人で、新�
 「記録の置き場所」で決めた先に書く。
 
 - `records.py` があるとき：`python3 .claude/skills/decision-record/records.py create --category "Decision logs" --title "[<リポジトリ名>] <何が変わったか>" --body-file <ファイル>`、追記は `comment <番号> --body-file <ファイル>`（ファイルを作れないときは `--body-file -` で標準入力）。記録のリポジトリの手元のクローンを `--store <パス>` で指し、ブランチを切って書き、`records.py check --base origin/<既定のブランチ>` を通してから PR を出す。
-- それ以外：ファイルを作るか末尾に追記し、ブランチを切ってコミットし、PR（MR）を出す。出せなければコミットまでにして、そう伝える。
+- それ以外：ファイルを作るか末尾に追記し、索引の `README.md` を作り直し、ブランチを切ってコミットし、PR（MR）を出す。出せなければコミットまでにして、そう伝える。
 
 書いたら番号・ファイル・PR のリンクを伝え、「マージで保存される」と言う。書けないときは、貼れる形で返して「まだ保存していません」と書く。
 
@@ -126,6 +173,7 @@ Decision log を決定に書き換えない。決定にするのは人で、新�
 
 ```yaml
 kind: log
+category: reliability       # 「分類」の表から一つ
 repos: [payment-api]
 paths: [src/payment/http/]
 keywords: [MAX_RETRIES, retry, backoff]
@@ -149,7 +197,7 @@ related: []                    # 関係する決定や Decision log の番号
 
 ## 確かめてから終える
 
-1. 書いた番号・リンク・状態が実在するか。
+1. 書いた番号・リンク・状態が実在するか。索引を作り直したなら、フォルダーの Decision log が全部載っていて、リンクが開けるか。
 2. `verified` の主張は、そのテストが主張を確かめていて、実行結果が基準のコミットのものか。
 3. 主張を状態ごとに数え、`conflict`・`unknown`・`untested` には次にすることを書く。
 4. テストを動かせたなら、コマンドと結果をそのまま書く。動かせなければ T は確かめていないと書く。
@@ -160,7 +208,7 @@ related: []                    # 関係する決定や Decision log の番号
 
 1. ぶつかり（`conflict`）と、読めなかったもの
 2. 範囲・基準のコミット・使った記録の置き場所・使った履歴の材料
-3. 見つけた流れと、新しい／追記した Decision log（`audit` では下書き）
+3. 見つけた流れを分類ごとにまとめたものと、新しい／追記した Decision log（`audit` では下書き）
 4. 決定の候補
 5. 確かめていないもの（`untested`・`unknown`）と次にすること
 6. 広さ（見た PR / 全 PR、差分を読んだ数 / 候補の数）と深さ（`verified` / 全主張）。どちらかが途中なら、そう書く。タイトルを見ただけで全部を調べたとは言わない。
