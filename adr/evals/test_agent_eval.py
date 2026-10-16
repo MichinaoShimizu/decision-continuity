@@ -123,7 +123,9 @@ class KiroTemplateTests(unittest.TestCase):
         for path in thin:
             name = path.parent.name
             with self.subTest(path=str(path.relative_to(self.ROOT))):
-                self.assertEqual(self.front(path), self.front(self.ROOT / self.SOURCES[name]))
+                thin_front, source_front = self.front(path), self.front(self.ROOT / self.SOURCES[name])
+                for key in ("name", "description"):
+                    self.assertEqual(thin_front[key], source_front[key])
                 self.assertIn(f".claude/skills/{name}/SKILL.md", path.read_text(encoding="utf-8"))
 
 
@@ -138,6 +140,43 @@ class ReaderAgentTests(unittest.TestCase):
         self.assertEqual(desc[0], desc[1])
         self.assertEqual(parts[0][2], parts[1][2])
         self.assertIn("decision-log-reader", (self.ROOT / "adr/skills/decision-log/SKILL.md").read_text(encoding="utf-8"))
+
+
+class BuildIndexTests(unittest.TestCase):
+    """decision-log の scripts/build_index.py が、決まりどおりの索引を作るかを確かめる。"""
+    SCRIPT = pathlib.Path(__file__).resolve().parents[1] / "skills" / "decision-log" / "scripts" / "build_index.py"
+
+    @staticmethod
+    def log(category, title, dates, reason, notes=""):
+        claims = "\n".join(f"- C{i} {d} いまも同じ：x。履歴：y ／ 現在：z" for i, d in enumerate(dates, 1))
+        return (f"---\nkind: log\ncategory: {category}\n---\n\n# [demo] {title}\n\n> 過去の観察である。\n\n"
+                f"## 起きたこと\n\n{claims}\n\n## 理由\n\n{reason}\n{notes}")
+
+    def run_script(self, folder, *extra):
+        return subprocess.run([sys.executable, str(self.SCRIPT), str(folder), "--repo", "demo", *extra],
+                              capture_output=True, text=True, check=False)
+
+    def test_groups_orders_and_marks(self):
+        with tempfile.TemporaryDirectory() as directory:
+            d = pathlib.Path(directory)
+            (d / "0001.md").write_text(self.log("reliability", "上限が 5 に", ["2025-03-04"], "不明（記録に書かれていない）。"), encoding="utf-8")
+            (d / "0002.md").write_text(self.log("reliability", "タイムアウトが 5 秒に", ["2024-12-01", "2024-11-20"], "不明。",
+                                                "\n---\n\n## 追記 2026-01-01（x）\n\n**分かった**（2026-01-01）：「なぜ」\n障害対応。\n"), encoding="utf-8")
+            (d / "0003.md").write_text(self.log("security", "署名検証を追加", ["2025-05-01"], "記録あり：監査の指摘（PR #9）。",
+                                                "\n---\n\n## 追記 2026-01-02（x）\n\n**分類を更新**（2026-01-02）\ncategory: data\n"), encoding="utf-8")
+            (d / "0004.md").write_text(self.log("data", "重複", ["2023-01-01"], "不明。",
+                                                "\n---\n\n## 追記 2026-01-03（x）\n\n**終了**（2026-01-03）：DL-3 と重複\n"), encoding="utf-8")
+            result = self.run_script(d)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            index = (d / "README.md").read_text(encoding="utf-8")
+            self.assertIn("## データの意味・持ち方（data）\n\n- 2025-05-01 [DL-3](0003.md) 署名検証を追加\n", index)
+            self.assertIn("- 2024-11-20 [DL-2](0002.md) タイムアウトが 5 秒に\n- 2025-03-04 [DL-1](0001.md) 上限が 5 に・理由不明", index)
+            self.assertIn("## 取り下げ\n\n- 2023-01-01 [DL-4](0004.md) 重複・理由不明", index)
+            self.assertNotIn("security", index)
+            self.assertLess(index.index("（data）"), index.index("（reliability）"))
+            self.assertEqual(self.run_script(d, "--check").returncode, 0)
+            (d / "README.md").write_text("old", encoding="utf-8")
+            self.assertEqual(self.run_script(d, "--check").returncode, 1)
 
 
 if __name__ == "__main__":

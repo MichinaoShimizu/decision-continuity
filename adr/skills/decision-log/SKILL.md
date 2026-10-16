@@ -1,13 +1,14 @@
 ---
 name: decision-log
-description: "Reconstruct evidence-backed Decision Logs from any code repository's history (PRs/MRs, issues, reviews, commits and code) without inventing rationale or approvals. Works on its own in any repository; if the decision-record kit (records.py) is installed it reads and writes the organization's records instead. Use when asked to recover historical decisions, explain how a design evolved, find reversals, or bootstrap decision records. Supports 'audit' (read-only, default) and 'write'. 過去の変更から Decision log を起こす（認証まわりがなぜこうなったか履歴から起こして）。"
+description: "Reconstructs evidence-backed Decision Logs from a code repository's history (PRs/MRs, issues, reviews, commits and code) without inventing rationale or approvals. Works on its own in any repository, and reads and writes the organization's records when the decision-record kit (records.py) is installed. Use when asked to recover past decisions, explain how a design evolved, find reversals, or bootstrap decision records. Supports 'audit' (read-only, default) and 'write'. 過去の変更から Decision log を起こす（認証まわりがなぜこうなったか履歴から起こして）。"
+allowed-tools: Bash(git:*) Bash(gh:*) Bash(glab:*)
 ---
 
 # decision-log：過去の変更を、根拠のある範囲で Decision log に書き起こす
 
-作業中のリポジトリの履歴から、何が起きたか、なぜか（記録にある範囲で）、いま何が本当か、何が分かっていないかを Decision log に書く。Decision log は過去の観察であり、決定ではなく、何も縛らない。決定は人が決めた方針で、このスキルは作らない。「記録」は決定と Decision log の総称、「主張」は「起きたこと」の 1 行（確かめられる一文）、「基準のコミット」は調べた時点の `HEAD` を指す。
+作業中のリポジトリの履歴から、何が起きたか、なぜか（記録にある範囲で）、いま何が本当か、何が分かっていないかを Decision log に書く。Decision log は過去の観察であり、決定ではなく、何も縛らない。決定は人が決めた方針で、このスキルは作らない。「主張」は「起きたこと」の 1 行、「基準のコミット」は調べた時点の `HEAD` を指す。
 
-このファイルだけで動く。Claude Code は `.claude/skills/decision-log/`、Kiro は `.kiro/skills/decision-log/` に置く。
+書くとき（`write`）だけ、[references/writing.md](references/writing.md) を読む。ファイルの形、例、書き方、追記の印、索引がある。
 
 ## モード
 
@@ -28,7 +29,7 @@ description: "Reconstruct evidence-backed Decision Logs from any code repository
 5. 本文は書いたあと書き換えない。訂正と後の変化は追記で足す。戻された判断も消さない。
 6. 見た目の変更、ふつうのバグ修正、定期的な更新（依存の更新など）は Decision log にしない。
 7. 決定を作らない。有効にしない。終わらせない。どれも人が決める。
-8. 秘密情報と個人情報を写さない。人はアカウント名でだけ書き、本名やメールアドレスは書かない。リンクは実在を確かめたものだけを書く（PR は API の出力、コミットは手元の git で確かめる）。
+8. 秘密情報と個人情報を写さない。人はアカウント名でだけ書く。リンクは実在を確かめたものだけを書く（PR は API の出力、コミットは手元の git で確かめる）。
 
 ## 記録の置き場所
 
@@ -36,16 +37,9 @@ description: "Reconstruct evidence-backed Decision Logs from any code repository
 
 | 順 | 条件 | 読む | 書く（`write`） |
 |---|---|---|---|
-| 1 | `.claude/skills/decision-record/records.py` がある（Kiro でもここ） | リポジトリのルートで `python3 .claude/skills/decision-record/records.py index --repo <リポジトリ名>` と `show <番号>`（絶対パスにしない）。終了コード 2 は「読めなかった」 | 同じ `records.py` の `create` と `comment`（手順 4） |
+| 1 | `.claude/skills/decision-record/records.py` がある（Kiro でもここ） | リポジトリのルートで `python3 .claude/skills/decision-record/records.py index --repo <リポジトリ名>` と `show <DL-17 などの番号>`（絶対パスにしない）。終了コード 2 は「読めなかった」 | 同じ `records.py` の `create` と `comment` |
 | 2 | 人が置き場所のパスを指定した | そのフォルダーの `*.md` | そのフォルダー |
 | 3 | 1 も 2 もない | `docs/decision-logs/*.md`（あれば） | `docs/decision-logs/` |
-
-置き場所 2 と 3 のファイルの形は、組織の記録（`records/decision-logs/`）と同じにする。あとでそのまま移せる（番号は移す先で振り直す）。
-
-- ファイル名は `0001.md` か `0001-auth-pkce.md`。先頭の 4 桁が番号で、フォルダーの中で最大の番号の次を使う。記録を指すときは `DL-1`（決定は `DR-`、決め方は `DF-`、Q&A は `Q-`）と書き、`#1` とは書かない（GitHub が issue・PR へのリンクにするため）。
-- 先頭にフロントマター、その下に `# [<リポジトリ名>] <何が変わったか>`、その下に本文を置く（手順 4 の例）。
-- 追記は末尾に `## 追記 YYYY-MM-DD（書いた人）` の見出しで足す。最初の追記の前にだけ `---` を置く。
-- 同じフォルダーに索引 `README.md` を置く（「索引」）。
 
 ## 分類
 
@@ -63,76 +57,50 @@ description: "Reconstruct evidence-backed Decision Logs from any code repository
 | `product` | プロダクトの方針 | 仕様の線引き、やらないと決めたこと |
 | `other` | その他 | |
 
-## 追記の印
-
-追記の 1 行目を次の印で始めると、索引と `records.py` が読む。それ以外の追記は印なしで書く。
-
-| 印 | 使うとき | 2 行目から |
-|---|---|---|
-| `**分類を更新**（YYYY-MM-DD）` | 分類を直す | `category: <新しい分類>` |
-| `**探し方を更新**（YYYY-MM-DD）` | `paths`・`keywords` を直す | 変える項目だけを、最新の一覧まるごとで |
-| `**分かった**（YYYY-MM-DD）：「<分かっていないことの問い>」` | 理由が分かった | 答え、答えた人（アカウント名）、元の場所のリンク。元の場所がなければ「元の場所なし」と添える |
-| `**決定になった**（YYYY-MM-DD）：DR-<番号>` | 人がこの観察をもとに決定を作った | なし |
-| `**終了**（YYYY-MM-DD）：<理由>` | 取り下げる（重複、誤りなど） | なし |
-
-「分かった」の答えに、決定の言葉（「〜にする」「〜と決めた」）と決めた人まで含まれていれば、手順 3 の「決定の候補」にも回す。主張の状態を直すときは印なしの追記で「C1 の状態を競合に変更：理由、証拠」と書く。
-
-## 索引
-
-`records.py` を使うときは索引のファイルを持たない（`records.py index` が毎回並べる）。それ以外の置き場所では、`write` のたびにフォルダーの `README.md` を、そのフォルダーの Decision log 全部から作り直す。生成物なので手で直さない。
-
-- 分類は、`category` に「分類を更新」の追記を古い順に重ねて決める。なければ `other`。
-- 見出しは「分類」の表の順に並べ、Decision log がない分類は出さない。中は時期（「起きたこと」のいちばん古い日付）の古い順、同じ時期は番号順。「終了」の追記があるものは、最後の「取り下げ」に移す。
-- 1 件を 1 行で書く：`- <最初の変更の日付 YYYY-MM-DD> [DL-<番号>](ファイル) 何が変わったか`。表にしない。理由の要約は書かない（本文を見る）。
-- 本文の「理由」の 1 行目が「不明」で、「分かった」の追記がないものだけ、末尾に `・理由不明` と付ける。
-- **索引の衝突**：ほかのブランチも索引を作り直していて衝突したら、手で直さない。既定のブランチを取り込み、フォルダーの Decision log 全部から作り直す。番号が重なっていたら、自分の側のファイルの番号を振り直してから作り直す。
-
-```markdown
-# Decision logs（<リポジトリ名>）
-
-> decision-log が各 Decision log から作り直す索引。手で直さない。過去の観察であり、何も縛らない。
-
-## 性能・信頼性（reliability）
-
-- 2024-11-20 [DL-4](0004.md) 外部 API のタイムアウトが 10 秒から 5 秒になった・理由不明
-- 2025-03-04 [DL-1](0001.md) リトライの上限が 3 から 5 になった
-```
-
 ## 手順
 
-ネットワークは候補にだけ、まとめて使う。
+次のチェックリストを写し、進めながら印を付ける。
 
-読む候補が 5 件を超えたら、自分で読まずにサブエージェントに分ける。分類ごとに 1 つ、同時に呼ぶ。
+```
+- [ ] 0. 範囲と既存の記録（探し方の行だけ）
+- [ ] 1. 候補を絞る（手元の git）→ 上から depth 件の本文・レビュー・差分を読む
+- [ ] 2. 主張ごとに履歴と現在を確かめる
+- [ ] 3. 振り分ける（新しい log ／追記／決定の候補／競合）
+- [ ] 4. 書く（write のときだけ）→ 確かめる
+- [ ] 5. 報告
+```
 
-- `decision-log-reader` があれば、名前で指定して呼ぶ（Kiro は `.kiro/agents/`、Claude Code は `.claude/agents/` にある）。例：「decision-log-reader サブエージェントで、reliability の PR #101、#117 を基準のコミット abc1234 で読んで」。
-- なければ既定のサブエージェントに、リポジトリ・基準のコミット・分類・PR の番号を渡し、「起きたこと」「理由」「関わった人」の行の形と、決定の言葉、問い、keywords の候補を返させる。ファイルは書かせない。
+ネットワークは候補にだけ、まとめて使う。読む候補が 5 件を超えたら、自分で読まずにサブエージェントに分ける。分類ごとに 1 つ、同時に呼ぶ。
+
+- `decision-log-reader` があれば、名前で指定して呼ぶ（Kiro は `.kiro/agents/`、Claude Code は `.claude/agents/`）。例：「decision-log-reader サブエージェントで、reliability の PR #101、#117 を基準のコミット abc1234 で読んで」。
+- なければ既定のサブエージェントに、リポジトリ・基準のコミット・分類・PR の番号を渡し、「起きたこと」「理由」「関わった人」の行、決定の言葉、問い、keywords の候補を返させる。ファイルは書かせない。
 - 返ってきたものの重なりを除き、Decision log にまとめるのは自分が行う。
 
 ### 0. 範囲と既存の記録
 
 1. リポジトリ名（`git remote get-url origin` の末尾）、基準のコミット（`git rev-parse HEAD`）、範囲を決める。
-2. 既存の決定と Decision log の、探し方の行だけを読む（`grep -H -E '^(category|paths|keywords):' <置き場所>/*.md`）。全文は、手順 1 で候補と重なったものだけ読む。索引の `README.md` は古いことがあるので参考にとどめる。
-3. 履歴の一覧を、手元で 1 回で取る（ネットワーク不要）。`git log --first-parent --date=short --format='@@ %h %ad %s' --name-only [-- <scope のパス>]`。メッセージの `(#123)` や `Merge pull request #123` で PR の番号に結びつける。浅いクローンなら先に `git fetch --unshallow`。できなければ、見えた範囲を報告に書く。
+2. 既存の決定と Decision log の、探し方の行だけを読む（`grep -H -E '^(category|paths|keywords):' <置き場所>/*.md`）。全文は、手順 1 で候補と重なったものだけ読む。索引の `README.md` は参考にとどめる。
+3. 履歴の一覧を手元で 1 回で取る。`git log --first-parent --date=short --format='@@ %h %ad %s' --name-only [-- <scope のパス>]`。メッセージの `(#123)` や `Merge pull request #123` で PR の番号に結びつける。浅いクローンなら先に `git fetch --unshallow`。できなければ、見えた範囲を報告に書く。
 4. マージされた変更を全部数え、総数とどこまで見たかを記録する。
 
 ### 1. 候補を見つける
 
 一覧（タイトルと変更ファイル）だけで、各変更を「分類」に当てはめる。手がかりはファイルの場所である（例：`migrations/` → `data`、`auth` → `security`、`openapi` → `compatibility`、`timeout`・`retry` → `reliability`、`.github/workflows` → `release`）。依存の更新、見た目の変更、ふつうのバグ修正はここで落とす。
 
-残った候補を、大事なもの、戻されたもの（`Revert`）、あいまいなもの、議論があったものの順に並べ、上から `depth` 件だけ、本文とレビューをまとめて取る。使ったものを報告に書く。
+残った候補を、大事なもの、戻されたもの（`Revert`）、あいまいなもの、議論があったものの順に並べ、上から `depth` 件だけ本文とレビューをまとめて取る。
 
-- GitHub：1 回のコマンドでループする。`for n in 101 117; do gh pr view $n --json number,title,body,author,createdAt,mergedAt,mergedBy,url,reviews,comments,files; done`。多いときは `gh api graphql` で 1 回に 20〜50 件。`gh` がなければ MCP ツールか REST API。
+- GitHub：`for n in 101 117; do gh pr view $n --json number,title,body,author,createdAt,mergedAt,mergedBy,url,reviews,comments,files; done`。多いときは `gh api graphql` で 1 回に 20〜50 件。`gh` がなければ MCP ツールか REST API。
 - GitLab：`glab mr view <番号>` を同じようにループする。
 - どちらも使えない：git の一覧と `git show` だけで進める。履歴の証拠はコミットメッセージだけになり、レビューは見ていないと書く。
 - issue とリリースは、候補の本文から参照されているものだけを開く。
 
-その `depth` 件は差分も読む。差分は先に `git show --stat <コミット>` を見て、当たるファイルだけ `git show <コミット> -- <パス>` で読む。lockfile、生成物、スナップショットは読まない。
+差分は先に `git show --stat <コミット>` を見て、当たるファイルだけ `git show <コミット> -- <パス>` で読む。lockfile、生成物、スナップショットは読まない。
 
-一つの流れの変更は 1 つの Decision log にまとめ、別の判断は分ける。PR ごとに作らない。理由が分からない大事な変更も Decision log にし、理由は「不明」のまま問いを残す。推測は「理由」の節に「推測：」と明記して書く。
+一つの流れの変更は 1 つの Decision log にまとめ、別の判断は分ける。PR ごとに作らない。理由が分からない大事な変更も Decision log にし、理由は「不明」のまま問いを残す。推測は「推測：」と明記して書く。
 
 ### 2. 主張ごとに確かめる
 
-「起きたこと」の 1 行を 1 つの主張とし、主張ごとに 2 つの証拠を別々に持つ。**履歴**（日付のある PR、issue、差分、レビュー、コミット）と、**現在**（基準のコミットのコード、設定、ドキュメント）である。履歴のない主張は書かない。テストの成否は調べない。
+主張ごとに 2 つの証拠を別々に持つ。**履歴**（日付のある PR、issue、差分、レビュー、コミット）と、**現在**（基準のコミットのコード、設定、ドキュメント）である。履歴のない主張は書かない。テストの成否は調べない。
 
 | 状態 | 条件 |
 |---|---|
@@ -153,71 +121,20 @@ description: "Reconstruct evidence-backed Decision Logs from any code repository
 | 大事な変更なのに理由が不明 | 「分かっていないこと」に、知っていそうな人への問いを書く |
 | 有効な決定と競合する | 報告の先頭。決定には追記しない |
 
-決定の候補では、決めた人を記録に書かれた役割で書き、なければ「未確認」とする。承認が見えなければ「承認は見えない」と書くが、候補からは外さない。`records.py` があれば `decision-record` の「拾う」に回せる（`entry: auto`）。Decision log を決定に書き換えない。決定は人が新しく作る。
+決定の候補では、決めた人を記録に書かれた役割で書き、なければ「未確認」とする。承認が見えなければ「承認は見えない」と書くが、候補からは外さない。`records.py` があれば `decision-record` の「拾う」に回せる（`entry: auto`）。Decision log を決定に書き換えない。
 
 ### 4. 書く（`write` のときだけ）
 
-- **`records.py` があるとき**：記録のリポジトリの手元のクローンでブランチを切る。新規は `python3 .claude/skills/decision-record/records.py --store <クローン> create --category "Decision logs" --title "[<リポジトリ名>] <何が変わったか>" --body-file <ファイル>`、追記は `comment <番号> --body-file <ファイル>`（ファイルを作れなければ `--body-file -` で標準入力）。`--body-file` には下の例から `# ` の行を除いたものを渡す。`records.py --store <クローン> check --base origin/<既定のブランチ>` を通してから PR を出す。
-- **それ以外のとき**：ファイルを作るか末尾に追記し、索引を作り直し、ブランチを切ってコミットし、PR（MR）を出す。出せなければコミットまでにして、そう伝える。
+[references/writing.md](references/writing.md) を読んでから書く。
+
+- **`records.py` があるとき**：記録のリポジトリの手元のクローンでブランチを切る。新規は `python3 .claude/skills/decision-record/records.py --store <クローン> create --category "Decision logs" --title "[<リポジトリ名>] <何が変わったか>" --body-file <ファイル>`、追記は `comment <DL-17 などの番号> --body-file <ファイル>`（ファイルを作れなければ `--body-file -`）。`records.py --store <クローン> check --base origin/<既定のブランチ>` が通るまで直す。
+- **それ以外のとき**：ファイルを作るか末尾に追記し、`python3 <このスキルのフォルダー>/scripts/build_index.py <置き場所>` で索引を作り直す。`--check` が通るまで直す。ブランチを切ってコミットし、PR（MR）を出す。出せなければコミットまでにして、そう伝える。
 
 書いたら番号・ファイル・PR のリンクを伝え、「マージで保存される」と伝える。書けないときは貼れる形で返し、「まだ保存していません」と書く。
 
-#### ファイル全体の例
-
-````markdown
----
-kind: log
-category: reliability
-repos: [payment-api]
-paths: [src/payment/http/]
-keywords: [MAX_RETRIES, retry, backoff]
----
-
-# [payment-api] リトライの上限が 3 から 5 になった
-
-> 過去の観察である。決定ではなく、何も縛らない。
-
-## 起きたこと
-
-- C1 2025-03-04 いまも同じ：リトライの上限が 3 から 5 になった。履歴：[PR #101](<PR の URL>) ／ 現在：[`client.py:12` @`abc1234`](<行の URL>)
-- C2 2025-03-04 置き換え済み：失敗時は固定 1 秒待つようになった。履歴：[PR #101](<PR の URL>) ／ 現在：[PR #140](<PR の URL>) で指数バックオフに変わった
-
-## 理由
-
-不明（記録に書かれていない）。
-
-## 関わった人
-
-PR の記録から。決めた人とは限らない。
-
-- PR #101：作成 @alice（2025-03-03）、承認 @bob（2025-03-04）、マージ @bob（2025-03-04）
-
-## 分かっていないこと
-
-- なぜ 5 にしたか。障害対応か、相手先の要望か（@alice に聞く）。
-
-## 元の場所
-
-- （上で触れていない出典だけ。例：議論のあった issue、Slack のリンク。なければこの見出しごと書かない）
-
-## 関係する記録
-
-- （関係する記録を `DR-12`、`DL-3` の形で。なければこの見出しごと書かない）
-````
-
-書き方：
-
-- **文体**：である調。タイトルで言ったことを本文で繰り返さない。
-- **見出し**：タイトルは `#`、本文の節は `##` の見出しにする（太字を見出しの代わりにしない）。節の順は例のとおり。中身のない節は書かない（「理由」と「分かっていないこと」は、ないなら「不明」「なし」と書いて残す）。同じリンクやリポジトリ名を何度も書かない。追記の `## 追記 YYYY-MM-DD` も同じ `##` の階層である。
-- **リンク**：PR・issue・コミット・コードの行はリンクにする。PR は API の `url`。コミットとコードの行は `git remote get-url origin` から作り、ハッシュで固定する（`/commit/<完全なハッシュ>`、`/blob/<ハッシュ>/<パス>#L12`。GitLab は `/-/` を挟む）。作れなければ「リンクなし」と添える。
-- **理由**：1 行目は「記録あり：<要約>（<出典>）」「推測：<内容>」「不明（記録に書かれていない）」のどれか。他の案が書かれていれば、2 行目から書く。
-- **関わった人**：PR ごとに 1 行。作成（`author`・`createdAt`）、承認したレビュー（`reviews` の `APPROVED`・`submittedAt`）、マージ（`mergedBy`・`mergedAt`）を書く。役割は PR や `config.yaml` の roles に書かれているときだけ `@bob（SRE）` のように添える。git だけのときは、コミットの author と日付を書き「レビューは見ていない」と添える。決めた人を書けるのは、決定の言葉と一緒に書かれているときだけである。
-- **起きたこと**：変更ごとに 1 行で、`C<番号> <日付> <状態>：<何が変わったか>。履歴：<リンク> ／ 現在：<リンク>` と書く。番号は Decision log の中で一意にし、振り直さない。
-- **フロントマター**：ツールが読む項目だけを置く。`kind`・`category` は索引と `records.py index`、`repos`・`paths`・`keywords` は adr-guard が読む。リストは 1 行の `[a, b]`。`paths` は前方一致で照らすパス。`keywords` は、本文に出てこないが差分に実際に出てくる言葉（識別子、設定名、テーブル名、言い換え）。
-
 ## 報告
 
-書いた番号・リンクが実在し、索引に Decision log が全部載っていることを確かめてから、次の順に書く。
+書いた番号・リンクが実在することを確かめてから、次の順に書く。
 
 1. 競合と、読めなかったもの。
 2. 範囲、基準のコミット、使った置き場所、使った履歴の材料。
@@ -225,5 +142,3 @@ PR の記録から。決めた人とは限らない。
 4. 決定の候補。
 5. 「履歴のみ」の主張と、次にすること。
 6. 広さ（見た PR／全 PR）と深さ（差分まで読んだ候補／候補の数）。途中ならそう書き、`depth` で読み残した候補を番号で残す。タイトルを見ただけで「全部を調べた」と書かない。
-
-全体の監査を頼まれ、時系列と候補の一覧（ledger）を残すように言われたら、同じ置き場所に `[<リポジトリ名>] 監査 YYYY-MM-DD`（`kind: audit`）を書く。中身は範囲、広さと深さ、確かめた手順、未調査の範囲である。

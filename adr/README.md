@@ -26,7 +26,7 @@
 | 場所 | 中身 |
 |---|---|
 | `skills/adr-guard/` | 変更が有効な決定とぶつからないかを確かめる |
-| `skills/decision-log/` | PR・issue・コードから、過去の変更を Decision log に起こす。`SKILL.md` 1 枚で、どのリポジトリでも動く |
+| `skills/decision-log/` | PR・issue・コードから、過去の変更を Decision log に起こす。このフォルダーだけで、どのリポジトリでも動く。書き方は `references/`、索引を作るスクリプトは `scripts/` |
 | `skills/decision-continuity-contract.md` | スキルが共通で守るルール |
 | `templates/agent-instructions.md` | `CLAUDE.md`（Kiro なら steering）に足す指示 |
 | `agents/` | decision-log が候補を並行に読ませるサブエージェント `decision-log-reader`（Claude Code 用と Kiro 用） |
@@ -46,7 +46,7 @@
 
 decision-log は以前 `reverse-adr` という名前だった。入れてあるなら、フォルダーを `decision-log` に置き換える。
 
-decision-log だけを使うなら、`adr/skills/decision-log/SKILL.md` を対象のリポジトリに写すだけでよい。写す先は Claude Code なら `.claude/skills/decision-log/SKILL.md`、Kiro なら `.kiro/skills/decision-log/SKILL.md`（両方使うなら両方）。候補が多いリポジトリなら、`agents/` のサブエージェントも写すと速い。`records.py` がなければ、既存の Decision log を `docs/decision-logs/` から読み、`write` でもそこに書く（形は組織の記録と同じなので、あとで移せる）。
+decision-log だけを使うなら、`adr/skills/decision-log/` をフォルダーごと（`SKILL.md`・`references/`・`scripts/`）対象のリポジトリに写すだけでよい。写す先は Claude Code なら `.claude/skills/decision-log/`、Kiro なら `.kiro/skills/decision-log/`（両方使うなら両方）。候補が多いリポジトリなら、`agents/` のサブエージェントも写すと速い。`records.py` がなければ、既存の Decision log を `docs/decision-logs/` から読み、`write` でもそこに書く（形は組織の記録と同じなので、あとで移せる）。
 
 ## 使い方
 
