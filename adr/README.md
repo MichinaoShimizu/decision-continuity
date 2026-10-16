@@ -26,7 +26,7 @@
 | 場所 | 中身 |
 |---|---|
 | `skills/adr-guard/` | 変更が有効な決定とぶつからないかを確かめる |
-| `skills/reverse-adr/` | PR・issue・コード・テストから、過去の変更を Decision log に起こす |
+| `skills/reverse-adr/` | PR・issue・コード・テストから、過去の変更を Decision log に起こす。`SKILL.md` 1 枚で、どのリポジトリでも動く |
 | `skills/decision-continuity-contract.md` | スキルが共通で守るルール |
 | `templates/agent-instructions.md` | `CLAUDE.md` に足す指示 |
 | `evals/` | スキルを試す 16 のケース、固定データ、実行の手順、実行スクリプト |
@@ -41,6 +41,8 @@
 2. `templates/agent-instructions.md` の内容を `CLAUDE.md`（Kiro なら steering）に足し、`<repo-name>` をそのリポジトリの名前にする。
 3. 記録のリポジトリを `git clone` できるようにしておく（非公開なら git の認証を通す）。`records.py` は読むたびにキャッシュへ最新を取ってくる。読めないと adr-guard は「読めなかった」と報告する。
 4. 記録を書く（reverse-adr の `write` など）なら、記録のリポジトリを手元にクローンし、`--store <パス>` か環境変数 `DR_STORE` でそのパスを渡す。
+
+reverse-adr だけを使うなら、`adr/skills/reverse-adr/SKILL.md` を対象のリポジトリの `.claude/skills/reverse-adr/SKILL.md` に写すだけでよい。`records.py` がなければ、既存の Decision log を `docs/decision-logs/` から読み、`write` でもそこに書く（形は組織の記録と同じなので、あとで移せる）。
 
 ## 使い方
 
