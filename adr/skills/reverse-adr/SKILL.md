@@ -67,7 +67,7 @@ Decision log は過去の観察である。決定ではなく、何も縛らな�
 
 | 順 | 条件 | 読む | 書く（`write`） |
 |---|---|---|---|
-| 1 | `.claude/skills/decision-record/records.py` か `.kiro/skills/decision-record/records.py` がある（組織の記録の仕組み。両方あれば `.claude` を使う） | リポジトリのルートで `python3 <見つけた records.py> index --repo <リポジトリ名>` と `show <番号>` を実行する（絶対パスにしない）。終了コード 2 は「読めなかった」を表す | 同じ `records.py` の `create --category "Decision logs"` と `comment` を使う。手順は `decision-record` スキルの「置き場所」にある |
+| 1 | `.claude/skills/decision-record/records.py` がある（組織の記録の仕組み。Kiro で使うときも置き場所はここ） | リポジトリのルートで `python3 .claude/skills/decision-record/records.py index --repo <リポジトリ名>` と `show <番号>` を実行する（絶対パスにしない）。終了コード 2 は「読めなかった」を表す | 同じ `records.py` の `create --category "Decision logs"` と `comment` を使う。手順は `decision-record` スキルの「置き場所」にある |
 | 2 | 人が置き場所のパスを指定した | そのフォルダーの `*.md` | そのフォルダー |
 | 3 | 1 も 2 もない | `docs/decision-logs/*.md`（あれば） | `docs/decision-logs/` |
 
@@ -214,7 +214,7 @@ Decision log を決定に書き換えない。決定にするのは人であり�
 「記録の置き場所」で決めた先に書く。
 
 - **`records.py` があるとき**
-  1. 新規は `python3 <見つけた records.py> create --category "Decision logs" --title "[<リポジトリ名>] <何が変わったか>" --body-file <ファイル>` で作る。
+  1. 新規は `python3 .claude/skills/decision-record/records.py create --category "Decision logs" --title "[<リポジトリ名>] <何が変わったか>" --body-file <ファイル>` で作る。
   2. 追記は `comment <番号> --body-file <ファイル>` で足す。ファイルを作れないときは `--body-file -` で標準入力から渡す。
   3. 記録のリポジトリの手元のクローンを `--store <パス>` で指す。ブランチを切って書く。
   4. `records.py check --base origin/<既定のブランチ>` を通してから PR を出す。

@@ -28,7 +28,8 @@
 | `skills/adr-guard/` | 変更が有効な決定とぶつからないかを確かめる |
 | `skills/reverse-adr/` | PR・issue・コード・テストから、過去の変更を Decision log に起こす。`SKILL.md` 1 枚で、どのリポジトリでも動く |
 | `skills/decision-continuity-contract.md` | スキルが共通で守るルール |
-| `templates/agent-instructions.md` | `CLAUDE.md` に足す指示 |
+| `templates/agent-instructions.md` | `CLAUDE.md`（Kiro なら steering）に足す指示 |
+| `templates/kiro/` | Kiro 用の薄い `SKILL.md`。中身は `.claude/skills/` の正本を読むように言うだけ |
 | `evals/` | スキルを試す 16 のケース、固定データ、実行の手順、実行スクリプト |
 
 新しい決定を書くこと、決め直すことは `decision-record`（`.claude/skills/decision-record/`）の「書く」「決め直す」が受け持つ。記録を読み書きするのは同じフォルダーの `records.py`。
@@ -37,7 +38,7 @@
 
 対象のリポジトリで:
 
-1. `adr/skills/` の中身と、このリポジトリの `.claude/skills/decision-record/` を、`.claude/skills/` に写す（Kiro なら `.kiro/skills/` にも）。`decision-record/STORE` に記録のリポジトリ（`owner/decision-records`）が書いてある。
+1. `adr/skills/` の中身と、このリポジトリの `.claude/skills/decision-record/` を、`.claude/skills/` に写す。ここが正本で、`records.py` もここに置く。Kiro も使うなら、`templates/kiro/` の中身を `.kiro/skills/` に写す（正本を指すだけの薄いファイルなので、中身を二重に持たない）。`decision-record/STORE` に記録のリポジトリ（`owner/decision-records`）が書いてある。
 2. `templates/agent-instructions.md` の内容を `CLAUDE.md`（Kiro なら steering）に足し、`<repo-name>` をそのリポジトリの名前にする。
 3. 記録のリポジトリを `git clone` できるようにしておく（非公開なら git の認証を通す）。`records.py` は読むたびにキャッシュへ最新を取ってくる。読めないと adr-guard は「読めなかった」と報告する。
 4. 記録を書く（reverse-adr の `write` など）なら、記録のリポジトリを手元にクローンし、`--store <パス>` か環境変数 `DR_STORE` でそのパスを渡す。
