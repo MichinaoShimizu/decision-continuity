@@ -59,6 +59,32 @@
 
 ## 構成
 
+```mermaid
+flowchart LR
+    person(["人"])
+    subgraph store["記録のリポジトリ（このリポジトリ）"]
+        records[("records/<br>DR 決定・DF 決め方<br>DL Decision log・Q 質問")]
+        tool["records.py<br>読む・書く・確かめる"]
+        dr["decision-record スキル<br>書く・聞く・拾う"]
+    end
+    subgraph code["コードのリポジトリ（ADR キットを入れる）"]
+        history[("PR・issue・コード")]
+        guard["adr-guard<br>変更を決定と照らす"]
+        dlog["decision-log<br>履歴から Decision log を起こす"]
+        reader["decision-log-reader<br>候補を並行に読む"]
+        docs[("docs/decision-logs/<br>記録のリポジトリがないとき")]
+    end
+    person -- "決めた・聞きたい" --> dr
+    dr -- "PR で足す" --> records
+    tool --- records
+    guard -- "index で読む" --> tool
+    guard -- "差分を見る" --> history
+    dlog -- "読む" --> history
+    dlog -- "分けて渡す" --> reader
+    dlog -- "create・comment" --> tool
+    dlog -. "書く" .-> docs
+```
+
 - **記録**：このリポジトリの `records/`（1 件 1 ファイルの Markdown。書き方は [records/README.md](records/README.md)）
   - 決めたこと（技術／プロダクト／組織・運用／事業・経営）
   - 決め方：誰が決める・承認するか

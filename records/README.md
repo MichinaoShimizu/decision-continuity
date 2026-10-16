@@ -42,15 +42,47 @@
 
 二つ目からの追記は `---` を付けず、`## 追記 …` の見出しから続ける。
 
+### 状態の移り変わり
+
+決定（DR）と決め方（DF）は、追記の印で状態が変わる。Decision log（DL）は縛らないので状態がなく、取り下げるときだけ「終了」を足す。
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    state "提案中" as proposed
+    state "有効（縛る）" as accepted
+    state "有効・見直しが必要" as shaken
+    state "終了（置き換え・やめた）" as closed
+    [*] --> proposed: 書く（status proposed）
+    [*] --> accepted: 拾う（決定の言葉と決めた人がある）
+    proposed --> accepted: 「決まった」
+    accepted --> shaken: 「前提が崩れた」
+    shaken --> closed: 新しい DR で置き換え
+    accepted --> closed: 「終了」
+    proposed --> closed: 「終了」
+```
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    state "記録（縛らない）" as log
+    state "取り下げ" as retired
+    [*] --> log: decision-log が起こす
+    log --> log: 「分かった」「決定になった」「分類を更新」「探し方を更新」
+    log --> retired: 「終了」（重複・誤り）
+```
+
+「決定になった」は Decision log を変えない。決定は、別の新しい DR として作られる（DR の本文に「DL-<番号> の観察にもとづく」と書く）。
+
 ## 道具
 
 リポジトリのルートで:
 
 ```sh
 python3 .claude/skills/decision-record/records.py index                 # 一覧
-python3 .claude/skills/decision-record/records.py show 42               # 本文・追記・参照している記録
+python3 .claude/skills/decision-record/records.py show DR-42            # 本文・追記・参照している記録
 python3 .claude/skills/decision-record/records.py create --category decisions --title "…" --body-file body.md
-python3 .claude/skills/decision-record/records.py comment 42 --body-file note.md
+python3 .claude/skills/decision-record/records.py comment DR-42 --body-file note.md
 python3 .claude/skills/decision-record/records.py check --base origin/main   # PR の前に
 ```
 
