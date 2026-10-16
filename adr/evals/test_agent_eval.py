@@ -105,5 +105,27 @@ class RunnerSmokeTests(unittest.TestCase):
             self.assertIn("40-character SHA", result.stderr)
 
 
+class KiroTemplateTests(unittest.TestCase):
+    """Kiro 用の薄い SKILL.md が、正本と同じ name と description を持つかを確かめる。"""
+    ROOT = pathlib.Path(__file__).resolve().parents[2]
+    SOURCES = {"adr-guard": "adr/skills/adr-guard/SKILL.md",
+               "reverse-adr": "adr/skills/reverse-adr/SKILL.md",
+               "decision-record": ".claude/skills/decision-record/SKILL.md"}
+
+    @staticmethod
+    def front(path):
+        lines = path.read_text(encoding="utf-8").split("---", 2)[1].strip().splitlines()
+        return dict(line.split(": ", 1) for line in lines)
+
+    def test_thin_skills_match_their_source(self):
+        thin = [self.ROOT / "adr/templates/kiro" / n / "SKILL.md" for n in self.SOURCES]
+        thin.append(self.ROOT / ".kiro/skills/decision-record/SKILL.md")
+        for path in thin:
+            name = path.parent.name
+            with self.subTest(path=str(path.relative_to(self.ROOT))):
+                self.assertEqual(self.front(path), self.front(self.ROOT / self.SOURCES[name]))
+                self.assertIn(f".claude/skills/{name}/SKILL.md", path.read_text(encoding="utf-8"))
+
+
 if __name__ == "__main__":
     unittest.main()

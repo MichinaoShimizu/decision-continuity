@@ -14,7 +14,7 @@ description: "Reconstruct evidence-backed Decision Logs from any code repository
 
 Decision log は過去の観察である。決定ではなく、何も縛らない。
 
-このファイルだけで動く。ほかのスキルや設定は要らない。「記録の置き場所」にある仕組みが見つかれば、それを使う。
+このファイルだけで動く。ほかのスキルや設定は要らない。Claude Code（`.claude/skills/reverse-adr/`）でも Kiro（`.kiro/skills/reverse-adr/`）でも、同じファイルを置けば動く。「記録の置き場所」にある仕組みが見つかれば、それを使う。
 
 ## 用語
 
@@ -67,7 +67,7 @@ Decision log は過去の観察である。決定ではなく、何も縛らな�
 
 | 順 | 条件 | 読む | 書く（`write`） |
 |---|---|---|---|
-| 1 | `.claude/skills/decision-record/records.py` がある（組織の記録の仕組み） | リポジトリのルートで `python3 .claude/skills/decision-record/records.py index --repo <リポジトリ名>` と `show <番号>` を実行する（絶対パスにしない）。終了コード 2 は「読めなかった」を表す | 同じ `records.py` の `create --category "Decision logs"` と `comment` を使う。手順は `decision-record` スキルの「置き場所」にある |
+| 1 | `.claude/skills/decision-record/records.py` がある（組織の記録の仕組み。Kiro で使うときも置き場所はここ） | リポジトリのルートで `python3 .claude/skills/decision-record/records.py index --repo <リポジトリ名>` と `show <番号>` を実行する（絶対パスにしない）。終了コード 2 は「読めなかった」を表す | 同じ `records.py` の `create --category "Decision logs"` と `comment` を使う。手順は `decision-record` スキルの「置き場所」にある |
 | 2 | 人が置き場所のパスを指定した | そのフォルダーの `*.md` | そのフォルダー |
 | 3 | 1 も 2 もない | `docs/decision-logs/*.md`（あれば） | `docs/decision-logs/` |
 
