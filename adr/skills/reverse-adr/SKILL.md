@@ -178,6 +178,9 @@ Decision log を決定に書き換えない。決定にするのは人で、新�
 **起きたこと**
 - 2025-03-04 Observed：リトライの上限が 3 から 5 になった（PR #101、`src/payment/http/client.py`）。
 
+**確かめたこと**
+- C1 `untested`：リトライの上限は 5。H：PR #101 ／ C：`src/payment/http/client.py:12` @`abc1234` ／ T：なし
+
 **書かれていた理由と他の案**
 書かれていない。
 
@@ -185,6 +188,8 @@ Decision log を決定に書き換えない。決定にするのは人で、新�
 - なぜ 5 にしたか。障害対応か、相手先の要望か。
 
 **元の場所**：（PR・コミットのパーマリンク）
+
+**関係する記録**：（関係する決定や Decision log の番号。なければこの行を書かない）
 
 <details><summary>記録データ</summary>
 
@@ -194,20 +199,13 @@ category: reliability       # 「分類」の表から一つ
 repos: [payment-api]
 paths: [src/payment/http/]
 keywords: [MAX_RETRIES, retry, backoff]
-revision: abc1234
-claims:
-  - id: C1                     # この Decision log の中で一意。書いたあとは振り直さない
-    statement: "リトライの上限は 5"
-    status: untested           # verified | historical-only | untested | superseded | conflict | unknown
-    historical: ["<PR のリンク>"]
-    current: ["src/payment/http/client.py:12 @abc1234"]
-    tests: []                  # [{test: "<パス::名前>", run: "<実行のリンクかコマンドと結果>", revision: "<コミット>"}]
-related: []                    # 関係する決定や Decision log の番号
 ```
 
 </details>
 ````
 
+- 記録データ（YAML）には、ツールが読む項目だけを置く：`kind`・`category`（`records.py index` と索引）、`repos`・`paths`・`keywords`（adr-guard が変更と照らす）。主張・基準のコミット・関係する記録は本文に書く。
+- 「確かめたこと」は主張ごとに一行で、番号・状態（手順 3 の六つから一つ）・主張・H・C・T を上の例の形で書く。T は、テストと、そのコミットで動かした結果。なければ「なし」。番号はこの Decision log の中で一意で、書いたあとは振り直さない。
 - `repos`・`paths`・`keywords` は一行の `[a, b]` で書く。`paths` は関係するパス（前方一致）。`keywords` は、本文の文に出てこないのに差分に出てくる言葉（コードの識別子、設定名、テーブル名、言い換え）。差分に実際に出てきたものだけを入れる。
 - 主張の状態を直すときは本文を書き換えず、「C1 の状態を conflict に：理由、証拠」と追記する。
 - パスやキーワードを直すときは、一行目を `**探し方を更新**（YYYY-MM-DD）` にした追記で、変える項目だけを最新の一覧まるごとで書く。
