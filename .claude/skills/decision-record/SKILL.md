@@ -1,11 +1,11 @@
 ---
 name: decision-record
-description: Capture, find, and explain organizational decisions as decision records (DRs) kept in this repository's GitHub Discussions. Use for "why is it like this?", "who approves this?", "may I decide this myself?", "record this decision", or "make a record from this thread". 組織の意思決定を記録・検索・説明する（なんでこうなってる？／誰の承認で決まる？／これ自分で決めていい？／この決定を残して）。
+description: Capture, find, and explain organizational decisions as decision records (DRs) kept as Markdown files in this repository's records/ folder. Use for "why is it like this?", "who approves this?", "may I decide this myself?", "record this decision", or "make a record from this thread". 組織の意思決定を記録・検索・説明する（なんでこうなってる？／誰の承認で決まる？／これ自分で決めていい？／この決定を残して）。
 ---
 
 # decision-record
 
-組織の誰かが決めたことと、「誰が決める・承認するか」という決め方を、あとから探せる形で残す。記録（DR）は記録のリポジトリ（このリポジトリ。ほかのリポジトリからはこのフォルダーの `STORE` に書いたもの）の GitHub Discussions に置く。答えはユーザーの言葉で返す。
+組織の誰かが決めたことと、「誰が決める・承認するか」という決め方を、あとから探せる形で残す。記録（DR）は記録のリポジトリ（このリポジトリ。ほかのリポジトリからはこのフォルダーの `STORE` に書いたもの）の `records/` に、1 件 1 ファイルの Markdown で置く。答えはユーザーの言葉で返す。
 
 コードのリポジトリでは、ADR キット（`adr/`）の `adr-guard` がこの記録を読んで変更を確かめ、`reverse-adr` が過去の変更を Decision logs に起こす。
 
@@ -18,9 +18,9 @@ description: Capture, find, and explain organizational decisions as decision rec
 | 聞く | 「なんでこうなってる？」「誰の承認で決まる？」「これ自分で決めていい？」 | 記録だけを根拠にした答えと、使った DR 番号。なければ「記録なし」と、誰に聞けばよさそうか |
 | 拾う | スレッド・議事録・PR・決めた人の返事を渡された | DR の下書き（`entry: auto`、元になかった項目つき） |
 | 書く | これから重い判断を決めたい。設計の判断を残したい | 問いかけと、提案中の DR |
-| 決め直す | 過去の DR を変えたい | 新しい DR と、古い DR を閉じる案 |
-| 決定にする | Decision log の変更を、決定として残したい | 新しい DR と、Decision log への一行のコメント |
-| 追記する | 見直しの時期が来た、結果が出た、提案中の DR が決まった、探し方を直したい | 古い DR への一行のコメント |
+| 決め直す | 過去の DR を変えたい | 新しい DR と、古い DR への「終了」の追記 |
+| 決定にする | Decision log の変更を、決定として残したい | 新しい DR と、Decision log への一行の追記 |
+| 追記する | 見直しの時期が来た、結果が出た、提案中の DR が決まった、探し方を直したい | 古い DR への一行の追記 |
 
 「聞く」で記録がなければ、決めた人に聞いて、その返事を「拾う」に回すよう勧める。必要とされたときに残すので、使われる決定だけがたまる。
 
@@ -77,11 +77,11 @@ description: Capture, find, and explain organizational decisions as decision rec
 
 | 状態 | 表し方 |
 |---|---|
-| 提案中 | 開いていて、`status: proposed`（「決まった」のコメントがない） |
-| 有効 | 開いていて、`status: accepted`、または「決まった」のコメントがある |
-| 終了 | 閉じている。置き換えたなら「outdated」、やめたなら「resolved」 |
+| 提案中 | 「終了」の追記がなく、`status: proposed`（「決まった」の追記がない） |
+| 有効 | 「終了」の追記がなく、`status: accepted`、または「決まった」の追記がある |
+| 終了 | 「**終了**」の追記がある。置き換えたなら一行目に「置き換え」、やめたなら理由 |
 
-Decision logs カテゴリの記録には状態がない。過去の観察で、何も縛らない。
+Decision logs の記録には状態がない。過去の観察で、何も縛らない。
 
 ## 探し方（repos・paths・keywords）
 
@@ -94,9 +94,9 @@ Decision logs カテゴリの記録には状態がない。過去の観察で、
 
 ## 追記と決め直し
 
-記録は追記だけで育てる。本文は投稿したあと書き換えない。結果も崩れた前提も、コメントで追記する（例：「**前提が崩れた**（YYYY-MM-DD）：組織長が承認の判断を期限内に返せる → 3週間返らない例が続いた」）。
+記録は追記だけで育てる。本文はマージしたあと書き換えない。結果も崩れた前提も、末尾に追記する（例：「**前提が崩れた**（YYYY-MM-DD）：組織長が承認の判断を期限内に返せる → 3週間返らない例が続いた」）。
 
-コメントの一行目を次の印で始めると、本文の記録データに重ねて読まれる。それ以外のコメントは状態を変えない。本文の `status: proposed` は、決まったあともそのまま残る（本文は書き換えない）。直す必要はない。
+追記の一行目を次の印で始めると、本文の記録データに重ねて読まれる。それ以外の追記は状態を変えない。本文の `status: proposed` は、決まったあともそのまま残る（本文は書き換えない）。直す必要はない。
 
 - **決まった**：提案中の DR が決まったとき。「**決まった**（YYYY-MM-DD）：決めた人（役割）、承認した人、元の場所」。元の場所に承認の事実がないなら書かない。
 - **探し方を更新**：パスが変わった、キーワードが足りなかった、`repos` や `paths` が空で拾えなかったとき。`repos`・`paths`・`keywords` のうち変える項目だけを、**最新の一覧まるごと**で書く。空だった項目もこれで足せる。記録を立て直す必要はない。
@@ -107,15 +107,15 @@ Decision logs カテゴリの記録には状態がない。過去の観察で、
   keywords: [logger, audit_log, Sentry]
   ```
 
-決め直すときは新しい DR を作り、本文に「#番号 を置き換える」と書く。古い DR には新しい番号へのリンクをコメントし、「outdated」で閉じる。閉じる手段がない環境では、閉じてほしい番号を人に伝える。
+決め直すときは新しい DR を作り、本文に「#番号 を置き換える」と書く。古い DR には「**終了**（YYYY-MM-DD）：#新しい番号 に置き換え」と追記する。新しい DR と同じ PR に入れてよい。
 
 ## Decision log から決定にする
 
-Decision log はずっと Decision log のまま。書き換えも閉じもしない。決定にするときは、新しい DR を作る。
+Decision log はずっと Decision log のまま。書き換えも終了もしない。決定にするときは、新しい DR を作る。
 
 - **当時の理由と決めた人が分かった**（Q&A の答え、決めた本人の話）：「拾う」で DR にする。状態と決めた日は、答えに書かれたとおり。Q&A なら `sources` に `asked` で入れる。
-- **理由は分からないが、いまの形をこれからのルールにしたい**：「書く」で提案中の DR を作り、決め方の DR に沿って承認されたら「決まった」のコメントで有効にする。決めた日はその日。Decision log の日付にさかのぼらせない（当時決めたことにすると作り話になる）。
-- どちらでも、DR の本文に「#（Decision log の番号）の観察にもとづく」と書き、Decision log には「**決定になった**（YYYY-MM-DD）：#（DR の番号）」とコメントする。
+- **理由は分からないが、いまの形をこれからのルールにしたい**：「書く」で提案中の DR を作り、決め方の DR に沿って承認されたら「決まった」の追記で有効にする。決めた日はその日。Decision log の日付にさかのぼらせない（当時決めたことにすると作り話になる）。
+- どちらでも、DR の本文に「#（Decision log の番号）の観察にもとづく」と書き、Decision log には「**決定になった**（YYYY-MM-DD）：#（DR の番号）」と追記する。
 - マージされた、時間がたった、adr-guard がよく参照する、エージェントがそう判断した、のどれも決定の理由にならない。決めるのは決め方の DR が定める役割。
 
 ## 守ること
@@ -126,24 +126,29 @@ Decision log はずっと Decision log のまま。書き換えも閉じもし�
 - 記録を個人の評価やランキングに使わない。外れたときは、人ではなく決め方と前提を振り返る。
 - 中身の良し悪しは判断しない。問いを投げるだけ。
 
-## 置き場所（GitHub Discussions）
+## 置き場所（records/ の Markdown）
 
-| 種類 | カテゴリ |
+記録は記録のリポジトリの `records/` に、1 件 1 ファイルの Markdown で置く。変更は PR で入れ、既定のブランチにマージされたら保存されたことになる。
+
+| 種類 | フォルダー |
 |---|---|
-| 決めたこと | Decisions |
-| 決め方（kind: flow） | Decision flows |
-| 過去に起きた変更の観察（縛らない） | Decision logs（書式は `reverse-adr`） |
-| 「なんで？」の質問 | Q&A |
+| 決めたこと | `records/decisions/`（Decisions） |
+| 決め方（kind: flow） | `records/decision-flows/`（Decision flows） |
+| 過去に起きた変更の観察（縛らない） | `records/decision-logs/`（Decision logs。書式は `reverse-adr`） |
+| 「なんで？」の質問 | `records/questions/`（Q&A） |
 
-- **番号**：Discussion の番号がそのまま DR 番号（例：#42）。採番はしない。
+- **番号**：ファイル名の先頭の 4 桁（`0042.md`、`0042-no-pii-in-logs.md`）がそのまま DR 番号（例：#42）。番号はフォルダーをまたいだ通し番号で、`records.py create` が次の番号を振る。手で作るときも、いちばん大きい番号の次にする。
+- **ファイル**：一行目が `# タイトル`。その下に本文、さらにその下に `---` と「追記」が続く。ファイルを消したり、名前やフォルダーを変えたりしない。
 - **タイトル**：何を決めたかが分かる一行。
-- **関係**：項目として持つのは `superseded_by`（置き換え）と `approved_via`（使った決め方）だけ。前提にしている決定や関連する決定は、本文に `#番号` を書く。リンクは GitHub が両方向に付ける。
+- **関係**：項目として持つのは `superseded_by`（置き換え）と `approved_via`（使った決め方）だけ。前提にしている決定や関連する決定は、本文に `#番号` を書く。逆向きのつながりは `records.py show` が「参照している記録」として出す。
 - **本文**：人が読む部分を先に、記録データ（YAML）を最後に折りたたんで置く。形は下の「本文の書き方」。
-- **状態**：上の「状態」のとおり。置き換えたら「outdated」で閉じる。やめたら「resolved」で閉じ、理由をコメントする。
+- **追記**：コメントにあたるもの。ファイルの末尾に `## 追記 YYYY-MM-DD（書いた人）` の見出しで足す（`records.py comment` が付ける）。前の行は変えない。
+- **状態**：上の「状態」のとおり。終わらせるときは「**終了**」の追記を足す。置き換えたなら「**終了**（YYYY-MM-DD）：#番号 に置き換え」、やめたなら「**終了**（YYYY-MM-DD）：やめた。（理由）」。
 - **Q&A**：答えが付いた質問は「拾う」に回し、新しい DR の `sources` に `asked` としてその Q&A を入れる。
-- **読み方**：リポジトリのルートで `python3 .claude/skills/decision-record/records.py <コマンド>` を実行する（絶対パスにしない。許可の設定がこの形で書かれている）。`index --repo <名前>` で探すための一覧、`show <番号>` で本文とコメント、`config` で記録のリポジトリの `config.yaml`。終了コード 2 は「読めなかった」で、「記録がない」ではない。
-- **書き方**：`python3 .claude/skills/decision-record/records.py create --category <名前> --title <タイトル> --body-file <ファイル>`、追記は同じく `comment <番号> --body-file <ファイル>`。ファイルを作れないときは `--body-file -` にして本文を標準入力で渡す（`gh` でログインしていれば書ける）。GraphQL を使える環境ならそのまま書いてもよい。使えない環境で GitHub Actions を起動できるなら、ワークフロー `discussion`（`.github/workflows/discussion.yml`）を起動する。新しい DR は `action: create` と `category`（`decisions` / `decision-flows` / `decision-logs` / `q-a`）・`title`・`body`、追記は `action: comment` と `number`・`body`。起動したら、実行結果に出る番号を確かめてから「保存した」と伝える。
-- **書けないとき**：Discussions に書く手段がない環境では、タイトルと本文をそのまま貼れる形で返し、「まだ保存していません」と明記する。ほかのリポジトリに書いて代わりにしない。
+- **読み方**：リポジトリのルートで `python3 .claude/skills/decision-record/records.py <コマンド>` を実行する（絶対パスにしない。許可の設定がこの形で書かれている）。`index --repo <名前>` で探すための一覧、`show <番号>` で本文と追記、`config` で記録のリポジトリの `config.yaml`。記録のリポジトリがほかのリポジトリ（`STORE` の `owner/repo`）なら、読むたびにキャッシュへ最新を取ってくる（`git` で読めること）。終了コード 2 は「読めなかった」で、「記録がない」ではない。
+- **書き方**：記録のリポジトリの手元のクローンで、既定のブランチから新しいブランチを切り、`python3 .claude/skills/decision-record/records.py create --category <フォルダー名か種類の名前> --title <タイトル> --body-file <ファイル>`、追記は同じく `comment <番号> --body-file <ファイル>`。ファイルを作れないときは `--body-file -` にして本文を標準入力で渡す。ほかのリポジトリから書くときは `--store <クローンのパス>`（か環境変数 `DR_STORE`）を付ける。書いたら `records.py check --base origin/<既定のブランチ>` を通し、コミットして PR を出す。PR を出したら「PR を出した（マージで保存される）」と、番号とファイルと PR のリンクを伝える。マージ前に「保存した」と言わない。
+- **番号がぶつかったとき**：ほかの PR が先に同じ番号でマージされたら、自分の側のファイルの番号を振り直す（`check` が知らせる）。マージ前のファイルなので書き換えてよい。
+- **書けないとき**：記録のリポジトリに PR を出す手段がない環境では、タイトルと本文をそのまま貼れる形で返し、「まだ保存していません」と明記する。ほかのリポジトリに書いて代わりにしない。
 
 ### 本文の書き方
 
@@ -184,7 +189,7 @@ Decision log はずっと Decision log のまま。書き換えも閉じもし�
 
 ```yaml
 kind: decision            # decision | flow（誰が決める・承認するかの決め方）
-status: accepted          # proposed | accepted（閉じた後は superseded | retired）
+status: accepted          # proposed | accepted（終了の追記の後は superseded | retired）
 approved_via: null        # 通った決め方の DR 番号（例：#12）
 superseded_by: null
 entry: explicit           # explicit: 人が追加 | auto: 仕組みや AI が拾った
@@ -199,9 +204,9 @@ repos: []                 # 縛るコードのリポジトリ名。全リポジ�
 paths: []                 # 関係するパス（前方一致）
 keywords: []              # 決定の文に出てこないのに変更に出てくる言葉（コードの識別子、言い換え）
 decision: ""
-premises: []              # [text] 崩れたらコメントで追記
+premises: []              # [text] 崩れたら追記する
 sources: []               # [{type, url}] type: chat|meeting|pr|ticket|approval|asked|manual
 unconfirmed: []           # 元に書かれていなかった項目のキー
 ```
 
-既存の ADR は `entry: explicit` で取り込める（Context→本文、Decision→`decision`、Status→状態、Consequences→後のコメント、ADR 索引のパスとキーワード→`paths`・`keywords`、置き場所のリポジトリ→`repos`）。Accepted でない ADR は `status: proposed` で取り込む。
+既存の ADR は `entry: explicit` で取り込める（Context→本文、Decision→`decision`、Status→状態、Consequences→後の追記、ADR 索引のパスとキーワード→`paths`・`keywords`、置き場所のリポジトリ→`repos`）。Accepted でない ADR は `status: proposed` で取り込む。

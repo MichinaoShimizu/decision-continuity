@@ -1,16 +1,16 @@
 ---
 name: reverse-adr
-description: "Reconstruct evidence-backed Decision Logs from a code repository's PRs, issues, reviews, code and tests, and keep them in the organization's decision records (GitHub Discussions, Decision logs category) without inventing rationale or approvals. Use when asked to recover historical decisions, explain how a design evolved, find reversals, or bootstrap the decision records for a repository. Supports 'audit' (read-only, default) and 'write' (post to Discussions). 過去の変更から Decision log を起こす（認証まわりがなぜこうなったか履歴から起こして）。"
+description: "Reconstruct evidence-backed Decision Logs from a code repository's PRs, issues, reviews, code and tests, and keep them in the organization's decision records (Markdown files under records/decision-logs/ in the records repository) without inventing rationale or approvals. Use when asked to recover historical decisions, explain how a design evolved, find reversals, or bootstrap the decision records for a repository. Supports 'audit' (read-only, default) and 'write' (open a PR to the records repository). 過去の変更から Decision log を起こす（認証まわりがなぜこうなったか履歴から起こして）。"
 ---
 
 # reverse-adr — 過去の変更を、作り話なしで Decision log に起こす
 
-いま作業しているコードのリポジトリの履歴から、**何が起きたか、なぜか（分かる範囲で）、いま何が本当か、何が分かっていないか**を起こし、記録のリポジトリの Discussions（Decision logs カテゴリ）に置く。Decision log は過去の観察で、何も縛らない。
+いま作業しているコードのリポジトリの履歴から、**何が起きたか、なぜか（分かる範囲で）、いま何が本当か、何が分かっていないか**を起こし、記録のリポジトリの `records/decision-logs/` に置く。Decision log は過去の観察で、何も縛らない。
 
 ## モード
 
-- `audit`（既定）：調べて、下書きと報告を返す。何も投稿しない。
-- `write`：audit のあと、Decision log を投稿し、既存の記録にコメントを足す。頼まれたときだけ。
+- `audit`（既定）：調べて、下書きと報告を返す。何も書かない。
+- `write`：audit のあと、Decision log を書き、既存の記録に追記して、記録のリポジトリに PR を出す。頼まれたときだけ。
 - `scope=<パス|サブシステム|期間>`：範囲を絞る。外したものを報告に書く。
 - `resume`：前回の報告の続きから。確かめ済みのものはやり直さない。
 
@@ -53,16 +53,16 @@ PR のタイトルと要約で、設計・データの意味・認証・個人�
 | 見つけたもの | 行き先 |
 |---|---|
 | 変更は分かるが、決定の言葉や決めた人がない | Decision log（新しく作る） |
-| すでにある Decision log と同じ流れの、後の変更（戻した、広げた） | その Decision log へのコメント。古い事実は消さない |
+| すでにある Decision log と同じ流れの、後の変更（戻した、広げた） | その Decision log への追記。古い事実は消さない |
 | PR やレビューに決定の言葉と決めた人がある | `decision-record` の「拾う」の候補（`entry: auto`、状態は元の場所の言葉から）。決め方（flow）の承認が見えなくても候補から外さず、`approved_by` を `unconfirmed` にして報告に書く。Decision log にも出典として書く |
 | 大事な変更なのに理由が Unknown | Decision log の「分かっていないこと」に問いを書く。`write` では、知っていそうな役割に向けた Q&A を一つ立ててよい（Decision log の番号を書く） |
-| 有効な DR とぶつかる | 報告の先頭。DR にはコメントしない（人が決める） |
+| 有効な DR とぶつかる | 報告の先頭。DR には追記しない（人が決める） |
 
 Decision log を決定にする道筋は `decision-record` の「Decision log から決定にする」。reverse-adr は Decision log を DR に書き換えない。
 
 ### 5. 書く（`write` のときだけ）
 
-`python3 .claude/skills/decision-record/records.py create --category "Decision logs" --title "[<リポジトリ名>] <何が変わったか>" --body-file <ファイル>`、追記は `records.py comment <番号> --body-file <ファイル>`。ファイルを作れないときは `--body-file -` で本文を標準入力から渡す。投稿したら出てきた番号を確かめてから「保存した」と言う。書けないときは、貼れる形で返して「まだ保存していません」と書く。
+`python3 .claude/skills/decision-record/records.py create --category "Decision logs" --title "[<リポジトリ名>] <何が変わったか>" --body-file <ファイル>`、追記は `records.py comment <番号> --body-file <ファイル>`。ファイルを作れないときは `--body-file -` で本文を標準入力から渡す。記録のリポジトリの手元のクローンを `--store <パス>` で指し、ブランチを切って書き、`records.py check --base origin/<既定のブランチ>` を通してから PR を出す（手順は `decision-record` の「置き場所」）。PR を出したら番号・ファイル・PR のリンクを伝え、「マージで保存される」と言う。書けないときは、貼れる形で返して「まだ保存していません」と書く。
 
 #### Decision log の本文
 

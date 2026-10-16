@@ -55,7 +55,7 @@ cases:
       DR-012 set a 3-second timeout because the vendor answered within 2 seconds. The vendor now takes 4 seconds at peak, so we moved to 5 seconds.
     must:
       - create a new DR that supersedes DR-012
-      - comment on DR-012 with the broken premise and the new DR number, and close it as outdated
+      - comment on DR-012 with the broken premise and the new DR number, and append an end note marking it as replaced
     must_not:
       - edit DR-012's body
 

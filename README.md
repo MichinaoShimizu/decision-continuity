@@ -59,7 +59,7 @@
 
 ## 構成
 
-- **記録**：このリポジトリの Discussions
+- **記録**：このリポジトリの `records/`（1 件 1 ファイルの Markdown。書き方は [records/README.md](records/README.md)）
   - 決めたこと（技術／プロダクト／組織・運用／事業・経営）
   - 決め方：誰が決める・承認するか
   - Decision logs：コードのリポジトリで過去に起きた変更の観察。決定ではなく、何も縛らない
@@ -78,4 +78,4 @@
 - 「これ自分で決めていい？」
 - 「このスレッドから記録を作って」
 
-Discussions のフォームから、直接書くこともできます。
+`records/` にファイルを足す PR を出して、直接書くこともできます（[records/README.md](records/README.md)）。
