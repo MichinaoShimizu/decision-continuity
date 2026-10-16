@@ -42,7 +42,7 @@
 3. 記録のリポジトリを `git clone` できるようにしておく（非公開なら git の認証を通す）。`records.py` は読むたびにキャッシュへ最新を取ってくる。読めないと adr-guard は「読めなかった」と報告する。
 4. 記録を書く（reverse-adr の `write` など）なら、記録のリポジトリを手元にクローンし、`--store <パス>` か環境変数 `DR_STORE` でそのパスを渡す。
 
-reverse-adr だけを使うなら、`adr/skills/reverse-adr/SKILL.md` を対象のリポジトリの `.claude/skills/reverse-adr/SKILL.md` に写すだけでよい。`records.py` がなければ、既存の Decision log を `docs/decision-logs/` から読み、`write` でもそこに書く（形は組織の記録と同じなので、あとで移せる）。
+reverse-adr だけを使うなら、`adr/skills/reverse-adr/SKILL.md` を対象のリポジトリに写すだけでよい。写す先は Claude Code なら `.claude/skills/reverse-adr/SKILL.md`、Kiro なら `.kiro/skills/reverse-adr/SKILL.md`（両方使うなら両方）。`records.py` がなければ、既存の Decision log を `docs/decision-logs/` から読み、`write` でもそこに書く（形は組織の記録と同じなので、あとで移せる）。
 
 ## 使い方
 
