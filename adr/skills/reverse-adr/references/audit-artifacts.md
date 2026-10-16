@@ -9,14 +9,14 @@
 | 成果物 | 置き場所 |
 |---|---|
 | 主張ごとの証拠（evidence matrix） | 各 Decision log の記録データの `claims` |
-| 時系列と候補の一覧（ledger） | 報告に書く。残したいと頼まれたら、Decision logs に `[<リポジトリ名>] 監査 YYYY-MM-DD` として投稿する（`kind: audit`） |
+| 時系列と候補の一覧（ledger） | 報告に書く。残したいと頼まれたら、Decision logs に `[<リポジトリ名>] 監査 YYYY-MM-DD` として書く（`kind: audit`） |
 | 広さと深さ、確かめた手順、残った穴 | 同上 |
 
 ## 主張の書き方
 
 ```yaml
 claims:
-  - id: C1                       # Decision log の中で一意。投稿後は番号を振り直さない
+  - id: C1                       # Decision log の中で一意。マージ後は番号を振り直さない
     statement: "<確かめられる主張を一つ>"
     status: historical-only      # verified | historical-only | untested | superseded | conflict | unknown
     historical: ["<PR やレビューのパーマリンク>"]

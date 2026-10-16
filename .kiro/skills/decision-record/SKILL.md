@@ -1,6 +1,6 @@
 ---
 name: decision-record
-description: Capture, find, and explain organizational decisions as decision records (DRs) kept in this repository's GitHub Discussions. Use for "why is it like this?", "who approves this?", "may I decide this myself?", "record this decision". 組織の意思決定を記録・検索・説明する。
+description: Capture, find, and explain organizational decisions as decision records (DRs) kept as Markdown files in this repository's records/ folder. Use for "why is it like this?", "who approves this?", "may I decide this myself?", "record this decision". 組織の意思決定を記録・検索・説明する。
 ---
 
 # decision-record
