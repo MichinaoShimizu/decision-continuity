@@ -19,11 +19,13 @@
       - 定数・設定の値の変更：`^[A-Z][A-Z0-9_]{2,} *[:=]`
    3. 設定ファイルの変更（中身は問わない）：`git log --first-parent --format='%h' -- '*.yml' '*.yaml' '*.toml' '*.ini' '*.properties' '*.env' ':(exclude)*lock*'`。scope があれば、その下に絞る（例：`'<scope>/*.yml'`）。小文字の設定（`retention_days: 90`）は 1 と 2 では拾えないので、これで拾う。
 
+言葉の洗い出しがほぼ全件に当たったら（手順書や仕様の文書が中心のリポジトリなど）、並べる手がかりにしない。定数と設定ファイルの結果、一覧からの分類で並べ、そう報告に書く。
+
 依存の更新、見た目の変更、ふつうのバグ修正は落とす。ただし、落とすのは 2 に当たらなかったものだけにする。タイトルだけで落とさない。
 
 候補を、大事なもの、2 に当たったのにタイトルからは分からないもの、戻されたもの（`Revert`）、あいまいなもの、議論があったものの順に並べ、上から `depth` 件だけ本文とレビューをまとめて取る。`depth` の外に残った候補は、分類ごとの数と番号を報告に書く。
 
-- GitHub：PR ごとに `gh pr view <番号> --json number,title,body,author,createdAt,mergedAt,mergedBy,url,reviews,comments,files`。コマンドを `;`・`&&`・`|` やループでつながない（確認なしで通るのは 1 つずつのコマンドだけ）。多いときは `gh api graphql` で 1 回に 20〜50 件取ってよいが、毎回確認が出る。`gh` がなければ MCP ツールか REST API。
+- GitHub：PR ごとに `gh pr view <番号> --json number,title,body,author,createdAt,mergedAt,mergedBy,url,reviews,comments,files`。コマンドを `;`・`&&`・`|` やループでつながない（確認なしで通るのは 1 つずつのコマンドだけ）。多いときは `gh api graphql` で 1 回に 20〜50 件取ってよいが、毎回確認が出る。`gh pr view` が失敗したら（GraphQL が止められている環境など）、REST API の GET で読む：`gh api repos/<owner>/<repo>/pulls/<番号>`、`…/pulls/<番号>/reviews`、`…/issues/<番号>/comments`。`-X`・`-f`・`-F`・`--input` は付けない。`gh` がなければ MCP ツール。
 - GitLab：MR ごとに `glab mr view <番号>`。
 - どちらも使えない：git の一覧と `git show` だけで進める。履歴の証拠はコミットメッセージだけになり、レビューは見ていないと書く。
 - issue とリリースは、候補の本文から参照されているものだけを開く。

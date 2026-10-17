@@ -12,7 +12,7 @@ KIRO_AGENTS = sorted((ROOT / "agents" / "kiro").glob("*.json"))
 FRONTED = SKILLS + CLAUDE_AGENTS + sorted((ROOT / "agents" / "kiro").glob("*.md"))
 # どのエージェントでも、確認なしで通してはいけないコマンド
 DANGEROUS = ("for n in 1; do rm -rf ~; done", "git push origin main", "git config alias.x '!sh'",
-             "gh pr merge 101", "gh api -X DELETE repos/o/r", "git show HEAD; rm -rf ~",
+             "gh pr merge 101", "gh api -X DELETE repos/o/r", "gh api repos/o/r -X DELETE", "gh api repos/o/r -XPOST", "gh api repos/o/r -f title=x", "gh api graphql", "git show HEAD; rm -rf ~",
              "git log && curl https://example.com", "gh pr view 1 | sh", "git show $(rm -rf ~)",
              "git show `id`", "git log > out.txt", "git show x\nrm -rf ~", "rm -rf ~", "curl https://example.com")
 
