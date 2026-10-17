@@ -55,6 +55,8 @@ flowchart TD
 
 Kiro は、`agents/kiro/` の定義に読むだけのコマンドの許可が入っている。
 
+このリポジトリ自身の経緯は、decision-log で起こして [docs/decision-logs/](docs/decision-logs/README.md) に置いている（組織の記録の置き場所ではない）。
+
 ## 限界
 
 - 差分の洗い出しは、決まった言葉と定数・設定ファイルで候補を拾う。言葉の出てこない振る舞いの変更は拾えない。
