@@ -21,8 +21,8 @@
 
 候補を、大事なもの、2 に当たったのにタイトルからは分からないもの、戻されたもの（`Revert`）、あいまいなもの、議論があったものの順に並べ、上から `depth` 件だけ本文とレビューをまとめて取る。`depth` の外に残った候補は、分類ごとの数と番号を報告に書く。
 
-- GitHub：`for n in 101 117; do gh pr view $n --json number,title,body,author,createdAt,mergedAt,mergedBy,url,reviews,comments,files; done`。多いときは `gh api graphql` で 1 回に 20〜50 件。`gh` がなければ MCP ツールか REST API。
-- GitLab：`glab mr view <番号>` を同じようにループする。
+- GitHub：PR ごとに `gh pr view <番号> --json number,title,body,author,createdAt,mergedAt,mergedBy,url,reviews,comments,files`。コマンドを `;`・`&&`・`|` やループでつながない（確認なしで通るのは 1 つずつのコマンドだけ）。多いときは `gh api graphql` で 1 回に 20〜50 件取ってよいが、毎回確認が出る。`gh` がなければ MCP ツールか REST API。
+- GitLab：MR ごとに `glab mr view <番号>`。
 - どちらも使えない：git の一覧と `git show` だけで進める。履歴の証拠はコミットメッセージだけになり、レビューは見ていないと書く。
 - issue とリリースは、候補の本文から参照されているものだけを開く。
 
