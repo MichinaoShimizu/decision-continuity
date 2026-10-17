@@ -12,7 +12,7 @@ tools: Read, Grep, Glob, Bash
 
 ## 読み方
 
-1. 本文とレビューを 1 回のコマンドでまとめて取る：`for n in <番号...>; do gh pr view $n --json number,title,body,author,createdAt,mergedAt,mergedBy,url,reviews,comments,files; done`。`gh` が使えなければ `git show` だけで読み、「レビューは見ていない」と書く。
+1. 本文とレビューを、PR ごとに 1 回のコマンドで取る：`gh pr view <番号> --json number,title,body,author,createdAt,mergedAt,mergedBy,url,reviews,comments,files`。コマンドを `;`・`&&`・`|` でつながない。`gh` が使えなければ `git show` だけで読み、「レビューは見ていない」と書く。
 2. 差分は `git show --stat <コミット>` を見てから、分類に当たるファイルだけ `git show <コミット> -- <パス>` で読む。lockfile、生成物、スナップショットは読まない。
 3. いまの姿は `git show <基準のコミット>:<パス>` か `git grep -n <識別子> <基準のコミット>` で確かめる。
 
