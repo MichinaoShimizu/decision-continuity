@@ -2,7 +2,7 @@
 
 作業単位: decision-records の文書群を日本語技術文書の規範で推敲する
 開始: 2026-10-17T12:22:20+0900
-最終更新: 2026-10-17T12:35:00+0900
+最終更新: 2026-10-17T12:50:00+0900
 開始コミット: a84d5c2fe913c3b8adb753bb115234cb047311ef
 
 ## 実行履歴
@@ -12,6 +12,7 @@
 | 1 | 12:22 | 文書構造是正スキル | 軽量確認（開始時「すべて通過」） | 違反0件 |
 | 2 | 12:25 | japanese-tech-writing | 第1巡: 6 文書の太字・段落の配置・事実の食い違い・用語・機構を直した | 違反0件 |
 | 3 | 12:33 | 文書簡潔化スキル | 第1巡: 推敲した箇所を見直し、追加の削減なし | 違反0件 |
+| 4 | 12:45 | markdownlint | 見出しの階層、コードブロックの言語、コードスパンの空白を直し、設定ファイルを追加 | markdownlint 0 件・違反0件 |
 
 ## 文書構造是正スキル
 
@@ -80,3 +81,15 @@
 ### その他の検査
 
 - `python3 -I -m unittest discover -s adr/evals -p 'test_agent_eval.py'` → OK
+
+## markdownlint
+
+`markdownlint-cli2@0.18.1` を既定のルールで実行した（25 文書）。開始時 116 件（MD013 106・MD025 4・MD041 3・MD040 2・MD038 1）。
+
+- [x] MD025 — [adr/skills/decision-log/references/investigation.md](../../adr/skills/decision-log/references/investigation.md) の「0.」〜「3.」の見出しが `#` だった。前の作業単位（#35）で SKILL.md から移したときに `###` を `##` ではなく `#` にした誤り。`##` に直した
+- [x] MD040 — [adr/skills/decision-log/SKILL.md](../../adr/skills/decision-log/SKILL.md) のチェックリストと [amend.md](../../.claude/skills/decision-record/references/amend.md) の追記例のコードブロックに `markdown` を付けた
+- [x] MD038 — [writing.md](../../adr/skills/decision-log/references/writing.md) の「`# ` の行」を「`#` で始まるタイトルの行」に言い換えた
+- [x] MD013 — 設定で無効にした。日本語の段落は 1 行で書いており、折り返すと表示に余計な空白が入る
+- [x] MD041 — 設定で無効にした。サブエージェントの指示（adr/agents/）と CLAUDE.md に足す断片（adr/templates/agent-instructions.md）は、見出しで始まらない形が正しい
+
+設定は [.markdownlint-cli2.jsonc](../../.markdownlint-cli2.jsonc)。最終結果: `markdownlint-cli2 "**/*.md"` → 0 error(s)。`document-structure-verifier.mjs` → すべて通過。`check-preserved-content.mjs --per-file` → すべて残っている。`test_agent_eval.py` → OK

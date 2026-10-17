@@ -1,0 +1,9 @@
+{
+  "config": {
+    // 日本語の段落は 1 行に書く。折り返すと表示に余計な空白が入る
+    "MD013": false,
+    // サブエージェントの指示（adr/agents/）と CLAUDE.md に足す断片（adr/templates/agent-instructions.md）は見出しで始まらない
+    "MD041": false
+  },
+  "ignores": [".verify-docs/**"]
+}
