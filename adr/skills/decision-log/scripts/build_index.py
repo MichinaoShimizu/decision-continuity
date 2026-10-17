@@ -13,6 +13,8 @@ import re
 import subprocess
 import sys
 
+# 組織の記録（records.py check）が受けるファイル名。ここから外れる名前は、読むが直すよう知らせる
+STRICT_RE = re.compile(r"^\d{4,}(?:-[a-z0-9-]+)?\.md$")
 CATEGORIES = [
     ("architecture", "設計・構成"),
     ("data", "データの意味・持ち方"),
@@ -24,7 +26,8 @@ CATEGORIES = [
     ("product", "プロダクトの方針"),
     ("other", "その他"),
 ]
-FILE_RE = re.compile(r"^(\d{4,})(?:-[a-z0-9-]+)?\.md$")
+# 0001.md、0001-auth-pkce.md のほか、0001-Short_Title.md・0001-認証の変更.md と、DL- を付けた DL-1.md・DL-0001-x.md も読む
+FILE_RE = re.compile(r"^(?:DL-(\d+)|(\d{4,})(?!-\d{2}-\d{2}))(?:[-_].*)?\.md$", re.I)
 FRONT_RE = re.compile(r"\A---\n(.*?)\n---[ \t]*\n+", re.S)
 APPEND_RE = re.compile(r"^## 追記 \d{4}-\d{2}-\d{2}.*$", re.M)
 CLAIM_DATE_RE = re.compile(r"^- C\d+ (\d{4}-\d{2}-\d{2}) ", re.M)
@@ -38,6 +41,11 @@ def field(text, key):
 def section(body, heading):
     m = re.search(rf"^## {re.escape(heading)}\n(.*?)(?=^## |\Z)", body, re.S | re.M)
     return m.group(1) if m else ""
+
+
+def number(name):
+    m = FILE_RE.match(name)
+    return int(m.group(1) or m.group(2))
 
 
 def read_log(path):
@@ -61,6 +69,10 @@ def read_log(path):
     dates = CLAIM_DATE_RE.findall(section(body, "起きたこと"))
     reason = next((l.strip() for l in section(body, "理由").splitlines() if l.strip()), "")
     problems = []
+    if path.name.upper().startswith("DL-"):
+        problems.append("ファイル名に DL- を付けない（DL-1 は文中で指すときの書き方）。0001-<名前>.md に変える")
+    elif not STRICT_RE.match(path.name):
+        problems.append("ファイル名は 0001.md か 0001-<英小文字・数字・ハイフン>.md にする（組織の記録へ移すと records.py check で止まる）")
     if not front:
         problems.append("フロントマターがない")
     elif field(front, "kind") != "log":
@@ -73,7 +85,7 @@ def read_log(path):
         problems.append("「## 起きたこと」に `- C<番号> YYYY-MM-DD <状態>：` の行がない")
     if not reason.startswith(("記録あり", "推測", "不明")):
         problems.append("「## 理由」の 1 行目が「記録あり」「推測」「不明」で始まっていない")
-    return dict(problems=problems, number=int(FILE_RE.match(path.name).group(1)), file=path.name, title=title,
+    return dict(problems=problems, number=number(path.name), file=path.name, title=title,
                 category=category if category in dict(CATEGORIES) else "other", retired=retired,
                 date=min(dates) if dates else None,
                 unknown=reason.startswith("不明") and not learned)
@@ -91,6 +103,11 @@ def order(log):
 
 def read_logs(folder):
     return [read_log(p) for p in sorted(folder.glob("*.md")) if FILE_RE.match(p.name)]
+
+
+def unindexed(folder):
+    """番号を読めず、索引に入らない Markdown（README.md を除く）。"""
+    return sorted(p.name for p in folder.glob("*.md") if p.name != "README.md" and not FILE_RE.match(p.name))
 
 
 def build(logs, repo):
@@ -128,6 +145,8 @@ def main():
     text = build(logs, args.repo or repo_name(args.folder))
     target = args.folder / "README.md"
     problems = [f"{l['file']}: {p}" for l in logs for p in l["problems"]]
+    problems += [f"{name}: ファイル名の先頭に 4 桁の番号がない（0001.md か 0001-<名前>.md）。索引に入らない"
+                 for name in unindexed(args.folder)]
     for p in problems:
         print(p)
     if args.check:

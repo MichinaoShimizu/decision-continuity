@@ -179,6 +179,24 @@ class BuildIndexTests(unittest.TestCase):
             (d / "README.md").write_text("old", encoding="utf-8")
             self.assertEqual(self.run_script(d, "--check").returncode, 1)
 
+    def test_reads_older_file_names_and_reports_unnumbered(self):
+        with tempfile.TemporaryDirectory() as directory:
+            d = pathlib.Path(directory)
+            for name in ("0001-Auth_PKCE.md", "0002-認証の変更.md", "DL-0003-retry.md", "DL-4.md"):
+                (d / name).write_text(self.log("security", name, ["2025-01-01"], "不明。"), encoding="utf-8")
+            (d / "notes.md").write_text("# メモ\n", encoding="utf-8")
+            (d / "2025-03-04-retry.md").write_text("# 日付の名前\n", encoding="utf-8")
+            built = self.run_script(d)
+            index = (d / "README.md").read_text(encoding="utf-8")
+            for number, name in ((1, "0001-Auth_PKCE.md"), (2, "0002-認証の変更.md"), (3, "DL-0003-retry.md"), (4, "DL-4.md")):
+                self.assertIn(f"[DL-{number}]({name})", index)
+            self.assertIn("DL-4.md: ファイル名に DL- を付けない", built.stdout)
+            self.assertIn("0001-Auth_PKCE.md: ファイル名は 0001.md か", built.stdout)
+            self.assertNotIn("0002-認証の変更.md: ファイル名に DL-", built.stdout)
+            self.assertIn("notes.md: ファイル名の先頭に 4 桁の番号がない", built.stdout)
+            self.assertIn("2025-03-04-retry.md: ファイル名の先頭に 4 桁の番号がない", built.stdout)
+            self.assertNotEqual(built.returncode, 0)
+
     def test_reports_malformed_logs(self):
         with tempfile.TemporaryDirectory() as directory:
             d = pathlib.Path(directory)
