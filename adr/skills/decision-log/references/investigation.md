@@ -4,14 +4,22 @@
 
 1. リポジトリ名（`git remote get-url origin` の末尾）、基準のコミット（`git rev-parse HEAD`）、範囲を決める。
 2. 既存の決定と Decision log の、探し方の行だけを読む（置き場所 1・3 は `grep -H -E '^(category|paths|keywords):' <置き場所>/*.md`、置き場所 2 は `records.py index --repo <リポジトリ名>` の出力）。全文は、手順 1 で候補と重なったものだけ読む。索引の `README.md` は参考にとどめる。
-3. 履歴の一覧を手元で 1 回で取る。`TZ=Asia/Tokyo git log --first-parent --date=short-local --format='@@ %h %ad %s' --name-only [-- <scope のパス>]`。日付はすべて JST（日本時間）の YYYY-MM-DD で書く。PR の `mergedAt` などは UTC なので、9 時間足して JST の日付にする（例：`gh pr view 101 --json mergedAt --jq '.mergedAt | fromdate + 32400 | strftime("%Y-%m-%d")'`）。メッセージの `(#123)` や `Merge pull request #123` で PR の番号に結びつける。浅いクローンなら先に `git fetch --unshallow`。できなければ、見えた範囲を報告に書く。
+3. 履歴の一覧を手元で 1 回で取る。`TZ=Asia/Tokyo git log --first-parent --date=short-local --format='@@ %h %ad %s' --name-only [-- <scope のパス>]`。日付はすべて JST（日本時間）の YYYY-MM-DD で書く。PR の `mergedAt` などは UTC なので、9 時間足して JST の日付にする（例：`gh pr view 101 --json mergedAt --jq '.mergedAt | fromdate + 32400 | strftime("%Y-%m-%d")'`）。メッセージの `(#123)` や `Merge pull request #123` で PR の番号に結びつける。マージコミットの件名はブランチ名なので（`Merge pull request #12 from x/fix-typo`）、`git log --first-parent --merges --format='@@ %h %b' [-- <scope のパス>]` も取り、本文の 1 行目を PR のタイトルとして読む。浅いクローンなら先に `git fetch --unshallow`。できなければ、見えた範囲を報告に書く。
 4. マージされた変更を全部数え、総数とどこまで見たかを記録する。
 
 ## 1. 候補を見つける
 
-一覧（タイトルと変更ファイル）だけで、各変更を「分類」に当てはめる。手がかりはファイルの場所である（例：`migrations/` → `data`、`auth` → `security`、`openapi` → `compatibility`、`timeout`・`retry` → `reliability`、`.github/workflows` → `release`）。依存の更新、見た目の変更、ふつうのバグ修正はここで落とす。
+タイトルと変更ファイルだけでは、名前と中身が違う変更（「fix typo」でタイムアウトを変えたもの）や、`settings.py`・`constants.ts` の中の値の変更を見落とす。次の 2 つを合わせて候補にする。
 
-残った候補を、大事なもの、戻されたもの（`Revert`）、あいまいなもの、議論があったものの順に並べ、上から `depth` 件だけ本文とレビューをまとめて取る。
+1. **一覧から**：タイトルと変更ファイルで、各変更を「分類」に当てはめる。手がかりはファイルの場所である（例：`migrations/` → `data`、`auth` → `security`、`openapi` → `compatibility`、`timeout`・`retry` → `reliability`、`.github/workflows` → `release`）。
+2. **差分から**：全件の差分を手元の git で 1 回洗う。`git log --first-parent -i -G '<言葉>' --format='%h' -- <scope のパス（なければ .）> ':(exclude)*lock*' ':(exclude)*.snap'`。lockfile とスナップショットは、依存の更新が当たり続けるので外す。`<言葉>` は次をつないだ正規表現にする。
+   - 既定：`timeout|retr(y|ies)|limit|max_|ttl|expire|auth|permission|role|token|secret|encrypt|signature|hmac|verify|email|phone|schema|migrat|deprecat|feature_?flag`
+   - 定数・設定の値の変更：`^[A-Z][A-Z0-9_]{2,} *[:=]`
+   - 手順 0 で読んだ既存の記録の `keywords`
+
+依存の更新、見た目の変更、ふつうのバグ修正は落とす。ただし、落とすのは 2 に当たらなかったものだけにする。タイトルだけで落とさない。
+
+候補を、大事なもの、2 に当たったのにタイトルからは分からないもの、戻されたもの（`Revert`）、あいまいなもの、議論があったものの順に並べ、上から `depth` 件だけ本文とレビューをまとめて取る。`depth` の外に残った候補は、分類ごとの数と番号を報告に書く。
 
 - GitHub：`for n in 101 117; do gh pr view $n --json number,title,body,author,createdAt,mergedAt,mergedBy,url,reviews,comments,files; done`。多いときは `gh api graphql` で 1 回に 20〜50 件。`gh` がなければ MCP ツールか REST API。
 - GitLab：`glab mr view <番号>` を同じようにループする。

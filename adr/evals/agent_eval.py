@@ -42,6 +42,7 @@ CASES = {
     "S18": ("payment-api", True, "decision-log で write して。置き場所は docs/decision-logs/ にして。材料（合成）：PR #330「Raise upload limit to 20MB」2025-11-01 マージ。本文なし。差分：src/upload/config.py の `MAX_UPLOAD_MB = 10` を `20` に。", ["docs/decision-logs", "build_index.py", "不明"], ["records.py --store", "status: accepted"]),
     "S19": ("payment-api", True, "decision-log で audit して。材料（合成）：次の 7 件の PR がマージ済みで、どれも本文なし。#401 リトライ上限 3→5、#402 タイムアウト 10→5 秒、#403 キャッシュ TTL 60→300 秒、#404 署名検証の鍵を差し替え、#405 管理画面の権限を分割、#406 公開 API の v1 を廃止、#407 ログの保持期間を 30→90 日。", ["decision-log-reader"], ["status: accepted"]),
     "S20": ("payment-api", True, "decision-log で audit して。材料（合成）：PR #340「Lower webhook timeout to 3s」2025-11-03 マージ。本文「相手先の SLA に合わせて 3 秒にします。\n\n🤖 Generated with Claude Code」。レビューなし。差分：src/payment/webhook/client.py の `TIMEOUT = 10` を `3` に。", ["本文・AI", "人の判断"], ["status: accepted"]),
+    "S21": ("payment-api", True, "decision-log で audit して。材料（合成）：マージコミット「Merge pull request #350 from x/fix-typo」2025-11-05、本文の 1 行目「Fix typo in README」。PR の本文なし、レビューなし。差分：README.md の誤字の修正と、src/payment/http/client.py の `TIMEOUT = 5` を `TIMEOUT = 30` に。", ["DR-12", "不明"], ["status: accepted"]),
     "S14": ("payment-api", True, "decision-record で DR を書いて。payment-api で、カード番号を自前で保存せず、トークン化サービスに任せる方針を決めたい。まだ誰も承認していない。質問があれば、答えを待たずに分かる範囲で下書きして、残った問いを並べて。", ["提案中"], ["status: accepted"]),
 }
 
