@@ -3,6 +3,10 @@
     // 日本語の段落は 1 行に書く。折り返すと表示に余計な空白が入る
     "MD013": false,
     // サブエージェントの指示（agents/）は見出しで始まらない
-    "MD041": false
-  }
+    "MD041": false,
+    // CHANGELOG.md は版ごとに同じ「### Added」などを持つ
+    "MD024": { "siblings_only": true }
+  },
+  // tools/changelog.sh のテストの入力（わざと形の崩れたものを含む）
+  "ignores": ["tools/testdata/**"]
 }
