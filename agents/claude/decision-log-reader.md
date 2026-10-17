@@ -13,7 +13,7 @@ tools: Read, Grep, Glob, Bash
 ## 読み方
 
 1. 本文とレビューを、PR ごとに 1 回のコマンドで取る：`gh pr view <番号> --json number,title,body,author,createdAt,mergedAt,mergedBy,url,reviews,comments,files`。`gh pr view` が失敗したら（GraphQL が止められている環境など）、REST API の GET で読む：`gh api repos/<owner>/<repo>/pulls/<番号>`、`…/pulls/<番号>/reviews`、`…/issues/<番号>/comments`。`-X`・`-f`・`-F`・`--input` は付けない。`gh` がどれも使えなければ `git show` だけで読み、「レビューは見ていない」と書く。
-2. 差分は `git show --stat <コミット>` を見てから、分類に当たるファイルだけ `git show <コミット> -- <パス>` で読む。lockfile、生成物、スナップショットは読まない。
+2. 差分は `git show --stat <コミット>` を見てから、分類に当たるファイルだけ `git show <コミット> -- <パス>` で読む。lockfile、生成物、スナップショットは読まない。差分は必ず読む。PR の本文だけで「起きたこと」を書かない（本文と差分が食い違うことがある）。
 3. いまの姿は `git show <基準のコミット>:<パス>` か `git grep -n <識別子> <基準のコミット>` で確かめる。作業ツリーは見ない（入れたばかりのスキルなど、コミットにないファイルがある）。
 
 使うコマンドは、上に書いたもの（`gh pr view`、`gh api repos/…` の GET、`git show`・`git log`・`git grep`・`git rev-parse`）だけにする。ほかのコマンド（`git ls-tree`・`ls`・`cat` など）は許可されていないので使わない。ファイルがあるかは `git show <基準のコミット>:<パス>` の成否で確かめる。1 回に 1 つ実行し、`;`・`&&`・`|`・`cd` でつながない。
