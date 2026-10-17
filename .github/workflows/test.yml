@@ -27,6 +27,40 @@ jobs:
       - name: Unit tests
         run: python -I -m unittest discover -s tests -p 'test_*.py' -v
 
+  # 版の仕組み（docs/release.md）：リリースする版（まだタグのない、いちばん上の版の節）が中身から決まる番号と合っているか、
+  # リリースの PR に、まとめていない断片が残っていないか
+  release-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Changelog
+        run: |
+          sh tools/changelog.sh --check
+          top=$(grep -m1 '^## ' CHANGELOG.md | cut -d' ' -f2)
+          sh tools/release-notes.sh "$top" > /dev/null
+          pending=$(sh tools/changelog.sh --print)
+          case "$top" in
+            v*)
+              if ! git rev-parse -q --verify "refs/tags/$top" >/dev/null; then
+                want=$(sh tools/next-version.sh "$top")
+                if [ "${top%%-*}" != "$want" ]; then
+                  echo "::error file=CHANGELOG.md::$top の中身からすると、版は $want です（sh tools/next-version.sh $top）"
+                  exit 1
+                fi
+                if [ -n "$pending" ]; then
+                  echo "::error file=CHANGELOG.md::changes/ にまだ断片があります。sh tools/changelog.sh --release $top で $top の節に入れてください"
+                  exit 1
+                fi
+              fi
+              ;;
+          esac
+          if [ -n "$pending" ]; then
+            echo "Next version from changes/ and ## Unreleased: $(sh tools/next-version.sh)"
+          fi
+
   markdownlint:
     runs-on: ubuntu-latest
     steps:

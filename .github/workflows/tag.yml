@@ -1,0 +1,64 @@
+name: Tag
+
+# CHANGELOG.md のいちばん上の節が「## v0.1.0 - 2026-10-17」のような版で、そのタグがまだなければ、
+# タグを打ち、その節をリリースノートにして GitHub のリリースを作る。リリースは、sh tools/release.sh で作る PR
+# （changes/ の断片と Unreleased を版の節にまとめ、plugin.json の版を上げる）をマージするだけで出る。
+# 手で動かすこともできる（Actions → Tag → Run workflow）。
+on:
+  push:
+    branches: [main]
+    paths: [CHANGELOG.md]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tag
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false # トークンはタグを push してリリースを作るステップにだけ渡す
+      - id: ver
+        run: |
+          v=$(grep -m1 '^## ' CHANGELOG.md | cut -d' ' -f2)
+          if ! printf '%s' "$v" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'; then
+            echo "いちばん上の節は「$v」なので、タグは打たない"
+            exit 0
+          fi
+          if git rev-parse -q --verify "refs/tags/$v" >/dev/null; then
+            echo "$v はもうある"
+            exit 0
+          fi
+          sh tools/release-notes.sh "$v" > "$RUNNER_TEMP/notes.md"
+          want=$(sh tools/next-version.sh "$v")
+          if [ "${v%%-*}" != "$want" ]; then  # v0.2.0-rc.1 のようなプレリリースは v0.2.0 と比べる
+            echo "::error::$v の中身からすると、版は $want です。CHANGELOG を直してください"
+            exit 1
+          fi
+          plugin=$(python3 -I -c 'import json; print(json.load(open(".claude-plugin/plugin.json"))["version"])')
+          if [ "v$plugin" != "$v" ]; then
+            echo "::error::.claude-plugin/plugin.json の版は $plugin です。$v にしてください"
+            exit 1
+          fi
+          echo "v=$v" >> "$GITHUB_OUTPUT"
+      - if: steps.ver.outputs.v != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          V: ${{ steps.ver.outputs.v }}
+        run: |
+          auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          echo "::add-mask::$auth"
+          git tag "$V"
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" push origin "$V"
+          prerelease=
+          case "$V" in *-*) prerelease=--prerelease ;; esac
+          gh release create "$V" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$V" --notes-file "$RUNNER_TEMP/notes.md" $prerelease

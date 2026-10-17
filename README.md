@@ -95,3 +95,7 @@ Kiro は、`agents/kiro/` の定義に読むだけのコマンドの許可が入
 - 実際のエージェントでの評価：スキルごとに `evals/<スキル名>/`（[decision-log](evals/decision-log/cases.md)）
 
 [MIT License](LICENSE)
+
+## 版
+
+変更は [CHANGELOG.md](CHANGELOG.md) にある。PR は `changes/` に変更の断片を足し、リリースの PR が版を決めてまとめる（[docs/release.md](docs/release.md)）。
