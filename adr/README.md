@@ -16,7 +16,7 @@
 | `skills/decision-log/` | PR・issue・コードから、過去の変更を Decision log に起こす。このフォルダーだけで、どのリポジトリでも動く。手順と書き方の詳細は `references/`、索引を作るスクリプトは `scripts/` |
 | `skills/decision-continuity-contract.md` | スキルが共通で守るルール |
 | [`templates/agent-instructions.md`](templates/agent-instructions.md) | `CLAUDE.md`（Kiro なら steering）に足す指示 |
-| `agents/` | decision-log が候補を並行に読ませるサブエージェント `decision-log-reader`（[Claude Code 用](agents/claude/decision-log-reader.md)と [Kiro 用](agents/kiro/decision-log-reader.json)） |
+| `agents/` | decision-log が候補を並行に読ませるサブエージェント `decision-log-reader`（[Claude Code 用](agents/claude/decision-log-reader.md)と Kiro 用の [JSON](agents/kiro/decision-log-reader.json) と [Markdown](agents/kiro/decision-log-reader.md)。Kiro は CLI が JSON、IDE が Markdown を読むので両方を置く） |
 | `templates/kiro/` | Kiro 用の薄い `SKILL.md`。中身は `.claude/skills/` の正本を読むように言うだけ |
 | `evals/` | スキルを試す 21 のケース、固定データ、実行の手順、実行スクリプト |
 
@@ -26,7 +26,7 @@
 
 対象のリポジトリで:
 
-1. `adr/skills/` の中身と、このリポジトリの `.claude/skills/decision-record/` を、`.claude/skills/` に写す。ここが正本で、`records.py` もここに置く。Kiro も使うなら、`templates/kiro/` の中身を `.kiro/skills/` に写す。サブエージェント `decision-log-reader` も、`agents/claude/` を `.claude/agents/` に、Kiro なら `agents/kiro/` を `.kiro/agents/` に写す（候補が多いとき、decision-log が並行に読ませる）。`decision-record/STORE` に記録のリポジトリ（`owner/decision-continuity`）が書いてある。
+1. `adr/skills/` の中身と、このリポジトリの `.claude/skills/decision-record/` を、`.claude/skills/` に写す。ここが正本で、`records.py` もここに置く。Kiro も使うなら、`templates/kiro/` の中身を `.kiro/skills/` に写す。サブエージェント `decision-log-reader` も、`agents/claude/` を `.claude/agents/` に、Kiro なら `agents/kiro/` の 2 つ（`.json` と `.md`）を両方 `.kiro/agents/` に写す（候補が多いとき、decision-log が並行に読ませる）。`decision-record/STORE` に記録のリポジトリ（`owner/decision-continuity`）が書いてある。
 2. `templates/agent-instructions.md` の内容を `CLAUDE.md`（Kiro なら steering）に足し、`<repo-name>` をそのリポジトリの名前にする。
 3. 記録のリポジトリを `git clone` できるようにしておく（非公開なら git の認証を通す）。`records.py` は読むたびにキャッシュへ最新を取ってくる。読めないと adr-guard は「読めなかった」と報告する。
 4. 記録を書く（decision-log の `write` など）なら、記録のリポジトリを手元にクローンし、`--store <パス>` か環境変数 `DR_STORE` でそのパスを渡す。
