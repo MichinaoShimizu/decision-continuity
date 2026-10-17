@@ -36,7 +36,7 @@ allowed-tools: Bash(git log:*) Bash(git show:*) Bash(git grep:*) Bash(git rev-pa
 | 順 | 条件 | 読む | 書く（`write`） |
 |---|---|---|---|
 | 1 | 人が置き場所のパスを指定した | そのフォルダーの `*.md` | そのフォルダー |
-| 2 | 1 がない | `docs/decision-logs/*.md`（なければ前のキットの `docs/decision-log/*.md`） | 読んだフォルダー。どちらもなければ `docs/decision-logs/` |
+| 2 | 1 がない | `docs/decision-logs/*.md` | `docs/decision-logs/`（なければ作る） |
 
 ## 分類
 
@@ -47,7 +47,7 @@ allowed-tools: Bash(git log:*) Bash(git show:*) Bash(git grep:*) Bash(git rev-pa
 次のチェックリストを写し、進めながら印を付ける。
 
 ```markdown
-- [ ] 0. 範囲と既存の記録（探し方の行だけ）
+- [ ] 0. 範囲と既存の記録（category と keywords の行だけ）
 - [ ] 1. 候補を絞る（手元の git）→ 上から depth 件の本文・レビュー・差分を読む
 - [ ] 2. 主張ごとに履歴と現在を確かめる
 - [ ] 3. 振り分ける（新しい log ／追記／決定の候補／競合）

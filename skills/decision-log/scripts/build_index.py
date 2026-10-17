@@ -127,7 +127,21 @@ def build(logs, repo):
     return "\n".join(out) + "\n"
 
 
+def duplicates(logs):
+    """同じ番号を持つファイル。ほかのブランチと同じ番号でマージされたときに起きる。"""
+    seen = {}
+    for log in logs:
+        seen.setdefault(log["number"], []).append(log["file"])
+    return [files for _, files in sorted(seen.items()) if len(files) > 1]
+
+
 def repo_name(folder):
+    """見出しに出すリポジトリ名。いまの索引にあればそれを使い、--repo の有無で索引が変わらないようにする。"""
+    index = folder / "README.md"
+    if index.exists():
+        m = re.match(r"# Decision logs（(.+)）\n", index.read_text(encoding="utf-8"))
+        if m:
+            return m.group(1)
     try:
         url = subprocess.run(["git", "-C", str(folder), "remote", "get-url", "origin"],
                              capture_output=True, text=True, check=True).stdout.strip()
@@ -139,7 +153,7 @@ def repo_name(folder):
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("folder", type=pathlib.Path)
-    p.add_argument("--repo", help="見出しに出すリポジトリ名（既定は git の origin から）")
+    p.add_argument("--repo", help="見出しに出すリポジトリ名（既定はいまの索引の名前、なければ git の origin から）")
     p.add_argument("--check", action="store_true", help="書かずに、README.md が最新かを確かめる")
     args = p.parse_args()
     if not args.folder.is_dir():
@@ -151,6 +165,8 @@ def main():
     problems = [f"{l['file']}: {p}" for l in logs for p in l["problems"]]
     problems += [f"{name}: ファイル名の先頭に 4 桁の番号がない（0001.md か 0001-<名前>.md）。索引に入らない"
                  for name in unindexed(args.folder)]
+    problems += [f"{', '.join(files)}: 番号が重なっている。あとから入れた側のファイルの番号を、いちばん大きい番号の次に振り直す"
+                 for files in duplicates(logs)]
     for p in problems:
         print(p)
     if args.check:
