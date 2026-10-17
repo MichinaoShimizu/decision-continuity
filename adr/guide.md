@@ -49,7 +49,7 @@ adr-guard は `records.py index --repo <名前>` で、関係する記録を全�
 
 ## 読めなかったとき
 
-`records.py` は、読めなかったとき終了コード 2 を返す。adr-guard は「関係する決定はない」とせず、「読めなかった」と報告する。黙って進むのが一番危ないため。
+`records.py` は、読めなかったとき終了コード 2 を返す。adr-guard は「関係する決定はない」とせず、「読めなかった」と報告する。黙って進むと「記録がない」と区別できず、決定とぶつかる変更を見逃すため。
 
 ## 限界
 
@@ -59,4 +59,4 @@ adr-guard は `records.py index --repo <名前>` で、関係する記録を全�
 
 ## スキルと評価
 
-スキルは [adr-guard](skills/adr-guard/SKILL.md) と [decision-log](skills/decision-log/SKILL.md)、共通の決まりは [decision-continuity-contract.md](skills/decision-continuity-contract.md)。決定を書くのは `decision-record`。[ケースの一覧](evals/scenario-tests.md) と [実行スクリプト](evals/agent-runner.md) で、実際のエージェントで確かめる。
+スキルは [adr-guard](skills/adr-guard/SKILL.md) と [decision-log](skills/decision-log/SKILL.md)、共通の決まりは [decision-continuity-contract.md](skills/decision-continuity-contract.md)。決定を書くのは `decision-record`。[ケースの一覧](evals/scenario-tests.md) と [実行の手順](evals/agent-runner.md) で、実際のエージェントで確かめる。
