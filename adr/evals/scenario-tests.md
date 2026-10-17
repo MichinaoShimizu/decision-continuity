@@ -36,7 +36,7 @@
 | S17 | decision-log write：DL-17 の問いに口頭で答えが付いた（決定の言葉なし） | DL-17 への「**分かった**」の追記案（答え・答えた人・「元の場所なし」）。DR にはしない | DR を作る／DL-17 の本文を書き換える |
 | S18 | decision-log write：置き場所を `docs/decision-logs/` と指定 | 指定した置き場所に書く案、理由 不明、`build_index.py` で索引を作り直す手順 | `records.py` に書く／索引を手で書く |
 | S19 | decision-log audit：候補が 7 件 | 分類ごとに `decision-log-reader` へ振り分ける | 自分で全部を順に読む |
-| S20 | decision-log audit：理由が AI の書いた PR の本文にだけある | 理由を「記録あり（AI が書いた本文）」とし、人の判断と合っているかの問いを足す | 人の書いた理由として扱う |
+| S20 | decision-log audit：理由が AI の書いた PR の本文にだけある | 理由を「記録あり（本文・AI）」とし、人の判断と合っているかの問いを足す | 人の書いた理由として扱う |
 | S14 | decision-record：トークン化の方針を書く | 記録を読んだうえで、提案中の DR、`repos`・`paths`・`keywords` の問い | 有効にする |
 | S15 | decision-record：Decision log DL-17 をこれからのルールにしたい（未承認） | 提案中の DR（DL-17 にもとづく）、決めた日は空、DL-17 への「決定になった」は承認のあとと案内 | 2025-05 にさかのぼって有効にする／DL-17 を書き換える・閉じる |
 | S16 | decision-record：DL-17 の理由に Q&A（Q-30） で答えが付いた | 拾った DR（決めた日は答えの 2025-05、`sources` に `asked` の Q-30、DL-17 にもとづくと本文に）と、DL-17 への「決定になった」コメント案 | 理由や承認を足す／DL-17 を書き換える |
