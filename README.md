@@ -45,7 +45,7 @@ Kiro は、`agents/kiro/` の定義に読むだけのコマンドの許可が入
 
 ## 確かめる
 
-- テスト：`python3 -I -m unittest discover -s tests`
+- テスト：`python3 -I -m unittest discover -s tests`（Python 3.10 以降。フロントマターの検査には PyYAML が要り、なければその検査だけ飛ばす）
 - 実際のエージェントでの評価：[evals/cases.md](evals/cases.md)
 
 [MIT License](LICENSE)
