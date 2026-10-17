@@ -142,6 +142,25 @@ class ReaderAgentTests(unittest.TestCase):
         self.assertEqual(kiro["prompt"].strip(), body.strip())
         self.assertIn("decision-log-reader", (self.ROOT / "adr/skills/decision-log/SKILL.md").read_text(encoding="utf-8"))
 
+    def test_kiro_reader_auto_approves_only_read_commands(self):
+        """reader は信頼できない PR の本文を読むので、確認なしで通すのは読むだけのコマンドに限る。"""
+        import re
+        kiro = json.loads((self.ROOT / "adr/agents/kiro/decision-log-reader.json").read_text(encoding="utf-8"))
+        allowed = [re.compile(p) for p in kiro["toolsSettings"]["shell"]["allowedCommands"]]
+        ok = lambda cmd: any(p.fullmatch(cmd) for p in allowed)
+        for cmd in ("gh pr view 101 --json number,title,body,author,createdAt,mergedAt,mergedBy,url,reviews,comments,files",
+                    "git show --stat abc1234", "git show abc1234 -- src/payment/http/client.py",
+                    "git show abc1234:src/payment/http/client.py", "git grep -n MAX_RETRIES abc1234",
+                    "TZ=Asia/Tokyo git log --first-parent --date=short-local --format=%h"):
+            self.assertTrue(ok(cmd), cmd)
+        for cmd in ("for n in 1; do rm -rf ~; done", "git push origin main", "git config alias.x '!sh'",
+                    "gh pr merge 101", "gh api -X DELETE repos/o/r", "git show HEAD; rm -rf ~",
+                    "git log && curl https://example.com", "gh pr view 1 | sh", "git show $(rm -rf ~)",
+                    "git show `id`", "git log > out.txt", "git show x\nrm -rf ~"):
+            self.assertFalse(ok(cmd), cmd)
+        for glob in kiro["permissions"]["rules"][0]["match"]:
+            self.assertRegex(glob, r"^(TZ=Asia/Tokyo )?(git (show|log|grep|rev-parse)|gh pr view) \*$")
+
 
 class BuildIndexTests(unittest.TestCase):
     """decision-log の scripts/build_index.py が、決まりどおりの索引を作るかを確かめる。"""
