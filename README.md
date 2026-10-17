@@ -40,13 +40,26 @@ flowchart TD
       "Bash(git log *)", "Bash(git show *)", "Bash(git grep *)", "Bash(git rev-parse *)",
       "Bash(git remote get-url *)", "Bash(TZ=Asia/Tokyo git log *)",
       "Bash(gh pr view *)", "Bash(gh issue view *)", "Bash(gh release view *)",
-      "Bash(glab mr view *)", "Bash(glab issue view *)"
+      "Bash(glab mr view *)", "Bash(glab issue view *)",
+      "Bash(gh api repos/*)"
+    ],
+    "deny": [
+      "Bash(gh api *-X*)", "Bash(gh api *--method*)", "Bash(gh api *-f*)",
+      "Bash(gh api *-F*)", "Bash(gh api *--input*)"
     ]
   }
 }
 ```
 
+`gh api repos/*` は、`gh pr view` が使えない環境（GraphQL が止められているなど）で PR を REST API で読むため。書き込みになる指定（`-X`・`-f` など）は `deny` で止める。
+
 Kiro は、`agents/kiro/` の定義に読むだけのコマンドの許可が入っている。
+
+## 限界
+
+- 差分の洗い出しは、決まった言葉と定数・設定ファイルで候補を拾う。言葉の出てこない振る舞いの変更は拾えない。
+- 手順書や仕様の文書が中心のリポジトリでは、言葉の洗い出しがほぼ全件に当たり、絞り込みに使えない。コードのリポジトリ向け。
+- リポジトリの外の変更（インフラの設定、管理画面のフラグ）は履歴に残らないので見えない。
 
 ## 確かめる
 
