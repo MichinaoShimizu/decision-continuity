@@ -77,7 +77,7 @@ def run(argv, cwd=None):
 def clone(slug):
     """owner/repo を読むためだけのキャッシュにクローンし、毎回最新にそろえる。ここには書かない。"""
     cache = pathlib.Path(os.environ.get("XDG_CACHE_HOME") or pathlib.Path.home() / ".cache")
-    path = cache / "decision-records" / slug.replace("/", "__")
+    path = cache / "decision-continuity" / slug.replace("/", "__")
     if (path / ".git").exists():
         run(["git", "-C", str(path), "fetch", "--depth", "1", "origin", "HEAD"])
         run(["git", "-C", str(path), "reset", "--hard", "FETCH_HEAD"])

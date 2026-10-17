@@ -26,7 +26,7 @@
 
 対象のリポジトリで:
 
-1. `adr/skills/` の中身と、このリポジトリの `.claude/skills/decision-record/` を、`.claude/skills/` に写す。ここが正本で、`records.py` もここに置く。Kiro も使うなら、`templates/kiro/` の中身を `.kiro/skills/` に写す。サブエージェント `decision-log-reader` も、`agents/claude/` を `.claude/agents/` に、Kiro なら `agents/kiro/` を `.kiro/agents/` に写す（候補が多いとき、decision-log が並行に読ませる）。`decision-record/STORE` に記録のリポジトリ（`owner/decision-records`）が書いてある。
+1. `adr/skills/` の中身と、このリポジトリの `.claude/skills/decision-record/` を、`.claude/skills/` に写す。ここが正本で、`records.py` もここに置く。Kiro も使うなら、`templates/kiro/` の中身を `.kiro/skills/` に写す。サブエージェント `decision-log-reader` も、`agents/claude/` を `.claude/agents/` に、Kiro なら `agents/kiro/` を `.kiro/agents/` に写す（候補が多いとき、decision-log が並行に読ませる）。`decision-record/STORE` に記録のリポジトリ（`owner/decision-continuity`）が書いてある。
 2. `templates/agent-instructions.md` の内容を `CLAUDE.md`（Kiro なら steering）に足し、`<repo-name>` をそのリポジトリの名前にする。
 3. 記録のリポジトリを `git clone` できるようにしておく（非公開なら git の認証を通す）。`records.py` は読むたびにキャッシュへ最新を取ってくる。読めないと adr-guard は「読めなかった」と報告する。
 4. 記録を書く（decision-log の `write` など）なら、記録のリポジトリを手元にクローンし、`--store <パス>` か環境変数 `DR_STORE` でそのパスを渡す。
