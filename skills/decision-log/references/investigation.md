@@ -12,10 +12,12 @@
 タイトルと変更ファイルだけでは、名前と中身が違う変更（「fix typo」でタイムアウトを変えたもの）や、`settings.py`・`constants.ts` の中の値の変更を見落とす。次の 2 つを合わせて候補にする。
 
 1. **一覧から**：タイトルと変更ファイルで、各変更を「分類」に当てはめる。手がかりはファイルの場所である（例：`migrations/` → `data`、`auth` → `security`、`openapi` → `compatibility`、`timeout`・`retry` → `reliability`、デプロイ・`monitoring`・`alerts` → `release`、`.github/workflows` のテストや lint・`.eslintrc` → `engineering`、`terraform` のインスタンスの種類・サンプリング → `cost`）。
-2. **差分から**：全件の差分を手元の git で 1 回洗う。`git log --first-parent -i -G '<言葉>' --format='%h' -- <scope のパス（なければ .）> ':(exclude)*lock*' ':(exclude)*.snap'`。lockfile とスナップショットは、依存の更新が当たり続けるので外す。`<言葉>` は次をつないだ正規表現にする。
-   - 既定：`timeout|retr(y|ies)|limit|max_|ttl|expire|auth|permission|role|token|secret|encrypt|signature|hmac|verify|email|phone|schema|migrat|deprecat|feature_?flag|instance_type|sampling|sample_rate`
-   - 定数・設定の値の変更：`^[A-Z][A-Z0-9_]{2,} *[:=]`
-   - 手順 0 で読んだ既存の記録の `keywords`
+2. **差分から**：全件の差分を手元の git で洗う。次の 3 つを別々に回し、当たったものを合わせる。`-i` は正規表現の全体に効くので、1 と 2 をつながない（つなぐと、2 があらゆる小文字の代入に当たる）。lockfile とスナップショットは、依存の更新が当たり続けるので外す。
+   1. 言葉（大文字と小文字を区別しない）：`git log --first-parent -i -G '<言葉>' --format='%h' -- <scope のパス（なければ .）> ':(exclude)*lock*' ':(exclude)*.snap'`。`<言葉>` は、既定の言葉と、手順 0 で読んだ既存の Decision log の `keywords` をつないだもの。
+      - 既定：`timeout|retr(y|ies)|limit|max_|ttl|expire|auth|permission|role|token|secret|encrypt|signature|hmac|verify|email|phone|schema|migrat|deprecat|feature_?flag|instance_type|sampling|sample_rate`
+   2. 定数の値の変更（区別する）：1 と同じ形で、`-i` を付けずに回す。
+      - 定数・設定の値の変更：`^[A-Z][A-Z0-9_]{2,} *[:=]`
+   3. 設定ファイルの変更（中身は問わない）：`git log --first-parent --format='%h' -- '*.yml' '*.yaml' '*.toml' '*.ini' '*.properties' '*.env' ':(exclude)*lock*'`。scope があれば、その下に絞る（例：`'<scope>/*.yml'`）。小文字の設定（`retention_days: 90`）は 1 と 2 では拾えないので、これで拾う。
 
 依存の更新、見た目の変更、ふつうのバグ修正は落とす。ただし、落とすのは 2 に当たらなかったものだけにする。タイトルだけで落とさない。
 
