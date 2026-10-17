@@ -1,4 +1,4 @@
-# decision-records
+# decision-continuity
 
 組織の意思決定を、あとから探せる形で残す場所と、そのためのスキル。
 
