@@ -22,10 +22,36 @@ flowchart TD
 
 ## 入れ方
 
+どれか 1 つを選ぶ。
+
+### Claude Code のプラグイン
+
+スキルとサブエージェントが両方入る。更新もプラグインで受け取る。
+
+```text
+/plugin install decision-continuity --marketplace MichinaoShimizu/decision-continuity
+```
+
+Claude Code 2.1.275 より前なら `/plugin marketplace add MichinaoShimizu/decision-continuity` のあと `/plugin install decision-continuity@decision-continuity`。スキルは `decision-continuity:decision-log`、サブエージェントは `decision-continuity:decision-log-reader` という名前になる。
+
+### npx skills
+
+[npx skills](https://github.com/vercel-labs/skills) で、Claude Code と Kiro にスキルだけを入れる。
+
+```sh
+npx skills add MichinaoShimizu/decision-continuity --skill decision-log -a claude-code -a kiro-cli
+```
+
+サブエージェントは入らないので、使うなら下の表の 2 行目を写す。写さなくても、decision-log は既定のサブエージェントに切り替えて動く。
+
+### 手で写す
+
 | 写すもの | Claude Code | Kiro |
 |---|---|---|
 | [skills/decision-log/](skills/decision-log/SKILL.md) | `.claude/skills/decision-log/` | `.kiro/skills/decision-log/` |
 | [agents/](agents/) の decision-log-reader | `claude/` の `.md` を `.claude/agents/` | `kiro/` の `.json` と `.md` を両方 `.kiro/agents/` |
+
+## 使い方
 
 使うときは「認証まわりがなぜこうなったか、履歴から起こして」のように頼む。既定は読むだけ（`audit`）で、書くのは `write` と頼んだときだけ。
 

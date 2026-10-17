@@ -85,6 +85,22 @@ class FrontMatterTests(unittest.TestCase):
                 self.assertLessEqual(len(skill.read_bytes()), 7000, "SKILL.md は 7,000 バイトまで。詳細は references/ に移す")
 
 
+class PluginTests(unittest.TestCase):
+    """Claude Code のプラグインとマーケットプレイスの定義が、リポジトリの中身と合っているか。"""
+
+    def test_plugin_lists_every_claude_agent_and_no_kiro_file(self):
+        plugin = json.loads((ROOT / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))
+        listed = sorted((ROOT / p).resolve() for p in plugin["agents"])
+        # agents を書かないと agents/ 全体（kiro/ の .md も）を読みにいくので、Claude Code 用だけを並べる
+        self.assertEqual(listed, sorted(p.resolve() for p in CLAUDE_AGENTS))
+        self.assertRegex(plugin["version"], r"^\d+\.\d+\.\d+$")
+
+    def test_marketplace_points_at_this_repository(self):
+        market = json.loads((ROOT / ".claude-plugin/marketplace.json").read_text(encoding="utf-8"))
+        plugin = json.loads((ROOT / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))
+        self.assertEqual([(p["name"], p["source"]) for p in market["plugins"]], [(plugin["name"], ".")])
+
+
 class AgentTests(unittest.TestCase):
     """Claude Code 用の定義ごとに、Kiro 用の JSON（CLI が読む）と Markdown（IDE が読む）が同じ中身で揃っているか。"""
 

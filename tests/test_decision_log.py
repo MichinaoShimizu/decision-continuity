@@ -40,7 +40,7 @@ class SkillAllowedToolsTests(unittest.TestCase):
         self.assertTrue(rules)
         read_only = re.compile(r"^(TZ=Asia/Tokyo )?git (log|show|grep|rev-parse|remote get-url):\*$"
                                r"|^(gh (pr|issue|release)|glab (mr|issue)) view:\*$"
-                               r"|^python3 \.(claude|kiro)/skills/decision-log/scripts/build_index\.py:\*$")
+                               r"|^python3 (\.(claude|kiro)/skills/decision-log|\$\{CLAUDE_SKILL_DIR\})/scripts/build_index\.py:\*$")
         for rule in rules:
             self.assertRegex(rule, read_only)
 
