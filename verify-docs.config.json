@@ -1,0 +1,4 @@
+{
+  "pathRoots": [".claude/skills/decision-record/", ".kiro/skills/decision-record/", ".github/", "adr/", "records/"],
+  "excludePaths": ["node_modules/", ".git/", "vendor/", "dist/", "build/", ".verify-docs/", "adr/agents/kiro/", "adr/templates/kiro/"]
+}
