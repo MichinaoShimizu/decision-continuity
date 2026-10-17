@@ -29,7 +29,7 @@
 ## 動かす
 
 ```sh
-python3 -I evals/run.py \
+python3 -I evals/decision-log/run.py \
   --agent-version 'AGENT_AND_MODEL_VERSION' \
   --agent-argv-json '["claude","-p","--allowedTools","Read","Grep","Glob","Skill","Agent","Write","Edit","Bash(git log:*)","Bash(git show:*)","Bash(git grep:*)","Bash(git rev-parse:*)","Bash(git remote get-url:*)","Bash(python3 .claude/skills/decision-log/scripts/build_index.py:*)"]' \
   --skills-loaded \

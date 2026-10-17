@@ -1,8 +1,13 @@
 # decision-continuity
 
-コードのリポジトリの履歴から、何が起きたか・なぜか・何が分かっていないかを Decision log に起こすスキル。Claude Code と Kiro で動く。
+意思決定の経緯を途切れさせないための、スキルとサブエージェントの集まり。組み合わせて使う。Claude Code と Kiro で動く。
 
-## 流れ
+| 名前 | 種類 | すること |
+|---|---|---|
+| [decision-log](skills/decision-log/SKILL.md) | スキル | コードのリポジトリの履歴から、何が起きたか・なぜか・何が分かっていないかを Decision log に起こす |
+| [decision-log-reader](agents/claude/decision-log-reader.md) | サブエージェント | decision-log の候補を分類ごとに並行に読み、決まった形で返す |
+
+## decision-log の流れ
 
 ```mermaid
 flowchart TD
@@ -46,6 +51,6 @@ Kiro は、`agents/kiro/` の定義に読むだけのコマンドの許可が入
 ## 確かめる
 
 - テスト：`python3 -I -m unittest discover -s tests`（Python 3.10 以降。フロントマターの検査には PyYAML が要り、なければその検査だけ飛ばす）
-- 実際のエージェントでの評価：[evals/cases.md](evals/cases.md)
+- 実際のエージェントでの評価：スキルごとに `evals/<スキル名>/`（[decision-log](evals/decision-log/cases.md)）
 
 [MIT License](LICENSE)
