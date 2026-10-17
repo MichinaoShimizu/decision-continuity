@@ -6,20 +6,7 @@
 
 ## 考え方
 
-**起きたこと**と、**意図して決めたこと**を分けて残す。
-
-| | Decision log | 決定（DR） |
-|---|---|---|
-| フォルダー | `records/decision-logs/` | `records/decisions/`、`records/decision-flows/` |
-| 何を残すか | 過去に何が変わったか、なぜか（分かる範囲で）、何が分からないか | これからどうするか、なぜか、誰が決めたか |
-| 縛るか | 縛らない。判断の材料 | 有効なものだけが、以後の変更を縛る |
-
-- 状態は 3 つだけ：提案中（`proposed`）、有効（`accepted` か「決まった」の追記）、終了（「終了」の追記がある）。
-- マージされた PR は「変わった」ことの証拠で、「方針として決めた」ことの証拠ではない。
-- 分からない理由は Unknown のまま残す。後から理由を作らない。
-- 索引のファイルは持たない。各 DR の `repos`・`paths`・`keywords` が索引の 1 行の代わりで、`records.py index` がそれを並べる。
-
-詳しい流れと図は [guide.md](guide.md)。
+**起きたこと**（Decision log。`records/decision-logs/`）と、**意図して決めたこと**（DR。`records/decisions/`、`records/decision-flows/`）を分けて残す。Decision log は縛らず、有効な DR だけが以後の変更を縛る。記録の種類、状態、探し方、流れと図は [guide.md](guide.md)。
 
 ## 構成
 
@@ -28,8 +15,8 @@
 | `skills/adr-guard/` | 変更が有効な決定とぶつからないかを確かめる |
 | `skills/decision-log/` | PR・issue・コードから、過去の変更を Decision log に起こす。このフォルダーだけで、どのリポジトリでも動く。書き方は `references/`、索引を作るスクリプトは `scripts/` |
 | `skills/decision-continuity-contract.md` | スキルが共通で守るルール |
-| `templates/agent-instructions.md` | `CLAUDE.md`（Kiro なら steering）に足す指示 |
-| `agents/` | decision-log が候補を並行に読ませるサブエージェント `decision-log-reader`（Claude Code 用と Kiro 用） |
+| [`templates/agent-instructions.md`](templates/agent-instructions.md) | `CLAUDE.md`（Kiro なら steering）に足す指示 |
+| `agents/` | decision-log が候補を並行に読ませるサブエージェント `decision-log-reader`（[Claude Code 用](agents/claude/decision-log-reader.md)と [Kiro 用](agents/kiro/decision-log-reader.md)） |
 | `templates/kiro/` | Kiro 用の薄い `SKILL.md`。中身は `.claude/skills/` の正本を読むように言うだけ |
 | `evals/` | スキルを試す 20 のケース、固定データ、実行の手順、実行スクリプト |
 
@@ -39,7 +26,7 @@
 
 対象のリポジトリで:
 
-1. `adr/skills/` の中身と、このリポジトリの `.claude/skills/decision-record/` を、`.claude/skills/` に写す。ここが正本で、`records.py` もここに置く。Kiro も使うなら、`templates/kiro/` の中身を `.kiro/skills/` に写す（正本を指すだけの薄いファイルなので、中身を二重に持たない）。サブエージェント `decision-log-reader` も、`agents/claude/` を `.claude/agents/` に、Kiro なら `agents/kiro/` を `.kiro/agents/` に写す（候補が多いとき、decision-log が並行に読ませる）。`decision-record/STORE` に記録のリポジトリ（`owner/decision-records`）が書いてある。
+1. `adr/skills/` の中身と、このリポジトリの `.claude/skills/decision-record/` を、`.claude/skills/` に写す。ここが正本で、`records.py` もここに置く。Kiro も使うなら、`templates/kiro/` の中身を `.kiro/skills/` に写す。サブエージェント `decision-log-reader` も、`agents/claude/` を `.claude/agents/` に、Kiro なら `agents/kiro/` を `.kiro/agents/` に写す（候補が多いとき、decision-log が並行に読ませる）。`decision-record/STORE` に記録のリポジトリ（`owner/decision-records`）が書いてある。
 2. `templates/agent-instructions.md` の内容を `CLAUDE.md`（Kiro なら steering）に足し、`<repo-name>` をそのリポジトリの名前にする。
 3. 記録のリポジトリを `git clone` できるようにしておく（非公開なら git の認証を通す）。`records.py` は読むたびにキャッシュへ最新を取ってくる。読めないと adr-guard は「読めなかった」と報告する。
 4. 記録を書く（decision-log の `write` など）なら、記録のリポジトリを手元にクローンし、`--store <パス>` か環境変数 `DR_STORE` でそのパスを渡す。
