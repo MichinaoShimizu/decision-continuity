@@ -47,6 +47,23 @@ class ReaderAgentTests(unittest.TestCase):
             self.assertRegex(glob, r"^(TZ=Asia/Tokyo )?(git (show|log|grep|rev-parse)|gh pr view) \*$")
 
 
+class SkillAllowedToolsTests(unittest.TestCase):
+    """decision-log は信頼できない PR の本文を読むので、確認なしで通すのは読むだけのコマンドに限る。"""
+    SKILL = pathlib.Path(__file__).resolve().parents[1] / "skills" / "decision-log" / "SKILL.md"
+
+    def test_only_read_commands_are_preapproved(self):
+        import re
+        front = self.SKILL.read_text(encoding="utf-8").split("---", 2)[1]
+        line = next(l for l in front.splitlines() if l.startswith("allowed-tools:"))
+        rules = re.findall(r"Bash\(([^)]*)\)", line)
+        self.assertTrue(rules)
+        read_only = re.compile(r"^(TZ=Asia/Tokyo )?git (log|show|grep|rev-parse|remote get-url):\*$"
+                               r"|^(gh (pr|issue|release)|glab (mr|issue)) view:\*$"
+                               r"|^python3 \.(claude|kiro)/skills/decision-log/scripts/build_index\.py:\*$")
+        for rule in rules:
+            self.assertRegex(rule, read_only)
+
+
 class BuildIndexTests(unittest.TestCase):
     """decision-log の scripts/build_index.py が、決まりどおりの索引を作るかを確かめる。"""
     SCRIPT = pathlib.Path(__file__).resolve().parents[1] / "skills" / "decision-log" / "scripts" / "build_index.py"

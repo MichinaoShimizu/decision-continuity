@@ -1,7 +1,7 @@
 ---
 name: decision-log
 description: "Reconstructs evidence-backed Decision Logs from a code repository's history (PRs/MRs, issues, reviews, commits and code) without inventing rationale or approvals. Works on its own in any repository. Use when asked to recover past decisions, explain how a design evolved, find reversals, or bootstrap decision records. Supports 'audit' (read-only, default) and 'write'. 過去の変更から Decision log を起こす（認証まわりがなぜこうなったか履歴から起こして）。"
-allowed-tools: Bash(git:*) Bash(gh:*) Bash(glab:*) Bash(TZ=Asia/Tokyo git *) Bash(python3 .claude/skills/decision-log/scripts/build_index.py *) Bash(python3 .kiro/skills/decision-log/scripts/build_index.py *)
+allowed-tools: Bash(git log:*) Bash(git show:*) Bash(git grep:*) Bash(git rev-parse:*) Bash(git remote get-url:*) Bash(TZ=Asia/Tokyo git log:*) Bash(gh pr view:*) Bash(gh issue view:*) Bash(gh release view:*) Bash(glab mr view:*) Bash(glab issue view:*) Bash(python3 .claude/skills/decision-log/scripts/build_index.py:*) Bash(python3 .kiro/skills/decision-log/scripts/build_index.py:*)
 ---
 
 # decision-log：過去の変更を、根拠のある範囲で Decision log に書き起こす
