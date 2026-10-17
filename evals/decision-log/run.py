@@ -147,6 +147,18 @@ def seed_log(repo):
     return {p.name: p.read_text(encoding="utf-8") for p in folder.glob("*.md")}
 
 
+def final_text(stdout):
+    """エージェントが stream-json で出したときは、最後の応答（result）だけを返す。ツールの結果まで照らさないため。"""
+    for line in reversed(stdout.splitlines()):
+        try:
+            event = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(event, dict) and event.get("type") == "result" and isinstance(event.get("result"), str):
+            return event["result"]
+    return stdout
+
+
 def inspect(repo, before):
     """書いたファイルの決まった検査：索引が最新で形が崩れていないか、前からあったファイルを書き換えていないか。"""
     folder = repo / "docs" / "decision-logs"
@@ -199,7 +211,9 @@ def main():
         (output / f"{case}.prompt.txt").write_text(text, encoding="utf-8")
         (output / f"{case}.response.txt").write_text(response, encoding="utf-8")
         (output / f"{case}.stderr.txt").write_text(error, encoding="utf-8")
-        lowered = response.lower()
+        final = final_text(response)
+        (output / f"{case}.final.txt").write_text(final, encoding="utf-8")
+        lowered = final.lower()
         status = "REVIEW_REQUIRED" if code == 0 and not timed_out and args.skills_loaded else "INCONCLUSIVE"
         results.append(dict(id=case, status=status, exit_code=code,
                             missing_keywords=[k for k in required if k.lower() not in lowered],

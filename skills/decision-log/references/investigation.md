@@ -34,7 +34,7 @@
 
 ## サブエージェントに分ける
 
-読む候補が 5 件を超えたとき（SKILL.md の「手順」）、分類ごとに 1 つ、同時に呼ぶ。
+読む候補が 5 件を超えたとき（SKILL.md の「手順」）、分類ごとに 1 つ、同時に呼ぶ。差分が小さい、自分で読んだほうが速い、は分けない理由にしない。
 
 - `.kiro/agents/decision-log-reader.json` か `.kiro/agents/decision-log-reader.md`（Kiro）か `.claude/agents/decision-log-reader.md`（Claude Code）があるときだけ、名前で指定して呼ぶ。例：「decision-log-reader サブエージェントで、reliability の PR #101、#117 を基準のコミット abc1234 で読んで」。
 - ないとき、または名前で呼んで失敗したとき（Kiro は登録のない名前を既定に切り替えない）は、既定のサブエージェントにリポジトリ・基準のコミット・分類・PR の番号を渡し、「起きたこと」「理由」「関わった人」の行、決定の言葉、問い、keywords の候補を返させる。ファイルは書かせない。
