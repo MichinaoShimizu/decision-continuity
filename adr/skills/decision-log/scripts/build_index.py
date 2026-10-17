@@ -24,7 +24,8 @@ CATEGORIES = [
     ("product", "プロダクトの方針"),
     ("other", "その他"),
 ]
-FILE_RE = re.compile(r"^(\d{4,})(?:-[a-z0-9-]+)?\.md$")
+# 0001.md、0001-auth-pkce.md のほか、前のキットの 0001-Short_Title.md・0001-認証の変更.md・DL-0001-x.md も読む
+FILE_RE = re.compile(r"^(?:DL-)?(\d{4,})(?!-\d{2}-\d{2})(?:[-_].*)?\.md$", re.I)
 FRONT_RE = re.compile(r"\A---\n(.*?)\n---[ \t]*\n+", re.S)
 APPEND_RE = re.compile(r"^## 追記 \d{4}-\d{2}-\d{2}.*$", re.M)
 CLAIM_DATE_RE = re.compile(r"^- C\d+ (\d{4}-\d{2}-\d{2}) ", re.M)
@@ -93,6 +94,11 @@ def read_logs(folder):
     return [read_log(p) for p in sorted(folder.glob("*.md")) if FILE_RE.match(p.name)]
 
 
+def unindexed(folder):
+    """番号を読めず、索引に入らない Markdown（README.md を除く）。"""
+    return sorted(p.name for p in folder.glob("*.md") if p.name != "README.md" and not FILE_RE.match(p.name))
+
+
 def build(logs, repo):
     out = [f"# Decision logs（{repo}）", "",
            "> decision-log が各 Decision log から作り直す索引。手で直さない。過去の観察であり、何も縛らない。"]
@@ -128,6 +134,8 @@ def main():
     text = build(logs, args.repo or repo_name(args.folder))
     target = args.folder / "README.md"
     problems = [f"{l['file']}: {p}" for l in logs for p in l["problems"]]
+    problems += [f"{name}: ファイル名の先頭に 4 桁の番号がない（0001.md か 0001-<名前>.md）。索引に入らない"
+                 for name in unindexed(args.folder)]
     for p in problems:
         print(p)
     if args.check:
