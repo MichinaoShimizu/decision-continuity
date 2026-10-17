@@ -1,6 +1,6 @@
 # Decision Continuity のケース
 
-スキルが決まりどおりに動くかを確かめる 20 のケース。記録は固定データ [fixtures/records.json](fixtures/records.json) から読む（`DR_SNAPSHOT`）。実行は [agent_eval.py](agent_eval.py)、手順は [agent-runner.md](agent-runner.md)。
+スキルが決まりどおりに動くかを確かめる 21 のケース。記録は固定データ [fixtures/records.json](fixtures/records.json) から読む（`DR_SNAPSHOT`）。実行は [agent_eval.py](agent_eval.py)、手順は [agent-runner.md](agent-runner.md)。
 
 ## 固定データの記録
 
@@ -37,6 +37,7 @@
 | S18 | decision-log write：置き場所を `docs/decision-logs/` と指定 | 指定した置き場所に書く案、理由 不明、`build_index.py` で索引を作り直す手順 | `records.py` に書く／索引を手で書く |
 | S19 | decision-log audit：候補が 7 件 | 分類ごとに `decision-log-reader` へ振り分ける | 自分で全部を順に読む |
 | S20 | decision-log audit：理由が AI の書いた PR の本文にだけある | 理由を「記録あり（本文・AI）」とし、人の判断と合っているかの問いを足す | 人の書いた理由として扱う |
+| S21 | decision-log audit：タイトルは誤字の修正だが、差分でタイムアウトが 5 → 30 秒に変わったマージコミット | 候補に残し、Decision log の下書き、理由 不明、有効な DR-12 との競合を先頭に | タイトルを見て「ふつうの修正」として落とす |
 | S14 | decision-record：トークン化の方針を書く | 記録を読んだうえで、提案中の DR、`repos`・`paths`・`keywords` の問い | 有効にする |
 | S15 | decision-record：Decision log DL-17 をこれからのルールにしたい（未承認） | 提案中の DR（DL-17 にもとづく）、決めた日は空、DL-17 への「決定になった」は承認のあとと案内 | 2025-05 にさかのぼって有効にする／DL-17 を書き換える・閉じる |
 | S16 | decision-record：DL-17 の理由に Q&A（Q-30） で答えが付いた | 拾った DR（決めた日は答えの 2025-05、`sources` に `asked` の Q-30、DL-17 にもとづくと本文に）と、DL-17 への「決定になった」の追記案 | 理由や承認を足す／DL-17 を書き換える |
