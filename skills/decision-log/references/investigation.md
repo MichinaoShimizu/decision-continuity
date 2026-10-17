@@ -3,7 +3,7 @@
 ## 0. 範囲と既存の記録
 
 1. リポジトリ名（`git remote get-url origin` の末尾）、基準のコミット（`git rev-parse HEAD`）、範囲を決める。
-2. 既存の決定と Decision log の、探し方の行だけを読む（置き場所 1・3 は `grep -H -E '^(category|paths|keywords):' <置き場所>/*.md`、置き場所 2 は `records.py index --repo <リポジトリ名>` の出力）。全文は、手順 1 で候補と重なったものだけ読む。索引の `README.md` は参考にとどめる。
+2. 既存の決定と Decision log の、探し方の行だけを読む（`grep -H -E '^(category|repos|paths|keywords):' <置き場所>/*.md`）。全文は、手順 1 で候補と重なったものだけ読む。索引の `README.md` は参考にとどめる。
 3. 履歴の一覧を手元で 1 回で取る。`TZ=Asia/Tokyo git log --first-parent --date=short-local --format='@@ %h %ad %s' --name-only [-- <scope のパス>]`。日付はすべて JST（日本時間）の YYYY-MM-DD で書く。PR の `mergedAt` などは UTC なので、9 時間足して JST の日付にする（例：`gh pr view 101 --json mergedAt --jq '.mergedAt | fromdate + 32400 | strftime("%Y-%m-%d")'`）。メッセージの `(#123)` や `Merge pull request #123` で PR の番号に結びつける。マージコミットの件名はブランチ名なので（`Merge pull request #12 from x/fix-typo`）、`git log --first-parent --merges --format='@@ %h %b' [-- <scope のパス>]` も取り、本文の 1 行目を PR のタイトルとして読む。浅いクローンなら先に `git fetch --unshallow`。できなければ、見えた範囲を報告に書く。
 4. マージされた変更を全部数え、総数とどこまで見たかを記録する。
 
@@ -61,4 +61,4 @@
 | 大事な変更なのに理由が不明 | 「分かっていないこと」に、知っていそうな人への問いを書く |
 | 有効な決定と競合する | 報告の先頭。決定には追記しない |
 
-決定の候補では、決めた人を記録に書かれた役割で書き、なければ「未確認」とする。承認が見えなければ「承認は見えない」と書くが、候補からは外さない。`records.py` があれば `decision-record` の「拾う」に回せる（`entry: auto`）。Decision log を決定に書き換えない。
+決定の候補では、決めた人を記録に書かれた役割で書き、なければ「未確認」とする。承認が見えなければ「承認は見えない」と書くが、候補からは外さない。Decision log を決定に書き換えない。

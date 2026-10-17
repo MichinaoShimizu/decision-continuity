@@ -1,7 +1,7 @@
 ---
 name: decision-log
-description: "Reconstructs evidence-backed Decision Logs from a code repository's history (PRs/MRs, issues, reviews, commits and code) without inventing rationale or approvals. Works on its own in any repository, and reads and writes the organization's records when the decision-record kit (records.py) is installed. Use when asked to recover past decisions, explain how a design evolved, find reversals, or bootstrap decision records. Supports 'audit' (read-only, default) and 'write'. 過去の変更から Decision log を起こす（認証まわりがなぜこうなったか履歴から起こして）。"
-allowed-tools: Bash(git:*) Bash(gh:*) Bash(glab:*) Bash(TZ=Asia/Tokyo git *) Bash(python3 .claude/skills/decision-record/records.py *) Bash(python3 .claude/skills/decision-log/scripts/build_index.py *)
+description: "Reconstructs evidence-backed Decision Logs from a code repository's history (PRs/MRs, issues, reviews, commits and code) without inventing rationale or approvals. Works on its own in any repository. Use when asked to recover past decisions, explain how a design evolved, find reversals, or bootstrap decision records. Supports 'audit' (read-only, default) and 'write'. 過去の変更から Decision log を起こす（認証まわりがなぜこうなったか履歴から起こして）。"
+allowed-tools: Bash(git:*) Bash(gh:*) Bash(glab:*) Bash(TZ=Asia/Tokyo git *) Bash(python3 .claude/skills/decision-log/scripts/build_index.py *)
 ---
 
 # decision-log：過去の変更を、根拠のある範囲で Decision log に書き起こす
@@ -36,8 +36,7 @@ allowed-tools: Bash(git:*) Bash(gh:*) Bash(glab:*) Bash(TZ=Asia/Tokyo git *) Bas
 | 順 | 条件 | 読む | 書く（`write`） |
 |---|---|---|---|
 | 1 | 人が置き場所のパスを指定した | そのフォルダーの `*.md` | そのフォルダー |
-| 2 | `.claude/skills/decision-record/records.py` がある（Kiro でもここ） | リポジトリのルートで `python3 .claude/skills/decision-record/records.py index --repo <リポジトリ名>` と `show <DL-17 などの番号>`（絶対パスにしない）。終了コード 2 は「読めなかった」 | 同じ `records.py` の `create` と `comment` |
-| 3 | 1 も 2 もない | `docs/decision-logs/*.md`（なければ前のキットの `docs/decision-log/*.md`） | 読んだフォルダー。どちらもなければ `docs/decision-logs/` |
+| 2 | 1 がない | `docs/decision-logs/*.md`（なければ前のキットの `docs/decision-log/*.md`） | 読んだフォルダー。どちらもなければ `docs/decision-logs/` |
 
 ## 分類
 

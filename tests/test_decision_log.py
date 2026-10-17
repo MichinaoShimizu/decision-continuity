@@ -1,4 +1,4 @@
-"""Smoke tests for the scenario runner; no real model is invoked."""
+"""decision-log のスキル・スクリプト・サブエージェントの定義のテスト。標準ライブラリだけを使う。"""
 import json
 import pathlib
 import subprocess
@@ -6,153 +6,31 @@ import sys
 import tempfile
 import unittest
 
-RUNNER = pathlib.Path(__file__).resolve().parent / "agent_eval.py"
-REVISION = "a" * 40
-
-
-class RunnerSmokeTests(unittest.TestCase):
-    def invoke(self, agent, *extra):
-        with tempfile.TemporaryDirectory() as directory:
-            result = subprocess.run(
-                [sys.executable, str(RUNNER), "--revision", REVISION,
-                 "--agent-version", "fake-agent-test",
-                 "--agent-argv-json", json.dumps(agent),
-                 "--output", directory, "--timeout", "10", *extra],
-                capture_output=True, text=True, timeout=40, check=False,
-            )
-            manifest_path = pathlib.Path(directory) / "manifest.json"
-            manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else None
-            responses = {p.name: p.read_text() for p in pathlib.Path(directory).glob("*.response.txt")}
-            return result, manifest, responses
-
-    def test_mock_agent_runs_selected_case_without_auto_pass(self):
-        agent = [sys.executable, "-c", "import sys; print('Decision Log: rationale Unknown'); sys.stdin.read()"]
-        result, manifest, responses = self.invoke(agent, "--case", "S01", "--skills-loaded")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(len(manifest["results"]), 1)
-        self.assertEqual(manifest["results"][0]["id"], "S01")
-        self.assertEqual(manifest["results"][0]["status"], "REVIEW_REQUIRED")
-        self.assertIn("S01.response.txt", responses)
-
-    def test_no_attestation_is_inconclusive(self):
-        agent = [sys.executable, "-c", "print('Decision Log Unknown')"]
-        result, manifest, _ = self.invoke(agent, "--case", "S01")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(manifest["results"][0]["status"], "INCONCLUSIVE")
-
-    def test_failed_agent_is_inconclusive(self):
-        agent = [sys.executable, "-c", "import sys; sys.exit(4)"]
-        result, manifest, _ = self.invoke(agent, "--case", "S02", "--skills-loaded")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(manifest["results"][0]["exit_code"], 4)
-        self.assertEqual(manifest["results"][0]["status"], "INCONCLUSIVE")
-
-    def test_checkout_revision_is_extracted_into_workspace(self):
-        with tempfile.TemporaryDirectory() as repo:
-            git = ["git", "-C", repo, "-c", "user.name=t", "-c", "user.email=t@example.com"]
-            subprocess.run(["git", "init", "-q", repo], check=True)
-            skill = pathlib.Path(repo) / ".claude" / "skills" / "adr-guard" / "SKILL.md"
-            skill.parent.mkdir(parents=True)
-            skill.write_text("pinned skill\n")
-            subprocess.run(git + ["add", "."], check=True)
-            subprocess.run(git + ["commit", "-q", "-m", "x"], check=True)
-            revision = subprocess.run(["git", "-C", repo, "rev-parse", "HEAD"], capture_output=True,
-                                      text=True, check=True).stdout.strip()
-            agent = [sys.executable, "-c", "print(open('.claude/skills/adr-guard/SKILL.md').read())"]
-            with tempfile.TemporaryDirectory() as directory:
-                result = subprocess.run(
-                    [sys.executable, str(RUNNER), "--revision", revision,
-                     "--agent-version", "fake", "--agent-argv-json", json.dumps(agent),
-                     "--checkout", repo, "--case", "S01", "--output", directory],
-                    capture_output=True, text=True, timeout=40, check=False,
-                )
-                self.assertEqual(result.returncode, 0, result.stderr)
-                response = (pathlib.Path(directory) / "S01.response.txt").read_text()
-                self.assertIn("pinned skill", response)
-
-    def test_snapshot_env_points_to_fixture_or_missing_file(self):
-        agent = [sys.executable, "-c", "import os, pathlib; print(pathlib.Path(os.environ['DR_SNAPSHOT']).exists())"]
-        _, _, readable = self.invoke(agent, "--case", "S01")
-        _, _, unreadable = self.invoke(agent, "--case", "S08")
-        config = [sys.executable, "-c", "import os, pathlib; print(pathlib.Path(os.environ['DR_SNAPSHOT']).with_name('config.yaml').read_text())"]
-        _, _, with_config = self.invoke(config, "--case", "S14")
-        self.assertIn("roles:", with_config["S14.response.txt"])
-        self.assertIn("True", readable["S01.response.txt"])
-        self.assertIn("False", unreadable["S08.response.txt"])
-
-    def test_install_kit_builds_fixture_repository(self):
-        source = pathlib.Path(__file__).resolve().parents[2]
-        revision = subprocess.run(["git", "-C", str(source), "rev-parse", "HEAD"], capture_output=True,
-                                  text=True, check=True).stdout.strip()
-        agent = [sys.executable, "-c", "import pathlib; print(sorted(p.name for p in pathlib.Path('.claude/skills').iterdir())); print(open('CLAUDE.md').read())"]
-        result, _, responses = self.invoke(agent, "--revision", revision, "--checkout", str(source),
-                                           "--install-kit", "--case", "S05")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        response = responses["S05.response.txt"]
-        for name in ("adr-guard", "decision-log", "decision-record", "decision-continuity-contract.md"):
-            self.assertIn(name, response)
-        self.assertIn("`order-service`", response)
-
-    def test_invalid_revision_rejected(self):
-        agent = [sys.executable, "-c", "print('x')"]
-        with tempfile.TemporaryDirectory() as directory:
-            result = subprocess.run(
-                [sys.executable, str(RUNNER), "--revision", "main",
-                 "--agent-version", "fake", "--agent-argv-json", json.dumps(agent),
-                 "--output", directory], capture_output=True, text=True, check=False,
-            )
-            self.assertNotEqual(result.returncode, 0)
-            self.assertIn("40-character SHA", result.stderr)
-
-
-class KiroTemplateTests(unittest.TestCase):
-    """Kiro 用の薄い SKILL.md が、正本と同じ name と description を持つかを確かめる。"""
-    ROOT = pathlib.Path(__file__).resolve().parents[2]
-    SOURCES = {"adr-guard": "adr/skills/adr-guard/SKILL.md",
-               "decision-log": "adr/skills/decision-log/SKILL.md",
-               "decision-record": ".claude/skills/decision-record/SKILL.md"}
-
-    @staticmethod
-    def front(path):
-        lines = path.read_text(encoding="utf-8").split("---", 2)[1].strip().splitlines()
-        return dict(line.split(": ", 1) for line in lines)
-
-    def test_thin_skills_match_their_source(self):
-        thin = [self.ROOT / "adr/templates/kiro" / n / "SKILL.md" for n in self.SOURCES]
-        thin.append(self.ROOT / ".kiro/skills/decision-record/SKILL.md")
-        for path in thin:
-            name = path.parent.name
-            with self.subTest(path=str(path.relative_to(self.ROOT))):
-                thin_front, source_front = self.front(path), self.front(self.ROOT / self.SOURCES[name])
-                for key in ("name", "description"):
-                    self.assertEqual(thin_front[key], source_front[key])
-                self.assertIn(f".claude/skills/{name}/SKILL.md", path.read_text(encoding="utf-8"))
-
 
 class ReaderAgentTests(unittest.TestCase):
     """Claude Code 用と Kiro 用の decision-log-reader が、同じ説明と同じ指示を持つかを確かめる。"""
-    ROOT = pathlib.Path(__file__).resolve().parents[2]
+    ROOT = pathlib.Path(__file__).resolve().parents[1]
 
     def test_both_readers_match(self):
-        _, front, body = (self.ROOT / "adr/agents/claude/decision-log-reader.md").read_text(encoding="utf-8").split("---", 2)
-        kiro = json.loads((self.ROOT / "adr/agents/kiro/decision-log-reader.json").read_text(encoding="utf-8"))
+        _, front, body = (self.ROOT / "agents/claude/decision-log-reader.md").read_text(encoding="utf-8").split("---", 2)
+        kiro = json.loads((self.ROOT / "agents/kiro/decision-log-reader.json").read_text(encoding="utf-8"))
         desc = next(l for l in front.splitlines() if l.startswith("description:")).split(": ", 1)[1]
         self.assertEqual(kiro["name"], "decision-log-reader")
         self.assertEqual(kiro["description"], desc)
         self.assertEqual(kiro["prompt"].strip(), body.strip())
         # Kiro は CLI が JSON、IDE が Markdown を読むので、両方が同じ説明・指示・許可を持つ
-        _, kiro_front, kiro_body = (self.ROOT / "adr/agents/kiro/decision-log-reader.md").read_text(encoding="utf-8").split("---", 2)
+        _, kiro_front, kiro_body = (self.ROOT / "agents/kiro/decision-log-reader.md").read_text(encoding="utf-8").split("---", 2)
         self.assertIn("name: decision-log-reader\n", kiro_front)
         self.assertIn(f"description: {desc}\n", kiro_front)
         self.assertEqual(kiro_body.strip(), body.strip())
         match = ", ".join(f'"{m}"' for m in kiro["permissions"]["rules"][0]["match"])
         self.assertIn(f"match: [{match}]", kiro_front)
-        self.assertIn("decision-log-reader", (self.ROOT / "adr/skills/decision-log/SKILL.md").read_text(encoding="utf-8"))
+        self.assertIn("decision-log-reader", (self.ROOT / "skills/decision-log/SKILL.md").read_text(encoding="utf-8"))
 
     def test_kiro_reader_auto_approves_only_read_commands(self):
         """reader は信頼できない PR の本文を読むので、確認なしで通すのは読むだけのコマンドに限る。"""
         import re
-        kiro = json.loads((self.ROOT / "adr/agents/kiro/decision-log-reader.json").read_text(encoding="utf-8"))
+        kiro = json.loads((self.ROOT / "agents/kiro/decision-log-reader.json").read_text(encoding="utf-8"))
         allowed = [re.compile(p) for p in kiro["toolsSettings"]["shell"]["allowedCommands"]]
         ok = lambda cmd: any(p.fullmatch(cmd) for p in allowed)
         for cmd in ("gh pr view 101 --json number,title,body,author,createdAt,mergedAt,mergedBy,url,reviews,comments,files",

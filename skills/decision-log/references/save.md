@@ -4,14 +4,13 @@
 
 ## 保存
 
-- **`records.py` があるとき**：記録のリポジトリの手元のクローンでブランチを切る。新規は `python3 .claude/skills/decision-record/records.py --store <クローン> create --category "Decision logs" --title "[<リポジトリ名>] <何が変わったか>" --body-file <ファイル>`、追記は `comment <DL-17 などの番号> --body-file <ファイル>`（ファイルを作れなければ `--body-file -`）。`records.py --store <クローン> check --base origin/<既定のブランチ>` が通るまで直す。
-- **それ以外のとき**：ファイルを作るか末尾に追記し、`python3 <このスキルのフォルダー>/scripts/build_index.py <置き場所>` で索引を作り直す。`--check` が通るまで直す（形の崩れた Decision log も名前を挙げて知らせる）。ブランチを切ってコミットし、PR（MR）を出す。出せなければコミットまでにして、そう伝える。
+ファイルを作るか末尾に追記し、`python3 <このスキルのフォルダー>/scripts/build_index.py <置き場所>` で索引を作り直す。`--check` が通るまで直す（形の崩れた Decision log も名前を挙げて知らせる）。ブランチを切ってコミットし、PR（MR）を出す。出せなければコミットまでにして、そう伝える。
 
 書いたら番号・ファイル・PR のリンクを伝え、「マージで保存される」と伝える。書けないときは貼れる形で返し、「まだ保存していません」と書く。
 
 ## 索引
 
-`records.py` を使うときは索引のファイルを持たない（`records.py index` が毎回並べる）。それ以外の置き場所では、書いたあとに必ず次を実行する。手で書かない。
+書いたあとに必ず次を実行する。手で書かない。
 
 ```sh
 python3 <このスキルのフォルダー>/scripts/build_index.py <置き場所>

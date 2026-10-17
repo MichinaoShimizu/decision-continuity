@@ -5,7 +5,7 @@
   build_index.py <フォルダー> --check         README.md が最新で、各 Decision log の形が崩れていないかを確かめる
                                              （どちらかが駄目なら終了コード 1）
 
-標準ライブラリだけを使う。records.py を使う置き場所では使わない（records.py index が毎回並べる）。
+標準ライブラリだけを使う。
 """
 import argparse
 import pathlib
@@ -13,7 +13,7 @@ import re
 import subprocess
 import sys
 
-# 組織の記録（records.py check）が受けるファイル名。ここから外れる名前は、読むが直すよう知らせる
+# 正しいファイル名。ここから外れる名前も読むが、直すよう知らせる
 STRICT_RE = re.compile(r"^\d{4,}(?:-[a-z0-9-]+)?\.md$")
 # (category, 見出し, 中身)。references/categories.md の表と同じにする（テストで照らす）
 CATEGORIES = [
@@ -76,7 +76,7 @@ def read_log(path):
     if path.name.upper().startswith("DL-"):
         problems.append("ファイル名に DL- を付けない（DL-1 は文中で指すときの書き方）。0001-<名前>.md に変える")
     elif not STRICT_RE.match(path.name):
-        problems.append("ファイル名は 0001.md か 0001-<英小文字・数字・ハイフン>.md にする（組織の記録へ移すと records.py check で止まる）")
+        problems.append("ファイル名は 0001.md か 0001-<英小文字・数字・ハイフン>.md にする")
     if not front:
         problems.append("フロントマターがない")
     elif field(front, "kind") != "log":
