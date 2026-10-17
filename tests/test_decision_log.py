@@ -88,10 +88,68 @@ class BuildIndexTests(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("build_index", self.SCRIPT)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        table = (self.SCRIPT.parents[1] / "references" / "categories.md").read_text(encoding="utf-8")
+        table = (self.SCRIPT.parents[1] / "references" / "categories.md").read_text(encoding="utf-8").split("## 英語で書くとき")[0]
         rows = [[c.strip() for c in line.strip("|").split("|")] for line in table.splitlines()
                 if line.startswith("| `") and not line.startswith("| `category`")]
         self.assertEqual([(k.strip("`"), l, d) for k, l, d in rows], [tuple(c) for c in module.CATEGORIES])
+
+    def test_categories_en_match_the_reference_table(self):
+        """英語の索引に出す分類と中身が、references/categories.md の英語の表と同じかを確かめる。"""
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("build_index", self.SCRIPT)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        table = (self.SCRIPT.parents[1] / "references" / "categories.md").read_text(encoding="utf-8").split("## 英語で書くとき")[1]
+        rows = [[c.strip() for c in line.strip("|").split("|")] for line in table.splitlines()
+                if line.startswith("| `") and not line.startswith("| `category`")]
+        self.assertEqual({k.strip("`"): (l, d) for k, l, d in rows}, module.CATEGORIES_EN)
+        self.assertEqual(list(module.CATEGORIES_EN), [k for k, _, _ in module.CATEGORIES])
+
+    @staticmethod
+    def log_en(category, title, dates, reason, notes=""):
+        claims = "\n".join(f"- C{i} {d} Still true: x. History: y / Now: z" for i, d in enumerate(dates, 1))
+        return (f"---\nkind: log\ncategory: {category}\n---\n\n# [demo] {title}\n\n> A past observation.\n\n"
+                f"## What happened\n\n{claims}\n\n## Reason\n\n{reason}\n{notes}")
+
+    def test_english_logs_and_index(self):
+        with tempfile.TemporaryDirectory() as directory:
+            d = pathlib.Path(directory)
+            (d / "0001.md").write_text(self.log_en("reliability", "Limit became 5", ["2025-03-04"], "Unknown (not recorded)."), encoding="utf-8")
+            (d / "0002.md").write_text(self.log_en("reliability", "Timeout became 5 s", ["2024-11-20"], "Unknown (not recorded).",
+                                                   "\n---\n\n## Addendum 2026-01-01 (x)\n\n**Answered** (2026-01-01): \"why\"\nAn outage.\n"), encoding="utf-8")
+            (d / "0003.md").write_text(self.log_en("security", "Signature check", ["2025-05-01"], "Documented (discussion): audit (PR #9).",
+                                                   "\n---\n\n## Addendum 2026-01-02 (x)\n\n**Category updated** (2026-01-02)\ncategory: data\n"), encoding="utf-8")
+            (d / "0004.md").write_text(self.log_en("data", "Duplicate", ["2023-01-01"], "Inferred: a copy.",
+                                                   "\n---\n\n## Addendum 2026-01-03 (x)\n\n**Retired** (2026-01-03): duplicate of DL-3\n"), encoding="utf-8")
+            result = self.run_script(d)
+            self.assertEqual(result.returncode, 0, result.stdout)
+            index = (d / "README.md").read_text(encoding="utf-8")
+            self.assertTrue(index.startswith("# Decision logs (demo)\n"))
+            self.assertIn("## Data meaning and storage (data)\n\n" + "Schemas, meaning and units of values, where data is stored, "
+                          "retention (personal data is privacy)\n\n- 2025-05-01 [DL-3](0003.md) Signature check\n", index)
+            self.assertIn("- 2024-11-20 [DL-2](0002.md) Timeout became 5 s\n- 2025-03-04 [DL-1](0001.md) Limit became 5 · reason unknown", index)
+            self.assertIn("## Retired\n\n- 2023-01-01 [DL-4](0004.md) Duplicate\n", index)
+            checked = subprocess.run([sys.executable, str(self.SCRIPT), str(d), "--check"], capture_output=True, text=True, check=False)
+            self.assertEqual(checked.returncode, 0, checked.stdout)
+            # 日本語の log が増えても、いまの索引の言語を保つ
+            (d / "0005.md").write_text(self.log("data", "日本語", ["2025-06-01"], "不明。"), encoding="utf-8")
+            (d / "0006.md").write_text(self.log("data", "日本語 2", ["2025-06-02"], "不明。"), encoding="utf-8")
+            (d / "0007.md").write_text(self.log("data", "日本語 3", ["2025-06-03"], "不明。"), encoding="utf-8")
+            (d / "0008.md").write_text(self.log("data", "日本語 4", ["2025-06-04"], "不明。"), encoding="utf-8")
+            (d / "0009.md").write_text(self.log("data", "日本語 5", ["2025-06-05"], "不明。"), encoding="utf-8")
+            self.assertEqual(self.run_script(d).returncode, 0)
+            index = (d / "README.md").read_text(encoding="utf-8")
+            self.assertIn("- 2025-06-01 [DL-5](0005.md) 日本語 · reason unknown", index)
+            self.assertEqual(self.run_script(d, "--lang", "ja").returncode, 0)
+            self.assertTrue((d / "README.md").read_text(encoding="utf-8").startswith("# Decision logs（demo）\n"))
+
+    def test_reports_malformed_english_logs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            d = pathlib.Path(directory)
+            (d / "0001.md").write_text(self.log_en("data", "x", ["2025-01-01"], "Because we wanted to."), encoding="utf-8")
+            built = self.run_script(d)
+            self.assertEqual(built.returncode, 1)
+            self.assertIn("0001.md: 「## Reason」の 1 行目が「Documented」「Inferred」「Unknown」で始まっていない", built.stdout)
 
     def test_reads_older_file_names_and_reports_unnumbered(self):
         with tempfile.TemporaryDirectory() as directory:
