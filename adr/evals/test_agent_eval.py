@@ -140,6 +140,13 @@ class ReaderAgentTests(unittest.TestCase):
         self.assertEqual(kiro["name"], "decision-log-reader")
         self.assertEqual(kiro["description"], desc)
         self.assertEqual(kiro["prompt"].strip(), body.strip())
+        # Kiro は CLI が JSON、IDE が Markdown を読むので、両方が同じ説明・指示・許可を持つ
+        _, kiro_front, kiro_body = (self.ROOT / "adr/agents/kiro/decision-log-reader.md").read_text(encoding="utf-8").split("---", 2)
+        self.assertIn("name: decision-log-reader\n", kiro_front)
+        self.assertIn(f"description: {desc}\n", kiro_front)
+        self.assertEqual(kiro_body.strip(), body.strip())
+        match = ", ".join(f'"{m}"' for m in kiro["permissions"]["rules"][0]["match"])
+        self.assertIn(f"match: [{match}]", kiro_front)
         self.assertIn("decision-log-reader", (self.ROOT / "adr/skills/decision-log/SKILL.md").read_text(encoding="utf-8"))
 
     def test_kiro_reader_auto_approves_only_read_commands(self):
