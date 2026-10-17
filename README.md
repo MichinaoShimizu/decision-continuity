@@ -1,6 +1,6 @@
 # decision-continuity
 
-コードのリポジトリの履歴から、何が起きたか・なぜか・何が分かっていないかを Decision log に起こすスキル。
+コードのリポジトリの履歴から、何が起きたか・なぜか・何が分かっていないかを Decision log に起こすスキル。Claude Code と Kiro で動く。
 
 ## 流れ
 
