@@ -189,7 +189,8 @@ class BuildIndexTests(unittest.TestCase):
             result = self.run_script(d)
             self.assertEqual(result.returncode, 0, result.stderr)
             index = (d / "README.md").read_text(encoding="utf-8")
-            self.assertIn("## データの意味・持ち方（data）\n\n- 2025-05-01 [DL-3](0003.md) 署名検証を追加\n", index)
+            self.assertIn("## データの意味・持ち方（data）\n\nスキーマ、値の意味と単位、保存先、保持期間（個人情報は privacy）\n\n"
+                          "- 2025-05-01 [DL-3](0003.md) 署名検証を追加\n", index)
             self.assertIn("- 2024-11-20 [DL-2](0002.md) タイムアウトが 5 秒に\n- 2025-03-04 [DL-1](0001.md) 上限が 5 に・理由不明", index)
             self.assertIn("## 取り下げ\n\n- 2023-01-01 [DL-4](0004.md) 重複・理由不明", index)
             self.assertNotIn("security", index)
@@ -197,6 +198,17 @@ class BuildIndexTests(unittest.TestCase):
             self.assertEqual(self.run_script(d, "--check").returncode, 0)
             (d / "README.md").write_text("old", encoding="utf-8")
             self.assertEqual(self.run_script(d, "--check").returncode, 1)
+
+    def test_categories_match_the_reference_table(self):
+        """索引に出す分類と中身が、references/categories.md の表と同じかを確かめる。"""
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("build_index", self.SCRIPT)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        table = (self.SCRIPT.parents[1] / "references" / "categories.md").read_text(encoding="utf-8")
+        rows = [[c.strip() for c in line.strip("|").split("|")] for line in table.splitlines()
+                if line.startswith("| `") and not line.startswith("| `category`")]
+        self.assertEqual([(k.strip("`"), l, d) for k, l, d in rows], [tuple(c) for c in module.CATEGORIES])
 
     def test_reads_older_file_names_and_reports_unnumbered(self):
         with tempfile.TemporaryDirectory() as directory:

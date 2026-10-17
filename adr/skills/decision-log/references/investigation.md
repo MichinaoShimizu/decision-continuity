@@ -11,9 +11,9 @@
 
 タイトルと変更ファイルだけでは、名前と中身が違う変更（「fix typo」でタイムアウトを変えたもの）や、`settings.py`・`constants.ts` の中の値の変更を見落とす。次の 2 つを合わせて候補にする。
 
-1. **一覧から**：タイトルと変更ファイルで、各変更を「分類」に当てはめる。手がかりはファイルの場所である（例：`migrations/` → `data`、`auth` → `security`、`openapi` → `compatibility`、`timeout`・`retry` → `reliability`、`.github/workflows` → `release`）。
+1. **一覧から**：タイトルと変更ファイルで、各変更を「分類」に当てはめる。手がかりはファイルの場所である（例：`migrations/` → `data`、`auth` → `security`、`openapi` → `compatibility`、`timeout`・`retry` → `reliability`、デプロイ・`monitoring`・`alerts` → `release`、`.github/workflows` のテストや lint・`.eslintrc` → `engineering`、`terraform` のインスタンスの種類・サンプリング → `cost`）。
 2. **差分から**：全件の差分を手元の git で 1 回洗う。`git log --first-parent -i -G '<言葉>' --format='%h' -- <scope のパス（なければ .）> ':(exclude)*lock*' ':(exclude)*.snap'`。lockfile とスナップショットは、依存の更新が当たり続けるので外す。`<言葉>` は次をつないだ正規表現にする。
-   - 既定：`timeout|retr(y|ies)|limit|max_|ttl|expire|auth|permission|role|token|secret|encrypt|signature|hmac|verify|email|phone|schema|migrat|deprecat|feature_?flag`
+   - 既定：`timeout|retr(y|ies)|limit|max_|ttl|expire|auth|permission|role|token|secret|encrypt|signature|hmac|verify|email|phone|schema|migrat|deprecat|feature_?flag|instance_type|sampling|sample_rate`
    - 定数・設定の値の変更：`^[A-Z][A-Z0-9_]{2,} *[:=]`
    - 手順 0 で読んだ既存の記録の `keywords`
 
