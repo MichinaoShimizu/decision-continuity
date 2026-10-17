@@ -162,7 +162,7 @@ class BuildIndexTests(unittest.TestCase):
             (d / "0001.md").write_text(self.log("reliability", "上限が 5 に", ["2025-03-04"], "不明（記録に書かれていない）。"), encoding="utf-8")
             (d / "0002.md").write_text(self.log("reliability", "タイムアウトが 5 秒に", ["2024-12-01", "2024-11-20"], "不明。",
                                                 "\n---\n\n## 追記 2026-01-01（x）\n\n**分かった**（2026-01-01）：「なぜ」\n障害対応。\n"), encoding="utf-8")
-            (d / "0003.md").write_text(self.log("security", "署名検証を追加", ["2025-05-01"], "記録あり：監査の指摘（PR #9）。",
+            (d / "0003.md").write_text(self.log("security", "署名検証を追加", ["2025-05-01"], "記録あり（議論）：監査の指摘（PR #9）。",
                                                 "\n---\n\n## 追記 2026-01-02（x）\n\n**分類を更新**（2026-01-02）\ncategory: data\n"), encoding="utf-8")
             (d / "0004.md").write_text(self.log("data", "重複", ["2023-01-01"], "不明。",
                                                 "\n---\n\n## 追記 2026-01-03（x）\n\n**終了**（2026-01-03）：DL-3 と重複\n"), encoding="utf-8")
