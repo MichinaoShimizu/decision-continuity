@@ -130,6 +130,25 @@ class BuildIndexTests(unittest.TestCase):
             self.assertIn("2025-03-04-retry.md: ファイル名の先頭に 4 桁の番号がない", built.stdout)
             self.assertNotEqual(built.returncode, 0)
 
+    def test_reports_duplicate_numbers(self):
+        with tempfile.TemporaryDirectory() as directory:
+            d = pathlib.Path(directory)
+            for name in ("0001.md", "0001-other.md"):
+                (d / name).write_text(self.log("data", name, ["2025-01-01"], "不明。"), encoding="utf-8")
+            built = self.run_script(d)
+            self.assertEqual(built.returncode, 1)
+            self.assertIn("0001-other.md, 0001.md: 番号が重なっている", built.stdout)
+            self.assertEqual(self.run_script(d, "--check").returncode, 1)
+
+    def test_check_without_repo_keeps_the_index_name(self):
+        with tempfile.TemporaryDirectory() as directory:
+            d = pathlib.Path(directory)
+            (d / "0001.md").write_text(self.log("data", "x", ["2025-01-01"], "不明。"), encoding="utf-8")
+            self.assertEqual(self.run_script(d).returncode, 0)
+            checked = subprocess.run([sys.executable, str(self.SCRIPT), str(d), "--check"],
+                                     capture_output=True, text=True, check=False)
+            self.assertEqual(checked.returncode, 0, checked.stdout)
+
     def test_reports_malformed_logs(self):
         with tempfile.TemporaryDirectory() as directory:
             d = pathlib.Path(directory)

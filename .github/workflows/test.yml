@@ -17,3 +17,12 @@ jobs:
           persist-credentials: false
       - name: Unit tests
         run: python3 -I -m unittest discover -s tests -p 'test_*.py' -v
+
+  markdownlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: markdownlint
+        run: npx --yes markdownlint-cli2@0.18.1 "**/*.md"
