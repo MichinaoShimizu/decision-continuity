@@ -64,6 +64,8 @@ class CandidateScanTests(unittest.TestCase):
         doc = (ROOT / "skills/decision-log/references/investigation.md").read_text(encoding="utf-8")
         self.words = re.search(r"既定：`([^`]+)`", doc).group(1)
         self.constant = re.search(r"定数・設定の値の変更：`([^`]+)`", doc).group(1)
+        config_line = next(l for l in doc.splitlines() if "設定ファイルの変更" in l)
+        self.config_globs = re.findall(r"'(\*\.[a-z]+)'", config_line)
 
     def tearDown(self):
         self.work.cleanup()
@@ -71,12 +73,27 @@ class CandidateScanTests(unittest.TestCase):
     def subjects(self, *args):
         return run.git(self.repo, "log", "--first-parent", "--format=%s", *args).splitlines()
 
+    def scan(self):
+        """investigation.md の手順 1 の 2：3 つを別々に回して合わせる。"""
+        exclude = ["--", ".", ":(exclude)*lock*", ":(exclude)*.snap"]
+        return (set(self.subjects("-i", "-G", self.words, *exclude))
+                | set(self.subjects("-G", self.constant, *exclude))
+                | set(self.subjects("--", *self.config_globs, ":(exclude)*lock*")))
+
     def test_diff_scan_catches_misleading_titles_and_skips_cosmetic_changes(self):
-        hits = self.subjects("-i", "-G", f"{self.words}|{self.constant}", "--", ".", ":(exclude)*lock*", ":(exclude)*.snap")
+        hits = self.scan()
         for subject in ("Merge pull request #12 from example/fix-typo", "Bump retry count (#13)",
-                        "Lower webhook timeout to 3s (#14)", "Extend session (#17)"):
+                        "Lower webhook timeout to 3s (#14)", "Extend session (#17)", "Keep logs longer (#18)",
+                        "Rotate webhook secret (#19)"):
             self.assertIn(subject, hits)
-        self.assertNotIn("Update button padding (#16)", hits)
+        for subject in ("Update button padding (#16)", "Refactor helper (#20)"):
+            self.assertNotIn(subject, hits)
+
+    def test_case_insensitive_flag_does_not_leak_into_the_constant_pattern(self):
+        # 1 本につないで -i を付けると、ふつうの代入（result = ...）まで当たる。手順書が分けている理由
+        joined = self.subjects("-i", "-G", f"{self.words}|{self.constant}", "--", ".")
+        self.assertIn("Refactor helper (#20)", joined)
+        self.assertNotIn("Refactor helper (#20)", self.scan())
 
     def test_merge_commit_body_gives_the_pr_title(self):
         bodies = run.git(self.repo, "log", "--first-parent", "--merges", "--format=@@ %h %b")

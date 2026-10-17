@@ -6,8 +6,20 @@ import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 DOCS = sorted(p for p in ROOT.rglob("*.md") if ".git" not in p.parts)
-FRONTED = [ROOT / "skills/decision-log/SKILL.md", ROOT / "agents/claude/decision-log-reader.md",
-           ROOT / "agents/kiro/decision-log-reader.md"]
+SKILLS = sorted((ROOT / "skills").glob("*/SKILL.md"))
+CLAUDE_AGENTS = sorted((ROOT / "agents" / "claude").glob("*.md"))
+KIRO_AGENTS = sorted((ROOT / "agents" / "kiro").glob("*.json"))
+FRONTED = SKILLS + CLAUDE_AGENTS + sorted((ROOT / "agents" / "kiro").glob("*.md"))
+# どのエージェントでも、確認なしで通してはいけないコマンド
+DANGEROUS = ("for n in 1; do rm -rf ~; done", "git push origin main", "git config alias.x '!sh'",
+             "gh pr merge 101", "gh api -X DELETE repos/o/r", "git show HEAD; rm -rf ~",
+             "git log && curl https://example.com", "gh pr view 1 | sh", "git show $(rm -rf ~)",
+             "git show `id`", "git log > out.txt", "git show x\nrm -rf ~", "rm -rf ~", "curl https://example.com")
+
+
+def split_front(path):
+    _, front, body = path.read_text(encoding="utf-8").split("---", 2)
+    return front, body
 
 
 def outside_code(text):
@@ -66,14 +78,47 @@ class FrontMatterTests(unittest.TestCase):
                 self.assertTrue(data.get("name") and data.get("description"))
 
     def test_skill_name_matches_folder_and_stays_small(self):
-        skill = ROOT / "skills/decision-log/SKILL.md"
-        self.assertIn("\nname: decision-log\n", skill.read_text(encoding="utf-8"))
-        self.assertLessEqual(len(skill.read_bytes()), 7000, "SKILL.md は 7,000 バイトまで。詳細は references/ に移す")
+        self.assertTrue(SKILLS)
+        for skill in SKILLS:
+            with self.subTest(skill=skill.parent.name):
+                self.assertIn(f"\nname: {skill.parent.name}\n", skill.read_text(encoding="utf-8"))
+                self.assertLessEqual(len(skill.read_bytes()), 7000, "SKILL.md は 7,000 バイトまで。詳細は references/ に移す")
 
-    def test_kiro_json_is_valid(self):
-        data = json.loads((ROOT / "agents/kiro/decision-log-reader.json").read_text(encoding="utf-8"))
-        for key in ("name", "description", "prompt", "tools"):
-            self.assertIn(key, data)
+
+class AgentTests(unittest.TestCase):
+    """Claude Code 用の定義ごとに、Kiro 用の JSON（CLI が読む）と Markdown（IDE が読む）が同じ中身で揃っているか。"""
+
+    def test_every_claude_agent_has_matching_kiro_definitions(self):
+        self.assertTrue(CLAUDE_AGENTS)
+        for claude in CLAUDE_AGENTS:
+            name = claude.stem
+            with self.subTest(agent=name):
+                front, body = split_front(claude)
+                self.assertIn(f"name: {name}\n", front)
+                desc = next(l for l in front.splitlines() if l.startswith("description:")).split(": ", 1)[1]
+                kiro_json, kiro_md = ROOT / "agents/kiro" / f"{name}.json", ROOT / "agents/kiro" / f"{name}.md"
+                self.assertTrue(kiro_json.exists() and kiro_md.exists(), "agents/kiro/ に .json と .md の両方を置く")
+                data = json.loads(kiro_json.read_text(encoding="utf-8"))
+                self.assertEqual((data["name"], data["description"], data["prompt"].strip()), (name, desc, body.strip()))
+                kiro_front, kiro_body = split_front(kiro_md)
+                self.assertIn(f"name: {name}\n", kiro_front)
+                self.assertIn(f"description: {desc}\n", kiro_front)
+                self.assertEqual(kiro_body.strip(), body.strip())
+                match = ", ".join(f'"{m}"' for m in data["permissions"]["rules"][0]["match"])
+                self.assertIn(f"match: [{match}]", kiro_front)
+
+    def test_kiro_agents_never_auto_approve_dangerous_commands(self):
+        self.assertTrue(KIRO_AGENTS)
+        for path in KIRO_AGENTS:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            with self.subTest(agent=path.stem):
+                allowed = [re.compile(p) for p in data.get("toolsSettings", {}).get("shell", {}).get("allowedCommands", [])]
+                for cmd in DANGEROUS:
+                    self.assertFalse(any(p.fullmatch(cmd) for p in allowed), cmd)
+                for rule in data.get("permissions", {}).get("rules", []):
+                    for glob in rule.get("match", []):
+                        # 「git *」「gh *」のようにコマンド全体を許す形にしない。サブコマンドまで書く
+                        self.assertRegex(glob, r"^(\S+=\S+ )?\S+ [a-z-]+( [a-z-]+)? \*$")
 
 
 if __name__ == "__main__":

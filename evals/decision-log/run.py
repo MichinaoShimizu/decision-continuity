@@ -45,6 +45,8 @@ HISTORY = [
     ("Update button padding (#16)", "", {"src/web/button.css": ".button { padding: 6px; }\n"}),
     ("Extend session (#17)", "", {"src/auth/session.py": "SESSION_TTL_HOURS = 48\n"}),
     ("Keep logs longer (#18)", "", {"config/logging.yml": "retention_days: 90\n"}),
+    ("Rotate webhook secret (#19)", "", {"src/payment/webhook/client.py": "TIMEOUT = 3\nSECRET_NAME = \"webhook-v2\"\n"}),
+    ("Refactor helper (#20)", "", {"src/payment/helper.py": "values = [1, 2]\nresult = sum(values)\n"}),
 ]
 
 # 既存の Decision log（E06 だけが使う）

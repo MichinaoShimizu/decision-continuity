@@ -13,6 +13,8 @@
 | #16 | Update button padding | CSS の余白だけ | 見た目の変更 |
 | #17 | Extend session | `SESSION_TTL_HOURS` 24 → 48。本文なし | 認証まわりの値の変更 |
 | #18 | Keep logs longer | `retention_days` 30 → 90。本文なし | 小文字の設定 |
+| #19 | Rotate webhook secret | `SECRET_NAME` を足した。本文なし | 秘密情報まわりの変更 |
+| #20 | Refactor helper | 新しいファイル（`result = sum(values)`）。本文なし | ふつうのコードの変更は、差分の洗い出しに当たらない |
 
 ## ケース
 
