@@ -42,6 +42,14 @@ class RunnerTests(unittest.TestCase):
         result, _ = self.run_case([sys.executable, "-c", "import sys; sys.exit(3)"], "E04", "--skills-loaded")
         self.assertEqual((result["status"], result["exit_code"]), ("INCONCLUSIVE", 3))
 
+    def test_keywords_are_matched_against_the_final_answer_only(self):
+        # ツールの結果に出てくる言葉（ここでは「本文・AI」）は、照合に数えない
+        lines = [{"type": "user", "message": {"content": [{"type": "tool_result", "content": "本文・AI 人の判断"}]}},
+                 {"type": "result", "result": "理由は不明。"}]
+        agent = [sys.executable, "-c", "import json; " + "; ".join(f"print(json.dumps({l!r}))" for l in lines)]
+        result, _ = self.run_case(agent, "E02", "--skills-loaded")
+        self.assertEqual(result["missing_keywords"], ["本文・AI", "人の判断"])
+
     def test_file_checks_catch_a_rewritten_log(self):
         rewrite = [sys.executable, "-c", "import pathlib; p = pathlib.Path('docs/decision-logs/0001.md'); "
                    "p.write_text(p.read_text().replace('不明', '監査の指摘'))"]

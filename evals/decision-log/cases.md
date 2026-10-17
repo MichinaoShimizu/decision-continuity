@@ -33,12 +33,13 @@
 ```sh
 python3 -I evals/decision-log/run.py \
   --agent-version 'AGENT_AND_MODEL_VERSION' \
-  --agent-argv-json '["claude","-p","--allowedTools","Read","Grep","Glob","Skill","Agent","Write","Edit","Bash(git log:*)","Bash(git show:*)","Bash(git grep:*)","Bash(git rev-parse:*)","Bash(git remote get-url:*)","Bash(python3 .claude/skills/decision-log/scripts/build_index.py:*)"]' \
+  --agent-argv-json '["claude","-p","--output-format","stream-json","--verbose","--allowedTools","Read","Grep","Glob","Skill","Agent","Write","Edit","Bash(git log:*)","Bash(git show:*)","Bash(git grep:*)","Bash(git rev-parse:*)","Bash(git remote get-url:*)","Bash(python3 .claude/skills/decision-log/scripts/build_index.py:*)"]' \
   --skills-loaded \
   --output /tmp/decision-log-eval
 ```
 
-- `--skills-loaded` は、スキルが実際に読み込まれたことを人が確かめた、という申告。付けないと結果はすべて INCONCLUSIVE。
+- `--skills-loaded` は、スキルが実際に読み込まれたことを人が確かめた、という申告。付けないと結果はすべて INCONCLUSIVE。`stream-json` で出すと、`<ID>.response.txt` に `Skill` の呼び出しが残るので、それで確かめる。
+- キーワードの照合は、最後の応答（`<ID>.final.txt`）だけに対して行う。ツールの結果（読んだ手順書など）には当てない。
 - `--case E03` のように一つずつ動かせる。
 
 ## 判定

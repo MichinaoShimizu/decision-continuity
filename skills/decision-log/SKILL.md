@@ -28,6 +28,7 @@ allowed-tools: Bash(git log:*) Bash(git show:*) Bash(git grep:*) Bash(git rev-pa
 7. 見た目の変更、ふつうのバグ修正、定期的な更新（依存の更新など）は Decision log にしない。
 8. 決定を作らない。有効にしない。終わらせない。どれも人が決める。
 9. 秘密情報と個人情報を写さない。人はアカウント名でだけ書く。リンクは実在を確かめたものだけを書く（PR は API の出力、コミットは手元の git で確かめる）。
+10. コマンドは 1 回に 1 つだけ実行する。`;`・`&&`・`|`・`cd` でつながない。リポジトリのルートで、パスは相対で書く（確認なしで通る許可は、ルートからの相対パスで書いてある）。
 
 ## 記録の置き場所
 
@@ -55,7 +56,7 @@ allowed-tools: Bash(git log:*) Bash(git show:*) Bash(git grep:*) Bash(git rev-pa
 - [ ] 5. 報告
 ```
 
-ネットワークは候補にだけ、まとめて使う。読む候補が 5 件を超えたら、自分で読まずにサブエージェント（`decision-log-reader`）に分ける。分類ごとに 1 つ、同時に呼ぶ。呼び方は [references/investigation.md](references/investigation.md#サブエージェントに分ける)。
+ネットワークは候補にだけ、まとめて使う。読む候補が 5 件を超えたら、自分で読まずにサブエージェント（`decision-log-reader`）に分ける。差分が小さくても、件数だけで決める。分類ごとに 1 つ、同時に呼ぶ。呼び方は [references/investigation.md](references/investigation.md#サブエージェントに分ける)。
 
 手順 0〜3 は [references/investigation.md](references/investigation.md) を読んで進める。
 
