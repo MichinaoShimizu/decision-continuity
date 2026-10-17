@@ -134,11 +134,12 @@ class ReaderAgentTests(unittest.TestCase):
     ROOT = pathlib.Path(__file__).resolve().parents[2]
 
     def test_both_readers_match(self):
-        parts = [(self.ROOT / f"adr/agents/{a}/decision-log-reader.md").read_text(encoding="utf-8").split("---", 2)
-                 for a in ("claude", "kiro")]
-        desc = [next(l for l in p[1].splitlines() if l.startswith("description:")) for p in parts]
-        self.assertEqual(desc[0], desc[1])
-        self.assertEqual(parts[0][2], parts[1][2])
+        _, front, body = (self.ROOT / "adr/agents/claude/decision-log-reader.md").read_text(encoding="utf-8").split("---", 2)
+        kiro = json.loads((self.ROOT / "adr/agents/kiro/decision-log-reader.json").read_text(encoding="utf-8"))
+        desc = next(l for l in front.splitlines() if l.startswith("description:")).split(": ", 1)[1]
+        self.assertEqual(kiro["name"], "decision-log-reader")
+        self.assertEqual(kiro["description"], desc)
+        self.assertEqual(kiro["prompt"].strip(), body.strip())
         self.assertIn("decision-log-reader", (self.ROOT / "adr/skills/decision-log/SKILL.md").read_text(encoding="utf-8"))
 
 

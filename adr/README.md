@@ -16,7 +16,7 @@
 | `skills/decision-log/` | PR・issue・コードから、過去の変更を Decision log に起こす。このフォルダーだけで、どのリポジトリでも動く。手順と書き方の詳細は `references/`、索引を作るスクリプトは `scripts/` |
 | `skills/decision-continuity-contract.md` | スキルが共通で守るルール |
 | [`templates/agent-instructions.md`](templates/agent-instructions.md) | `CLAUDE.md`（Kiro なら steering）に足す指示 |
-| `agents/` | decision-log が候補を並行に読ませるサブエージェント `decision-log-reader`（[Claude Code 用](agents/claude/decision-log-reader.md)と [Kiro 用](agents/kiro/decision-log-reader.md)） |
+| `agents/` | decision-log が候補を並行に読ませるサブエージェント `decision-log-reader`（[Claude Code 用](agents/claude/decision-log-reader.md)と [Kiro 用](agents/kiro/decision-log-reader.json)） |
 | `templates/kiro/` | Kiro 用の薄い `SKILL.md`。中身は `.claude/skills/` の正本を読むように言うだけ |
 | `evals/` | スキルを試す 20 のケース、固定データ、実行の手順、実行スクリプト |
 
