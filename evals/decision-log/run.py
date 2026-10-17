@@ -16,7 +16,7 @@ import sys
 import tempfile
 import time
 
-ROOT = pathlib.Path(__file__).resolve().parents[1]
+ROOT = pathlib.Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "skills" / "decision-log" / "scripts" / "build_index.py"
 
 # (件名, 本文, {パス: 中身})。マージコミットは件名が "Merge pull request" で始まるもの。
@@ -207,7 +207,7 @@ def main():
     manifest = dict(timestamp_utc=dt.datetime.now(dt.timezone.utc).isoformat(), revision=revision,
                     agent_version=args.agent_version, skills_loaded_operator_attestation=args.skills_loaded,
                     agent_argv=argv, results=results,
-                    note="キーワードとファイルの検査は目安。人が応答を読み、evals/cases.md と照らして PASS / FAIL をつける。")
+                    note="キーワードとファイルの検査は目安。人が応答を読み、evals/decision-log/cases.md と照らして PASS / FAIL をつける。")
     (output / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print("結果:", output)
 

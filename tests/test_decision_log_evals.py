@@ -1,4 +1,4 @@
-"""evals/run.py を偽のエージェントで動かすテスト。実際のモデルは呼ばない。"""
+"""evals/decision-log/run.py を偽のエージェントで動かすテスト。実際のモデルは呼ばない。"""
 import json
 import pathlib
 import re
@@ -8,8 +8,8 @@ import tempfile
 import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-RUNNER = ROOT / "evals" / "run.py"
-sys.path.insert(0, str(ROOT / "evals"))
+RUNNER = ROOT / "evals" / "decision-log" / "run.py"
+sys.path.insert(0, str(RUNNER.parent))
 import run  # noqa: E402
 
 
