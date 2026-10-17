@@ -191,6 +191,8 @@ class BuildIndexTests(unittest.TestCase):
             for number, name in ((1, "0001-Auth_PKCE.md"), (2, "0002-認証の変更.md"), (3, "DL-0003-retry.md"), (4, "DL-4.md")):
                 self.assertIn(f"[DL-{number}]({name})", index)
             self.assertIn("DL-4.md: ファイル名に DL- を付けない", built.stdout)
+            self.assertIn("0001-Auth_PKCE.md: ファイル名は 0001.md か", built.stdout)
+            self.assertNotIn("0002-認証の変更.md: ファイル名に DL-", built.stdout)
             self.assertIn("notes.md: ファイル名の先頭に 4 桁の番号がない", built.stdout)
             self.assertIn("2025-03-04-retry.md: ファイル名の先頭に 4 桁の番号がない", built.stdout)
             self.assertNotEqual(built.returncode, 0)
