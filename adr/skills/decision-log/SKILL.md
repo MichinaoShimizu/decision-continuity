@@ -56,11 +56,7 @@ allowed-tools: Bash(git:*) Bash(gh:*) Bash(glab:*)
 - [ ] 5. 報告
 ```
 
-ネットワークは候補にだけ、まとめて使う。読む候補が 5 件を超えたら、自分で読まずにサブエージェントに分ける。分類ごとに 1 つ、同時に呼ぶ。
-
-- `decision-log-reader` があれば、名前で指定して呼ぶ（Kiro は `.kiro/agents/`、Claude Code は `.claude/agents/`）。例：「decision-log-reader サブエージェントで、reliability の PR #101、#117 を基準のコミット abc1234 で読んで」。
-- なければ既定のサブエージェントに、リポジトリ・基準のコミット・分類・PR の番号を渡し、「起きたこと」「理由」「関わった人」の行、決定の言葉、問い、keywords の候補を返させる。ファイルは書かせない。
-- 返ってきたものの重なりを除き、自分で Decision log にまとめる。
+ネットワークは候補にだけ、まとめて使う。読む候補が 5 件を超えたら、自分で読まずにサブエージェント（`decision-log-reader`）に分ける。分類ごとに 1 つ、同時に呼ぶ。呼び方は [references/investigation.md](references/investigation.md#サブエージェントに分ける)。
 
 手順 0〜3 は [references/investigation.md](references/investigation.md) を読んで進める。
 
