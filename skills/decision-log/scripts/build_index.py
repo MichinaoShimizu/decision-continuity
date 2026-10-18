@@ -60,7 +60,7 @@ WORDS = {
 }
 # ステータスの値。日本語でも英語でも同じ語を使う
 STATES = ("Active", "Superseded", "Removed")
-STATE_RE = re.compile(r"^(?:Active|Superseded|Removed)(?:：|: )\S")
+STATE_RE = re.compile(r"^(?:- )?(?:Active|Superseded|Removed)(?:：|: )\S")
 # 0001.md、0001-auth-pkce.md のほか、0001-Short_Title.md・0001-認証の変更.md と、DL- を付けた DL-1.md・DL-0001-x.md も読む
 FILE_RE = re.compile(r"^(?:DL-(\d+)|(\d{4,})(?!-\d{2}-\d{2}))(?:[-_].*)?\.md$", re.I)
 FRONT_RE = re.compile(r"\A---\n(.*?)\n---[ \t]*\n+", re.S)
