@@ -96,11 +96,14 @@ CASES = {
             "ブランチ・コミット・PR は作らず、ファイルを書くところまででよい。",
             ["分かった", "元の場所なし"], ["status: accepted"], True, True),
     "E07": ("decision-log で audit して。範囲はリポジトリ全体。",
-            ["decision-log-reader"], ["status: accepted"], False, False),
+            [], ["status: accepted"], False, False),
     "E08": ("decision-log で audit して。範囲は src/payment/batch.py。",
             ["記録あり（差分）", "100"], ["不明（記録に書かれていない）", "記録あり（本文）"], False, False),
 }
 
+
+# 呼ばれているべきサブエージェント（応答の記録の Agent / Task の呼び出しで数える。プラグインの名前は末尾で照らす）
+AGENTS = {"E07": ["decision-log-planner", "decision-log-reader"]}
 
 # 書いたファイルに入っているべき事実（正規表現のどれか 1 つに当たればよい）。目安で、人の判定を置き換えない
 ANSWERS = {
@@ -177,6 +180,22 @@ def final_text(stdout):
     return stdout
 
 
+def subagents(stdout):
+    """stream-json の応答の記録から、呼んだサブエージェントの名前を順に返す。"""
+    names = []
+    for line in stdout.splitlines():
+        try:
+            event = json.loads(line)
+        except ValueError:
+            continue
+        message = event.get("message") if isinstance(event, dict) else None
+        content = message.get("content") if isinstance(message, dict) else None
+        for item in content if isinstance(content, list) else []:
+            if isinstance(item, dict) and item.get("type") == "tool_use" and item.get("name") in ("Agent", "Task"):
+                names.append(str((item.get("input") or {}).get("subagent_type") or ""))
+    return names
+
+
 def inspect(repo, before, answers=None):
     """書いたファイルの決まった検査：索引が最新で形が崩れていないか、前からあったファイルを書き換えていないか、
     正解表の事実が入っているか。"""
@@ -237,11 +256,13 @@ def main():
         (output / f"{case}.final.txt").write_text(final, encoding="utf-8")
         lowered = final.lower()
         status = "REVIEW_REQUIRED" if code == 0 and not timed_out and args.skills_loaded else "INCONCLUSIVE"
-        results.append(dict(id=case, status=status, exit_code=code,
+        called = subagents(response)
+        missing_agents = [a for a in AGENTS.get(case, []) if not any(n == a or n.endswith(":" + a) for n in called)]
+        results.append(dict(id=case, status=status, exit_code=code, subagents=called, missing_agents=missing_agents,
                             missing_keywords=[k for k in required if k.lower() not in lowered],
                             forbidden_keyword_hits=[k for k in forbidden if k.lower() in lowered],
                             files=files, elapsed_seconds=round(time.monotonic() - start, 2)))
-        print(f"{case}: {status} {results[-1]['missing_keywords'] or ''} {results[-1]['forbidden_keyword_hits'] or ''}")
+        print(f"{case}: {status} {results[-1]['missing_keywords'] or ''} {results[-1]['forbidden_keyword_hits'] or ''} {missing_agents or ''}")
     manifest = dict(timestamp_utc=dt.datetime.now(dt.timezone.utc).isoformat(), revision=revision,
                     agent_version=args.agent_version, skills_loaded_operator_attestation=args.skills_loaded,
                     agent_argv=argv, results=results,

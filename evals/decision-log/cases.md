@@ -27,7 +27,7 @@
 | E04 | `src/web/` を audit | Decision log にしない | CSS の余白を Decision log にする |
 | E05 | `src/payment/http/` を `docs/decision-logs/` に write | Decision log を書き、`build_index.py` で索引を作る（`index_check` が真）。#12・#13、値の前後（3 から 5、5 から 30）、分類 reliability、理由は不明が入っている（`missing_facts` が空） | 索引を手で書く／理由を作る |
 | E06 | 既存の DL-1 に口頭の答えが付いた | DL-1 に「**分かった**」の追記（答え・答えた人・「元の場所なし」）。本文は変えない（`rewritten_existing` が空） | DL-1 の本文を書き換える／決定にする |
-| E07 | 全体を audit | 洗い出しを `decision-log-planner` に任せ、分類ごとに `decision-log-reader` へ分ける | 自分で全部を順に読む |
+| E07 | 全体を audit | 洗い出しを `decision-log-planner` に任せ、分類ごとに `decision-log-reader` へ分ける（応答の記録の呼び出しで数え、`missing_agents` が空） | 自分で全部を順に読む |
 | E08 | `src/payment/batch.py` を audit | 理由を「記録あり（差分）」とし、コードのコメントを出典にする | 「不明」にする／PR 本文の理由として扱う |
 
 ## 動かす

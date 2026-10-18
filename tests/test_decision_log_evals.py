@@ -50,6 +50,15 @@ class RunnerTests(unittest.TestCase):
         result, _ = self.run_case(agent, "E02", "--skills-loaded")
         self.assertEqual(result["missing_keywords"], ["本文・AI", "人の判断"])
 
+    def test_subagents_are_counted_from_tool_calls(self):
+        call = lambda name: {"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Agent", "input": {"subagent_type": name}}]}}
+        lines = [call("decision-continuity:decision-log-planner"), call("decision-log-reader"), {"type": "result", "result": "終わり"}]
+        agent = [sys.executable, "-c", "import json; " + "; ".join(f"print(json.dumps({l!r}))" for l in lines)]
+        result, _ = self.run_case(agent, "E07", "--skills-loaded")
+        self.assertEqual(result["missing_agents"], [])
+        result, _ = self.run_case([sys.executable, "-c", "print('自分で読んだ')"], "E07", "--skills-loaded")
+        self.assertEqual(result["missing_agents"], ["decision-log-planner", "decision-log-reader"])
+
     def test_answer_key_reports_missing_facts(self):
         write = [sys.executable, "-c", "import pathlib, subprocess, sys; d = pathlib.Path('docs/decision-logs'); d.mkdir(parents=True); "
                  "(d / '0001.md').write_text('---\\nkind: log\\ncategory: reliability\\n---\\n\\n# [payment-api] x\\n\\n## 起きたこと\\n\\n"
