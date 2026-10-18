@@ -21,6 +21,7 @@ class InstallTests(unittest.TestCase):
             dest = pathlib.Path(d) / ".kiro"
             self.assertTrue((dest / "skills/decision-log/SKILL.md").exists())
             self.assertTrue((dest / "skills/decision-log/scripts/build_index.py").exists())
+            self.assertTrue((dest / "skills/change-history/scripts/build_history.py").exists())
             agents = sorted(p.name for p in (dest / "agents").iterdir())
             want = sorted(p.name for p in (ROOT / "agents/kiro").iterdir())
             self.assertEqual(agents, want)
