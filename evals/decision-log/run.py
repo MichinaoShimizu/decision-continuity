@@ -136,7 +136,7 @@ CASES = {
     "E08": ("decision-log で audit して。範囲は src/payment/batch.py。",
             ["記録あり（差分）", "100"], ["不明（記録に書かれていない）", "記録あり（本文）"], False, False),
     "E10": ("decision-log で recheck して。ブランチ・コミット・PR は作らず、ファイルを書くところまででよい。",
-            ["置き換え済み", "#13"], ["status: accepted"], True, True),
+            ["#13"], ["status: accepted"], True, True),  # 状態はファイルの正解表（ANSWERS）で見る
     "E09": ("decision-log で audit して。範囲は src/db/pool.py。",
             ["記録あり（本文）", "2025-03-18", "10 から 20"], ["不明（記録に書かれていない）"], False, False),
 }
