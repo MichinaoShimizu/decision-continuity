@@ -69,7 +69,7 @@ class RunnerTests(unittest.TestCase):
                "head = subprocess.run(['git', 'rev-parse', '--short', 'HEAD'], capture_output=True, text=True).stdout.strip(); "
                "import re; t = re.sub(r'checked: \\w+', 'checked: ' + head, p.read_text()); "
                "p.write_text(t + f'\\n---\\n\\n## 追記 2026-01-01（x）\\n\\n**いま**（{head}）：上限は 5。\\n\\n"
-               "- C1 は置き換え済みになった：PR #13 で 3 から 5 になった（1 日後）\\n- C2 はいまも同じ\\n'); "
+               "- 上限の行は置き換え済みになった：PR #13 で 3 から 5 になった（1 日後）\\n- タイムアウトの行はいまも同じ\\n'); "
                "subprocess.run([sys.executable, '.claude/skills/decision-log/scripts/build_index.py', 'docs/decision-logs'])"]
         result, _ = self.run_case(add, "E10", "--skills-loaded")
         files = result["files"]
@@ -81,7 +81,7 @@ class RunnerTests(unittest.TestCase):
     def test_answer_key_reports_missing_facts(self):
         write = [sys.executable, "-c", "import pathlib, subprocess, sys; d = pathlib.Path('docs/decision-logs'); d.mkdir(parents=True); "
                  "(d / '0001.md').write_text('---\\nkind: log\\ncategory: reliability\\n---\\n\\n# [payment-api] x\\n\\n## 起きたこと\\n\\n"
-                 "- C1 2025-01-11 いまも同じ：MAX_RETRIES が 3 から 5 になった。履歴：PR #13 ／ 現在：client.py:1\\n\\n## 理由\\n\\n不明（記録に書かれていない）。\\n'); "
+                 "- 2025-01-11 いまも同じ：MAX_RETRIES が 3 から 5 になった。履歴：PR #13 ／ 現在：client.py:1\\n\\n## 理由\\n\\n不明（記録に書かれていない）。\\n'); "
                  "subprocess.run([sys.executable, '.claude/skills/decision-log/scripts/build_index.py', str(d)])"]
         result, _ = self.run_case(write, "E05", "--skills-loaded")
         self.assertTrue(result["files"]["index_check"], result["files"]["index_output"])

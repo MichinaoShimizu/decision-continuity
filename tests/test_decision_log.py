@@ -214,24 +214,30 @@ class BuildIndexTests(unittest.TestCase):
 
     def test_reports_malformed_claim_lines(self):
         body = ("---\nkind: log\ncategory: data\n---\n\n# [demo] x\n\n## 起きたこと\n\n"
-                "- C1 2025-01-01 いまも同じ：a。履歴：PR #1 ／ 現在：x.py:1\n"
-                "- C1 2025-01-02 置き換え済み：b。履歴：PR #2\n"
-                "- C3 2025-01-03 たぶん同じ：c。履歴：PR #3 ／ 現在：x.py:2\n"
-                "- C4 2025-01-04 一部置き換え済み：d。履歴：PR #4 ／ 現在：PR #5 で変わった\n\n## 理由\n\n不明。\n")
+                "- 2025-01-01 いまも同じ：a。履歴：PR #1 ／ 現在：x.py:1\n"
+                "- 2025-01-02 置き換え済み：b。履歴：PR #2\n"
+                "- 2025-01-03 たぶん同じ：c。履歴：PR #3 ／ 現在：x.py:2\n"
+                "- 2025-1-5 いまも同じ：e。履歴：PR #6 ／ 現在：x.py:3\n"
+                "- C4 2025-01-04 一部置き換え済み：d。履歴：PR #4 ／ 現在：PR #5 で変わった\n"
+                "- C4 2025-01-05 競合：f。履歴：PR #7 ／ 現在：x.py:4\n\n## 理由\n\n不明。\n")
         with tempfile.TemporaryDirectory() as directory:
             d = pathlib.Path(directory)
             (d / "0001.md").write_text(body, encoding="utf-8")
-            out = self.run_script(d).stdout
-            self.assertIn("C1 が重なっている", out)
-            self.assertIn("C1 に「履歴：」と「現在：」の両方がない", out)
-            self.assertIn("C3 の状態が", out)
-            self.assertNotIn("C4", out)
-            self.assertNotIn("C1 の状態", out)
+            lines = self.run_script(d).stdout.splitlines()
+            has = lambda *words: any(all(w in l for w in words) for l in lines)
+            self.assertTrue(has("2025-01-02 置き換え済み", "両方がない"), lines)
+            self.assertTrue(has("2025-01-03 たぶん同じ", "状態が"), lines)
+            self.assertTrue(has("2025-1-5", "の形でない"), lines)
+            # 前の形（C 番号付き、前の状態の語）も読み、番号の重なりだけを挙げる
+            self.assertTrue(has("C4 が重なっている"), lines)
+            self.assertFalse(has("2025-01-01"), lines)
+            self.assertFalse(has("一部置き換え済み：d"), lines)
             en = body.replace("## 起きたこと", "## What happened").replace("## 理由\n\n不明。", "## Reason\n\nUnknown.")
             en = en.replace("いまも同じ：a。履歴：PR #1 ／ 現在：", "Still true: a. History: PR #1 / Now: ")
             (d / "0001.md").write_text(en, encoding="utf-8")
-            out = self.run_script(d).stdout
-            self.assertIn("C1 の状態が「Still true」", out)
+            lines = self.run_script(d).stdout.splitlines()
+            self.assertFalse(has("2025-01-01"), lines)
+            self.assertTrue(has("2025-01-02", "Still true"), lines)
 
     def test_checked_logs_need_a_now_line(self):
         def write(d, front, body, notes=""):
@@ -262,8 +268,8 @@ class BuildIndexTests(unittest.TestCase):
             folder = repo / "docs/decision-logs"; folder.mkdir(parents=True)
             u = f"https://github.com/o/r/blob/{first}/src/a.py"
             log = (f"---\nkind: log\ncategory: reliability\n---\n\n# [r] x\n\n## 起きたこと\n\n"
-                   f"- C1 2025-01-01 いまも同じ：MAX は 3。履歴：PR #1 ／ 現在：[a.py:1]({u}#L1)\n"
-                   f"- C2 2025-01-01 いまも同じ：TIMEOUT は 5。履歴：PR #1 ／ 現在：[a.py:2-3]({u}#L2-L3)\n\n## 理由\n\n不明。\n")
+                   f"- 2025-01-01 いまも同じ：MAX は 3。履歴：PR #1 ／ 現在：[a.py:1]({u}#L1)\n"
+                   f"- 2025-01-01 いまも同じ：TIMEOUT は 5。履歴：PR #1 ／ 現在：[a.py:2-3]({u}#L2-L3)\n\n## 理由\n\n不明。\n")
             (folder / "0001.md").write_text(log, encoding="utf-8")
             self.assertEqual(self.run_script(folder, "--stale").returncode, 0)
             (repo / "src/a.py").write_text("MAX = 5\nTIMEOUT = 5\nNAME = 'x'\n", encoding="utf-8")
@@ -275,7 +281,7 @@ class BuildIndexTests(unittest.TestCase):
             # 確かめ直して checked を進めると、その時点から比べる
             (folder / "0001.md").write_text(log.replace("category: reliability\n", f"category: reliability\nchecked: {second[:7]}\n")
                                             + f"\n---\n\n## 追記 2026-01-01（x）\n\n**いま**（{second[:7]}）：MAX は 5（PR #2）。\n\n"
-                                            "- C1 は置き換え済みになった：PR #2\n", encoding="utf-8")
+                                            "- 「MAX は 3」は置き換え済みになった：PR #2\n", encoding="utf-8")
             self.assertEqual(self.run_script(folder, "--stale").returncode, 0, self.run_script(folder, "--stale").stdout)
             # 範囲の中に行が足されたら数える
             (repo / "src/a.py").write_text("MAX = 5\nTIMEOUT = 5\nRETRY = 1\nNAME = 'x'\n", encoding="utf-8")
@@ -287,7 +293,7 @@ class BuildIndexTests(unittest.TestCase):
 
     def test_review_findings_on_format_checks(self):
         head = "---\nkind: log\ncategory: data\n{front}---\n\n# [demo] x\n\n## 起きたこと\n\n{claims}\n\n## 理由\n\n不明。\n{notes}"
-        ok = "- C1 2025-01-01 いまも同じ：a。履歴：PR #1 ／ 現在：x.py:1"
+        ok = "- 2025-01-01 いまも同じ：a。履歴：PR #1 ／ 現在：x.py:1"
         with tempfile.TemporaryDirectory() as directory:
             d = pathlib.Path(directory)
             # 空の checked: が、次の行（category）を値として読まない
@@ -296,8 +302,8 @@ class BuildIndexTests(unittest.TestCase):
             self.assertIn("checked が基準のコミット", out)
             self.assertIn("（data）", (d / "README.md").read_text(encoding="utf-8"))
             # 日付の形が崩れた C 行も挙げる
-            (d / "0001.md").write_text(head.format(front="", claims=ok + "\n- C2 2025-1-5 いまも同じ：b", notes=""), encoding="utf-8")
-            self.assertIn("C2 の行が", self.run_script(d).stdout)
+            (d / "0001.md").write_text(head.format(front="", claims=ok + "\n- 2025-1-5 いまも同じ：b", notes=""), encoding="utf-8")
+            self.assertIn("2025-1-5 いまも同じ：b…」 の行が", self.run_script(d).stdout)
 
     def test_repo_name_without_origin_is_the_repository_folder(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -322,7 +328,7 @@ class BuildIndexTests(unittest.TestCase):
             folder = repo / "docs"; folder.mkdir()
             u = f"https://github.com/o/r/blob/{first}/a.py"
             log = (f"---\nkind: log\ncategory: reliability\nchecked: {second[:7]}\n---\n\n# [r] x\n\n**いま**（{second[:7]}）：MAX は 3。\n\n## 起きたこと\n\n"
-                   f"- C1 2025-01-01 いまも同じ：MAX は 3。履歴：[a.py:2]({u}#L2) ／ 現在：[a.py:1][c1]、"
+                   f"- 2025-01-01 いまも同じ：MAX は 3。履歴：[a.py:2]({u}#L2) ／ 現在：[a.py:1][c1]、"
                    f"[lib]({'https://github.com/other/lib/blob/' + '1' * 40 + '/x.py#L1'})\n\n## 理由\n\n不明。\n\n[c1]: {u}#L1\n")
             (folder / "0001.md").write_text(log, encoding="utf-8")
             self.assertEqual(self.run_script(folder, "--stale").returncode, 0, self.run_script(folder, "--stale").stdout)

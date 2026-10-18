@@ -62,29 +62,33 @@ WORDS = {
 FILE_RE = re.compile(r"^(?:DL-(\d+)|(\d{4,})(?!-\d{2}-\d{2}))(?:[-_].*)?\.md$", re.I)
 FRONT_RE = re.compile(r"\A---\n(.*?)\n---[ \t]*\n+", re.S)
 APPEND_RE = re.compile(r"^## (?:追記|Addendum) \d{4}-\d{2}-\d{2}.*$", re.M)
-CLAIM_DATE_RE = re.compile(r"^- C\d+ (\d{4}-\d{2}-\d{2}) ", re.M)
-CLAIM_RE = re.compile(r"^- C(\d+) \d{4}-\d{2}-\d{2} (.*)$", re.M)
+CLAIM_DATE_RE = re.compile(r"^- (?:C\d+ )?(\d{4}-\d{2}-\d{2}) ", re.M)
+# v0.5 までは日付の前に C1 などの番号を付けていた。いまは付けないが、前に書いたものも読む
+CLAIM_RE = re.compile(r"^- (?:C(\d+) )?\d{4}-\d{2}-\d{2} (.*)$", re.M)
 # コミットで固定した行・ファイルのリンク：/blob/<ハッシュ>/<パス>#L12 か #L12-L20（GitLab は /-/blob/）
 BLOB_RE = re.compile(r"/blob/([0-9a-f]{7,40})/([^\s)#?\]]+)(?:#L(\d+)(?:-L(\d+))?)?")
 HUNK_RE = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@", re.M)
 REF_DEF_RE = re.compile(r"^\[([^\]]+)\]:[ \t]*(\S+)", re.M)
-ANY_CLAIM_RE = re.compile(r"^- C\d+ .*$", re.M)
+ITEM_RE = re.compile(r"^- .*$", re.M)
 
 
 def claim_problems(happened, w):
-    """「起きたこと」の各行：状態の語、履歴と現在の証拠、番号の重なり。"""
+    """「起きたこと」の各行：日付、状態の語、履歴と現在の証拠（前の形なら番号の重なりも）。"""
     problems, seen = [], set()
-    for bad in ANY_CLAIM_RE.findall(happened):
-        if not CLAIM_RE.match(bad):
-            problems.append(f"{bad.split(' ', 2)[1]} の行が `- C<番号> YYYY-MM-DD <状態>：` の形でない")
-    for num, rest in CLAIM_RE.findall(happened):
-        if num in seen:
+    for item in ITEM_RE.findall(happened):
+        m = CLAIM_RE.match(item)
+        name = f"「{item[2:22]}…」"
+        if not m:
+            problems.append(f"{name} の行が `- YYYY-MM-DD <状態>：` の形でない")
+            continue
+        num, rest = m.groups()
+        if num and num in seen:
             problems.append(f"C{num} が重なっている。番号は Decision log の中で一意にする")
         seen.add(num)
         if not any(rest.startswith(s + w["sep"]) for s in w["states"] + w["old_states"]):
-            problems.append(f"C{num} の状態が「{'」「'.join(w['states'])}」のどれでもない")
+            problems.append(f"{name} の状態が「{'」「'.join(w['states'])}」のどれでもない")
         if w["history"] not in rest or w["now"] not in rest:
-            problems.append(f"C{num} に「{w['history']}」と「{w['now']}」の両方がない（履歴と現在の証拠を 1 つずつ書く）")
+            problems.append(f"{name} に「{w['history']}」と「{w['now']}」の両方がない（履歴と現在の証拠を 1 つずつ書く）")
     return problems
 
 
@@ -134,7 +138,7 @@ def read_log(path):
     if not title_m:
         problems.append("タイトル（# の行）がない")
     if not dates:
-        problems.append(f"「## {w['happened']}」に `- C<番号> YYYY-MM-DD <状態>：` の行がない")
+        problems.append(f"「## {w['happened']}」に `- YYYY-MM-DD <状態>：` の行がない")
     problems += claim_problems(section(body, w["happened"]), w)
     if checked is not None:
         # checked を持つのは新しい形の Decision log。基準のコミットと「いま」の行（本文か追記）を確かめる
@@ -152,11 +156,11 @@ def read_log(path):
 
 
 def current_links(text, w):
-    """「起きたこと」の C 行（追記の C 行も）の「現在」より後にあるリンクだけを、(URL, ハッシュ, パス, 行, 行) で返す。
+    """「起きたこと」の行（追記に足した行も）の「現在」より後にあるリンクだけを、(URL, ハッシュ, パス, 行, 行) で返す。
     参照の定義（[c12]: <URL>）も引く。履歴のリンクや本文の他の節のリンクは数えない。"""
     defs = {k.lower(): v for k, v in REF_DEF_RE.findall(text)}
     found = set()
-    for claim in ANY_CLAIM_RE.findall(text):
+    for claim in (m.group(0) for m in CLAIM_RE.finditer(text)):
         if w["now"] not in claim:
             continue
         tail = claim.rsplit(w["now"], 1)[1]
