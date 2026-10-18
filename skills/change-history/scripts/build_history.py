@@ -20,6 +20,9 @@ import sys
 
 MERGE_RE = re.compile(r"^Merge pull request #(\d+) from \S+")
 SQUASH_RE = re.compile(r"^(.*?)\s*\(#(\d+)\)\s*$")
+# PR を通さないブランチの同期（Merge branch '3.0.x'、Merge remote-tracking branch 'origin/stable'）
+SYNC_RE = re.compile(r"^Merge (?:remote-tracking )?branch ")
+SYNC = "（ブランチの取り込み）"
 MONTH_RE = re.compile(r"^\d{4}-\d{2}$")
 SUMMARY = "## 主な変更"
 EMPTY = "（まだ書いていない）"
@@ -63,6 +66,8 @@ def changes(tz):
         elif SQUASH_RE.match(subject):
             title, pr = SQUASH_RE.match(subject).groups()
             item = dict(pr=pr, title=title)
+        elif SYNC_RE.match(subject):
+            item = dict(pr=None, title=f"{SYNC}{subject}")
         else:
             item = dict(pr=None, title=subject)
         item.update(sha=sha, date=date, author=author, files=[f for f in files.splitlines() if f.strip()])
