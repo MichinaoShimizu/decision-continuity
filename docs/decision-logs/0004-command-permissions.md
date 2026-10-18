@@ -54,3 +54,16 @@ PR #53 以降の変化。
 
 - C6 2026-10-18 いまも同じ：新しい `decision-log-planner` の定義に、手順 0〜1 の git のコマンドだけの許可を入れた。Kiro 2.x 向けの正規表現は、記号を一重引用符の中だけ許す形にした。履歴：[PR #59](https://github.com/MichinaoShimizu/decision-continuity/pull/59) ／ 現在：[`agents/kiro/decision-log-planner.json`](https://github.com/MichinaoShimizu/decision-continuity/blob/f54494031bc571248825a61557e34f3b9f75da34/agents/kiro/decision-log-planner.json)
 - C7 2026-10-18 いまも同じ：`git -C <パス>` を付けない、引数の記号は一重引用符で囲む、と手順に書いた。理由は記録あり（本文・AI）：評価で reader と planner が `git -C /…/repo show …` と書いて許可に当たらず拒否されていた（PR #68 の中のコミット `a98c49c` のメッセージ）。PR #53 の本文にも、`git -C` で確認待ちや拒否になったとある。履歴：[PR #68](https://github.com/MichinaoShimizu/decision-continuity/pull/68) ／ 現在：[`skills/decision-log/references/commands.md`](https://github.com/MichinaoShimizu/decision-continuity/blob/f54494031bc571248825a61557e34f3b9f75da34/skills/decision-log/references/commands.md)
+
+## 追記 2026-10-18（Claude、再確認）
+
+**再確認**（2026-10-18、fbc765a）
+**いま**：確認なしで通すのは読むだけのコマンド。Kiro 3.x では REST の GET も許し、書き込みの指定は deny で止める。コマンドの書き方は `references/commands.md` にまとまった。
+
+- C1：いまも同じ → 一部置き換え済み。[PR #69][pr69] で、Kiro 3.x の許可に `gh api repos/*` の allow と、書き込みの指定の deny が足された（1 日後）
+- C3 はいまも同じ（守ること 10 は [PR #69][pr69] で短くなり、中身は `references/commands.md` に移った）
+- C4 はいまも同じ（README の設定例は [PR #66][pr66] で `docs/claude-code-permissions.md` に移った）
+- C2・C5・C6・C7 はいまも同じ
+
+[pr66]: https://github.com/MichinaoShimizu/decision-continuity/pull/66
+[pr69]: https://github.com/MichinaoShimizu/decision-continuity/pull/69

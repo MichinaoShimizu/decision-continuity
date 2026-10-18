@@ -35,3 +35,14 @@ PR の記録から。決めた人とは限らない。いずれもレビュー�
 ## 関係する記録
 
 - DL-6、DL-7、DL-8、DL-15
+
+---
+
+## 追記 2026-10-18（Claude、再確認）
+
+**再確認**（2026-10-18、fbc765a）
+**いま**：reader は行のコメント、PR の中のコミット、参照された issue も読む。「起きたこと」には値の前後と置き換えまでの日数を書く。
+
+- C1・C2・C3 はいまも同じ（writing.md と build_index.py は [PR #73][pr73] で変わったが、ここに書いた決まりと検査は残っている）
+
+[pr73]: https://github.com/MichinaoShimizu/decision-continuity/pull/73
