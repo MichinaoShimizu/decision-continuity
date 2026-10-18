@@ -2,6 +2,7 @@
 kind: log
 category: architecture
 keywords: [decision-log-reader, .kiro/agents, .kiro/skills, thin pointer, 薄い入口, JSON, Markdown]
+checked: fbc765a
 ---
 
 # [decision-continuity] Kiro の対応が、薄い入口の方式から、reader を JSON と Markdown の両方で置く形になった

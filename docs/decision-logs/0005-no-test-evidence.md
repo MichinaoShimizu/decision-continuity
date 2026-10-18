@@ -2,6 +2,7 @@
 kind: log
 category: product
 keywords: [statusCheckRollup, headRefOid, テストの証拠, 検証済み, 未検証, 根拠なし]
+checked: fbc765a
 ---
 
 # [decision-continuity] CI の結果をテスト証拠に数えたが、約 40 分後にテストの確認自体をやめた

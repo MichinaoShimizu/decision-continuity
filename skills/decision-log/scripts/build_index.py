@@ -4,7 +4,7 @@
   build_index.py <フォルダー> [--repo NAME] [--lang ja|en]   README.md を書く
   build_index.py <フォルダー> --check         README.md が最新で、各 Decision log の形が崩れていないかを確かめる
                                              （どちらかが駄目なら終了コード 1）
-  build_index.py <フォルダー> --stale         「現在」のリンク先が、確かめたコミットより後に変わった Decision log を挙げる
+  build_index.py <フォルダー> --stale         「現在」のリンク先が checked のコミットより後に変わった Decision log を挙げる
                                              （あれば終了コード 1。git が要る。references/recheck.md）
 
 Decision log は日本語でも英語でも読む（references/writing.md の「英語で書くとき」）。索引の言語は --lang、
@@ -47,18 +47,16 @@ CATEGORIES_EN = {
     "product": ("Product policy", "Where the spec draws the line, things decided not to do"),
     "other": ("Other", "Anything that fits none of the above; if there are many, revisit the categories"),
 }
-# 決まった言葉。日本語と英語のどちらの Decision log も読む
+# 決まった言葉。日本語と英語のどちらの Decision log も読む。old_states は v0.5 までの状態の語で、前に書いたものを読むために残す
 WORDS = {
-    "ja": dict(happened="起きたこと", reason="理由", recat="**分類を更新**", retire="**終了**", learned="**分かった**",
+    "ja": dict(happened="起きたこと", reason="理由", retire="**終了**", learned="**分かった**",
                reasons=("記録あり", "推測", "不明"), unknown="不明",
-               states=("いまも同じ", "置き換え済み", "一部置き換え済み", "競合", "履歴のみ"), sep="：",
-               history="履歴：", now="現在：", today="**いま**", recheck="**再確認**",
-               today_re=r"^\*\*いま\*\*（([0-9a-f]{7,40})）：\S", recheck_re=r"^\*\*再確認\*\*（\d{4}-\d{2}-\d{2}、([0-9a-f]{7,40})）"),
-    "en": dict(happened="What happened", reason="Reason", recat="**Category updated**", retire="**Retired**",
-               learned="**Answered**", reasons=("Documented", "Inferred", "Unknown"), unknown="Unknown",
-               states=("Still true", "Replaced", "Partly replaced", "Conflict", "History only"), sep=":",
-               history="History:", now="Now:", today="**Now**", recheck="**Rechecked**",
-               today_re=r"^\*\*Now\*\* \(([0-9a-f]{7,40})\): \S", recheck_re=r"^\*\*Rechecked\*\* \(\d{4}-\d{2}-\d{2}, ([0-9a-f]{7,40})\)"),
+               states=("いまも同じ", "置き換え済み", "履歴のみ"), old_states=("一部置き換え済み", "競合"), sep="：",
+               history="履歴：", now="現在：", today="**いま**", today_re=r"^\*\*いま\*\*(?:（[0-9a-f]{7,40}）)?：\S"),
+    "en": dict(happened="What happened", reason="Reason", retire="**Retired**", learned="**Answered**",
+               reasons=("Documented", "Inferred", "Unknown"), unknown="Unknown",
+               states=("Still true", "Replaced", "History only"), old_states=("Partly replaced", "Conflict"), sep=":",
+               history="History:", now="Now:", today="**Now**", today_re=r"^\*\*Now\*\*(?: \([0-9a-f]{7,40}\))?: \S"),
 }
 # 0001.md、0001-auth-pkce.md のほか、0001-Short_Title.md・0001-認証の変更.md と、DL- を付けた DL-1.md・DL-0001-x.md も読む
 FILE_RE = re.compile(r"^(?:DL-(\d+)|(\d{4,})(?!-\d{2}-\d{2}))(?:[-_].*)?\.md$", re.I)
@@ -83,7 +81,7 @@ def claim_problems(happened, w):
         if num in seen:
             problems.append(f"C{num} が重なっている。番号は Decision log の中で一意にする")
         seen.add(num)
-        if not any(rest.startswith(s + w["sep"]) for s in w["states"]):
+        if not any(rest.startswith(s + w["sep"]) for s in w["states"] + w["old_states"]):
             problems.append(f"C{num} の状態が「{'」「'.join(w['states'])}」のどれでもない")
         if w["history"] not in rest or w["now"] not in rest:
             problems.append(f"C{num} に「{w['history']}」と「{w['now']}」の両方がない（履歴と現在の証拠を 1 つずつ書く）")
@@ -116,22 +114,10 @@ def read_log(path):
     lang = "en" if re.search(r"^## What happened$", body, re.M) else "ja"
     w = WORDS[lang]
     category = field(front, "category") or "other"
-    retired = learned = False
-    recat_bad = None
+    firsts = [note.split("\n", 1)[0] for note in appends]
+    retired = any(f.startswith(w["retire"]) for f in firsts)
+    learned = any(f.startswith(w["learned"]) for f in firsts)
     checked = field(front, "checked")
-    for note in appends:
-        first = note.split("\n", 1)[0]
-        again = re.match(w["recheck_re"], first)
-        if again:
-            checked = again.group(1)
-        elif first.startswith(w["recat"]):
-            category = field(note, "category") or category
-            if category not in LABELS:
-                recat_bad = category
-        elif first.startswith(w["retire"]):
-            retired = True
-        elif first.startswith(w["learned"]):
-            learned = True
     dates = CLAIM_DATE_RE.findall(section(body, w["happened"]))
     reason = next((l.strip() for l in section(body, w["reason"]).splitlines() if l.strip()), "")
     problems = []
@@ -143,25 +129,19 @@ def read_log(path):
         problems.append("フロントマターがない")
     elif field(front, "kind") != "log":
         problems.append("フロントマターの kind が log でない")
-    if (field(front, "category") or "other") not in LABELS:
-        problems.append(f"category が分類の一覧にない: {field(front, 'category')}")
-    if recat_bad:
-        problems.append(f"「{w['recat']}」の追記の category が分類の一覧にない: {recat_bad}")
+    if category not in LABELS:
+        problems.append(f"category が分類の一覧にない: {category}")
     if not title_m:
         problems.append("タイトル（# の行）がない")
     if not dates:
         problems.append(f"「## {w['happened']}」に `- C<番号> YYYY-MM-DD <状態>：` の行がない")
     problems += claim_problems(section(body, w["happened"]), w)
-    if field(front, "checked") is not None:
-        # checked を持つのは新しい形の Decision log。基準のコミットと「いま」の行を確かめる
-        if not re.fullmatch(r"[0-9a-f]{7,40}", field(front, "checked")):
+    if checked is not None:
+        # checked を持つのは新しい形の Decision log。基準のコミットと「いま」の行（本文か追記）を確かめる
+        if not re.fullmatch(r"[0-9a-f]{7,40}", checked):
             problems.append("フロントマターの checked が基準のコミットのハッシュ（7〜40 桁）でない")
-        if not re.search(w["today_re"], body, re.M):
-            problems.append(f"checked があるのに、本文に「{w['today']}」の行（{w['today']}（<コミット>）：…）がない")
-    for note in appends:
-        first = note.split("\n", 1)[0]
-        if first.startswith(w["recheck"]) and not re.match(w["recheck_re"], first):
-            problems.append(f"「{w['recheck']}」の追記の 1 行目は {w['recheck']}（YYYY-MM-DD、<コミット>）の形にする")
+        if not re.search(w["today_re"], rest, re.M):
+            problems.append(f"checked があるのに「{w['today']}」の行（{w['today']}（<コミット>）：…）がない")
     if not reason.startswith(w["reasons"]):
         problems.append(f"「## {w['reason']}」の 1 行目が「{'」「'.join(w['reasons'])}」で始まっていない")
     return dict(problems=problems, number=number(path.name), file=path.name, title=title,
@@ -233,7 +213,7 @@ def changed_lines(folder, base, path, first, last):
 
 
 def stale_links(folder, logs):
-    """「現在」のリンク先が、確かめたコミット（再確認の追記、checked、なければリンクのハッシュ）より後に変わったもの。"""
+    """「現在」のリンク先が、確かめたコミット（checked、なければリンクのハッシュ）より後に変わったもの。"""
     found = []
     origin = (git_text(folder, "remote", "get-url", "origin") or "").strip()
     m = re.search(r"[/:]([^/:]+/[^/]+?)(?:\.git)?/?$", origin)
@@ -259,7 +239,7 @@ def stale_links(folder, logs):
                 found.append(f"{log['file']}: 確かめられない：{where}（{base[:7]} がない。浅いクローンなら git fetch --unshallow）")
             elif changed:
                 found.append(f"{log['file']}: 要再確認：{where}（{base[:7]} より後に変わった）")
-    return found
+    return list(dict.fromkeys(found))
 
 
 def line(log, lang="ja"):
@@ -350,7 +330,7 @@ def main():
         for f in found:
             print(f)
         print(f"要再確認 {sum('要再確認' in f for f in found)} 件、確かめられない {sum('確かめられない' in f for f in found)} 件"
-              "（references/recheck.md の手順で確かめ、「再確認」の追記を足す）" if found else "確かめたあとに変わった「現在」はない")
+              "（recheck を頼まれたら references/recheck.md の手順で確かめる）" if found else "確かめたあとに変わった「現在」はない")
         return 1 if found else 0
     text = build(logs, args.repo or repo_name(args.folder), args.lang or index_lang(args.folder, logs))
     target = args.folder / "README.md"

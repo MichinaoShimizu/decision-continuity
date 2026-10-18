@@ -2,6 +2,7 @@
 kind: log
 category: product
 keywords: [depth, first-parent, -G, resume, 洗い出し, 定数, 設定ファイル, 候補]
+checked: fbc765a
 ---
 
 # [decision-continuity] 候補の絞り込みが、タイトルとファイル名から、差分の洗い出しを含む形になった

@@ -100,8 +100,7 @@ class BuildIndexTests(unittest.TestCase):
             (d / "0001.md").write_text(self.log("reliability", "上限が 5 に", ["2025-03-04"], "不明（記録に書かれていない）。"), encoding="utf-8")
             (d / "0002.md").write_text(self.log("reliability", "タイムアウトが 5 秒に", ["2024-12-01", "2024-11-20"], "不明。",
                                                 "\n---\n\n## 追記 2026-01-01（x）\n\n**分かった**（2026-01-01）：「なぜ」\n障害対応。\n"), encoding="utf-8")
-            (d / "0003.md").write_text(self.log("security", "署名検証を追加", ["2025-05-01"], "記録あり（議論）：監査の指摘（PR #9）。",
-                                                "\n---\n\n## 追記 2026-01-02（x）\n\n**分類を更新**（2026-01-02）\ncategory: data\n"), encoding="utf-8")
+            (d / "0003.md").write_text(self.log("data", "署名検証を追加", ["2025-05-01"], "記録あり：監査の指摘（PR #9 のレビュー）。"), encoding="utf-8")
             (d / "0004.md").write_text(self.log("data", "重複", ["2023-01-01"], "不明。",
                                                 "\n---\n\n## 追記 2026-01-03（x）\n\n**終了**（2026-01-03）：DL-3 と重複\n"), encoding="utf-8")
             result = self.run_script(d)
@@ -152,8 +151,7 @@ class BuildIndexTests(unittest.TestCase):
             (d / "0001.md").write_text(self.log_en("reliability", "Limit became 5", ["2025-03-04"], "Unknown (not recorded)."), encoding="utf-8")
             (d / "0002.md").write_text(self.log_en("reliability", "Timeout became 5 s", ["2024-11-20"], "Unknown (not recorded).",
                                                    "\n---\n\n## Addendum 2026-01-01 (x)\n\n**Answered** (2026-01-01): \"why\"\nAn outage.\n"), encoding="utf-8")
-            (d / "0003.md").write_text(self.log_en("security", "Signature check", ["2025-05-01"], "Documented (discussion): audit (PR #9).",
-                                                   "\n---\n\n## Addendum 2026-01-02 (x)\n\n**Category updated** (2026-01-02)\ncategory: data\n"), encoding="utf-8")
+            (d / "0003.md").write_text(self.log_en("data", "Signature check", ["2025-05-01"], "Documented: audit (review on PR #9)."), encoding="utf-8")
             (d / "0004.md").write_text(self.log_en("data", "Duplicate", ["2023-01-01"], "Inferred: a copy.",
                                                    "\n---\n\n## Addendum 2026-01-03 (x)\n\n**Retired** (2026-01-03): duplicate of DL-3\n"), encoding="utf-8")
             result = self.run_script(d)
@@ -235,7 +233,7 @@ class BuildIndexTests(unittest.TestCase):
             out = self.run_script(d).stdout
             self.assertIn("C1 の状態が「Still true」", out)
 
-    def test_checked_logs_need_a_now_line_and_well_formed_rechecks(self):
+    def test_checked_logs_need_a_now_line(self):
         def write(d, front, body, notes=""):
             (d / "0001.md").write_text(f"---\nkind: log\ncategory: data\n{front}---\n\n# [demo] x\n\n> 過去の観察である。\n\n{body}"
                                        "## 起きたこと\n\n- C1 2025-01-01 いまも同じ：a。履歴：PR #1 ／ 現在：x.py:1\n\n## 理由\n\n不明。\n" + notes,
@@ -248,9 +246,8 @@ class BuildIndexTests(unittest.TestCase):
             self.assertEqual(self.run_script(d).returncode, 0, self.run_script(d).stdout)
             write(d, "checked: main\n", "**いま**（abc1234）：a のまま。\n\n")
             self.assertIn("checked が基準のコミット", self.run_script(d).stdout)
-            write(d, "", "", "\n---\n\n## 追記 2026-01-01（x）\n\n**再確認**（2026-01-01）\nいまも同じ。\n")
-            self.assertIn("「**再確認**」の追記の 1 行目", self.run_script(d).stdout)
-            write(d, "", "", "\n---\n\n## 追記 2026-01-01（x）\n\n**再確認**（2026-01-01、abc1234）\n**いま**：a のまま。\n")
+            # 前の形（本文に「いま」がない）でも、確かめ直した追記に「いま」があればよい
+            write(d, "checked: abc1234\n", "", "\n---\n\n## 追記 2026-01-01（x）\n\n**いま**（abc1234）：a のまま。\n")
             self.assertEqual(self.run_script(d).returncode, 0, self.run_script(d).stdout)
 
     def test_stale_reports_only_changes_inside_the_linked_lines(self):
@@ -275,9 +272,10 @@ class BuildIndexTests(unittest.TestCase):
             self.assertEqual(out.returncode, 1)
             self.assertIn("要再確認：src/a.py#L1（", out.stdout)
             self.assertNotIn("#L2-L3", out.stdout)
-            # 確かめ直して「再確認」を足すと、その時点から比べる
-            (folder / "0001.md").write_text(log + f"\n---\n\n## 追記 2026-01-01（x）\n\n**再確認**（2026-01-01、{second[:7]}）\n"
-                                            "**いま**：MAX は 5（PR #2）。C1 の状態を置き換え済みに変更。\n", encoding="utf-8")
+            # 確かめ直して checked を進めると、その時点から比べる
+            (folder / "0001.md").write_text(log.replace("category: reliability\n", f"category: reliability\nchecked: {second[:7]}\n")
+                                            + f"\n---\n\n## 追記 2026-01-01（x）\n\n**いま**（{second[:7]}）：MAX は 5（PR #2）。\n\n"
+                                            "- C1 は置き換え済みになった：PR #2\n", encoding="utf-8")
             self.assertEqual(self.run_script(folder, "--stale").returncode, 0, self.run_script(folder, "--stale").stdout)
             # 範囲の中に行が足されたら数える
             (repo / "src/a.py").write_text("MAX = 5\nTIMEOUT = 5\nRETRY = 1\nNAME = 'x'\n", encoding="utf-8")
@@ -297,9 +295,6 @@ class BuildIndexTests(unittest.TestCase):
             out = self.run_script(d).stdout
             self.assertIn("checked が基準のコミット", out)
             self.assertIn("（data）", (d / "README.md").read_text(encoding="utf-8"))
-            # 追記で直した分類も一覧にあるかを確かめる
-            (d / "0001.md").write_text(head.format(front="", claims=ok, notes="\n---\n\n## 追記 2026-01-01（x）\n\n**分類を更新**（2026-01-01）\ncategory: reliabilty\n"), encoding="utf-8")
-            self.assertIn("「**分類を更新**」の追記の category が分類の一覧にない: reliabilty", self.run_script(d).stdout)
             # 日付の形が崩れた C 行も挙げる
             (d / "0001.md").write_text(head.format(front="", claims=ok + "\n- C2 2025-1-5 いまも同じ：b", notes=""), encoding="utf-8")
             self.assertIn("C2 の行が", self.run_script(d).stdout)
@@ -326,10 +321,9 @@ class BuildIndexTests(unittest.TestCase):
             git("commit", "-qam", "comment"); second = git("rev-parse", "HEAD")
             folder = repo / "docs"; folder.mkdir()
             u = f"https://github.com/o/r/blob/{first}/a.py"
-            log = (f"---\nkind: log\ncategory: reliability\n---\n\n# [r] x\n\n## 起きたこと\n\n"
+            log = (f"---\nkind: log\ncategory: reliability\nchecked: {second[:7]}\n---\n\n# [r] x\n\n**いま**（{second[:7]}）：MAX は 3。\n\n## 起きたこと\n\n"
                    f"- C1 2025-01-01 いまも同じ：MAX は 3。履歴：[a.py:2]({u}#L2) ／ 現在：[a.py:1][c1]、"
-                   f"[lib]({'https://github.com/other/lib/blob/' + '1' * 40 + '/x.py#L1'})\n\n## 理由\n\n不明。\n\n[c1]: {u}#L1\n"
-                   f"\n---\n\n## 追記 2026-01-01（x、再確認）\n\n**再確認**（2026-01-01、{second[:7]}）\n\n- C1 はいまも同じ\n")
+                   f"[lib]({'https://github.com/other/lib/blob/' + '1' * 40 + '/x.py#L1'})\n\n## 理由\n\n不明。\n\n[c1]: {u}#L1\n")
             (folder / "0001.md").write_text(log, encoding="utf-8")
             self.assertEqual(self.run_script(folder, "--stale").returncode, 0, self.run_script(folder, "--stale").stdout)
             # 動いた先（2 行目）の MAX が変わったら挙げる。履歴のリンクと、ほかのリポジトリのリンクは数えない

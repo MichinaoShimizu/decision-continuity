@@ -120,7 +120,7 @@ CASES = {
     "E01": ("decision-log で audit して。範囲はリポジトリ全体。",
             ["#12", "不明"], ["status: accepted"], False, False),
     "E02": ("decision-log で audit して。範囲は src/payment/webhook/。",
-            ["本文・AI", "人の判断"], [], False, False),
+            ["AI の印", "人の判断"], [], False, False),
     "E03": ("decision-log で audit して。範囲は src/payment/idempotency.py。",
             ["決定の候補", "UUIDv7"], ["status: accepted"], False, False),
     "E04": ("decision-log で audit して。範囲は src/web/。",
@@ -133,11 +133,11 @@ CASES = {
     "E07": ("decision-log で audit して。範囲はリポジトリ全体。",
             [], ["status: accepted"], False, False),
     "E08": ("decision-log で audit して。範囲は src/payment/batch.py。",
-            ["記録あり（差分）", "100"], ["不明（記録に書かれていない）", "記録あり（本文）"], False, False),
+            ["記録あり", "コメント", "100"], ["不明（記録に書かれていない）"], False, False),
     "E10": ("decision-log で recheck して。ブランチ・コミット・PR は作らず、ファイルを書くところまででよい。",
             ["#13"], ["status: accepted"], True, True),  # 状態はファイルの正解表（ANSWERS）で見る
     "E09": ("decision-log で audit して。範囲は src/db/pool.py。",
-            ["記録あり（本文）", "2025-03-18", "10 から 20"], ["不明（記録に書かれていない）"], False, False),
+            ["記録あり", "2025-03-18", "10 から 20"], ["不明（記録に書かれていない）"], False, False),
 }
 
 
@@ -156,7 +156,7 @@ ANSWERS = {
         "#12 はタイトルと中身が違う": [r"(?i)typo"],
     },
     "E10": {
-        "再確認の追記": [r"^\*\*再確認\*\*（\d{4}-\d{2}-\d{2}、[0-9a-f]{7,40}）"],
+        "追記のいまの行": [r"^\*\*いま\*\*（[0-9a-f]{7,40}）："],
         "C1 が置き換え済みに": [r"C1[^\n]*置き換え済み"],
         "置き換えた PR #13": [r"#13"],
         "C2 はいまも同じ": [r"C2[^\n]*いまも同じ"],
@@ -255,10 +255,11 @@ def inspect(repo, before, answers=None):
         return {"wrote": False}
     checked = subprocess.run([sys.executable, str(SCRIPT), str(folder), "--check"], capture_output=True, text=True)
     stale = subprocess.run([sys.executable, str(SCRIPT), str(folder), "--stale"], capture_output=True, text=True)
-    # 名前を変えた・消したファイルも「書き換えた」に数える（読めずに評価全体が止まらないように）
+    # 名前を変えた・消したファイルも「書き換えた」に数える（読めずに評価全体が止まらないように）。フロントマターは直してよい
+    body = lambda text: re.sub(r"\A---\n.*?\n---\n", "", text, flags=re.S).rstrip("\n")
     rewritten = [name for name, text in before.items() if name != "README.md"
                  and (not (folder / name).is_file()
-                      or not (folder / name).read_text(encoding="utf-8").startswith(text.rstrip("\n")))]
+                      or not body((folder / name).read_text(encoding="utf-8")).startswith(body(text)))]
     written = "\n".join(p.read_text(encoding="utf-8") for p in folder.glob("*.md") if p.name != "README.md")
     missing = [fact for fact, patterns in (answers or {}).items()
                if not any(re.search(pat, written, re.M) for pat in patterns)]

@@ -2,6 +2,7 @@
 kind: log
 category: product
 keywords: [記録あり, 推測, 不明, 本文・AI, Generated with Claude Code, JST, TZ=Asia/Tokyo]
+checked: fbc765a
 ---
 
 # [decision-continuity] 理由の確かさを、書かれていた場所で分けるようになった

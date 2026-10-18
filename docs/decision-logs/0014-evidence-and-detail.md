@@ -2,6 +2,7 @@
 kind: log
 category: product
 keywords: [pulls/comments, 行のコメント, 記録あり（差分）, Documented (diff), 一部置き換え済み, 値の前後, claim_problems, --check]
+checked: fbc765a
 ---
 
 # [decision-continuity] 理由の証拠を広く読み、起きたことに値の前後や置き換えまでの日数を書く形になった

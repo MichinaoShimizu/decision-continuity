@@ -43,12 +43,12 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual((result["status"], result["exit_code"]), ("INCONCLUSIVE", 3))
 
     def test_keywords_are_matched_against_the_final_answer_only(self):
-        # ツールの結果に出てくる言葉（ここでは「本文・AI」）は、照合に数えない
-        lines = [{"type": "user", "message": {"content": [{"type": "tool_result", "content": "本文・AI 人の判断"}]}},
+        # ツールの結果に出てくる言葉（ここでは「AI の印」）は、照合に数えない
+        lines = [{"type": "user", "message": {"content": [{"type": "tool_result", "content": "AI の印 人の判断"}]}},
                  {"type": "result", "result": "理由は不明。"}]
         agent = [sys.executable, "-c", "import json; " + "; ".join(f"print(json.dumps({l!r}))" for l in lines)]
         result, _ = self.run_case(agent, "E02", "--skills-loaded")
-        self.assertEqual(result["missing_keywords"], ["本文・AI", "人の判断"])
+        self.assertEqual(result["missing_keywords"], ["AI の印", "人の判断"])
 
     def test_subagents_are_counted_from_tool_calls(self):
         call = lambda name: {"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Agent", "input": {"subagent_type": name}}]}}
@@ -67,8 +67,9 @@ class RunnerTests(unittest.TestCase):
     def test_recheck_case_counts_a_good_addendum(self):
         add = [sys.executable, "-c", "import pathlib, subprocess, sys; p = pathlib.Path('docs/decision-logs/0001.md'); "
                "head = subprocess.run(['git', 'rev-parse', '--short', 'HEAD'], capture_output=True, text=True).stdout.strip(); "
-               "p.write_text(p.read_text() + f'\\n---\\n\\n## 追記 2026-01-01（x、再確認）\\n\\n**再確認**（2026-01-01、{head}）\\n"
-               "**いま**：上限は 5。\\n- C1：いまも同じ → 置き換え済み。PR #13 で 3 から 5 になった（1 日後）\\n- C2 はいまも同じ\\n'); "
+               "import re; t = re.sub(r'checked: \\w+', 'checked: ' + head, p.read_text()); "
+               "p.write_text(t + f'\\n---\\n\\n## 追記 2026-01-01（x）\\n\\n**いま**（{head}）：上限は 5。\\n\\n"
+               "- C1 は置き換え済みになった：PR #13 で 3 から 5 になった（1 日後）\\n- C2 はいまも同じ\\n'); "
                "subprocess.run([sys.executable, '.claude/skills/decision-log/scripts/build_index.py', 'docs/decision-logs'])"]
         result, _ = self.run_case(add, "E10", "--skills-loaded")
         files = result["files"]

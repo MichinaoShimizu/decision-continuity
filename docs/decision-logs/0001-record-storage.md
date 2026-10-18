@@ -2,6 +2,7 @@
 kind: log
 category: architecture
 keywords: [Discussions, records/, records.py, decision-record, adr-guard, config.yaml, STORE, DISCUSSION_TEMPLATE]
+checked: fbc765a
 ---
 
 # [decision-continuity] 記録の置き場所が Discussions から records/ を経て、置き場所を持たない汎用ツールになった
