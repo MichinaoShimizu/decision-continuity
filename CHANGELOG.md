@@ -2,6 +2,17 @@
 
 decision-continuity の主な変更。[Keep a Changelog](https://keepachangelog.com/) の形で書く。変更は `changes/` の断片に書き（[changes/README.md](changes/README.md)）、リリースのときに版の節にまとめる。版は中身から決まり（[Semantic Versioning](https://semver.org/)、`sh tools/next-version.sh`）、各版の節がそのまま GitHub のリリースノートになる。手順は [docs/release.md](docs/release.md)。
 
+## v0.5.0 - 2026-10-18
+
+### Added
+
+- decision-log: `recheck` モード。`build_index.py --stale` で「現在」のリンク先が確かめたあとに変わった Decision log を挙げ（行の範囲があればその範囲の変更だけを数える）、確かめ直した結果を「**再確認**」の追記で足す（`references/recheck.md`）
+
+### Changed
+
+- decision-log: 新しく書く Decision log は、フロントマターに `checked`（基準のコミット）、本文の最初に「**いま**」の 1 行を置き、リンクは参照の定義として本文の最後にまとめる。作成とマージが同じ人でレビューのない PR は「関わった人」を 1 行にまとめる。追記に足すのは印の付くものと 3 行までの後の変化にし、それを超えたら新しい Decision log にする
+  - `--check` は、`checked` のある Decision log の「いま」の行と、「再確認」の追記の 1 行目を確かめる。`checked` のない既存の Decision log はそのまま通る
+
 ## v0.4.1 - 2026-10-18
 
 ### Changed
