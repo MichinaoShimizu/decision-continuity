@@ -42,6 +42,8 @@ Claude Code 2.1.275 より前なら `/plugin marketplace add MichinaoShimizu/dec
 npx skills add MichinaoShimizu/decision-continuity --skill decision-log -a claude-code -a kiro-cli
 ```
 
+入るのは `main` の最新。版を決めて入れるなら `MichinaoShimizu/decision-continuity#v0.2.0` のようにタグを付ける。
+
 サブエージェントは入らないので、使うなら下の表の 2 行目を写す。写さなくても、decision-log は既定のサブエージェントに切り替えて動く。
 
 ### 手で写す
