@@ -16,6 +16,7 @@
 | #19 | Rotate webhook secret | `SECRET_NAME` を足した。本文なし | 秘密情報まわりの変更 |
 | #20 | Refactor helper | 新しいファイル（`result = sum(values)`）。本文なし | ふつうのコードの変更は、差分の洗い出しに当たらない |
 | #21 | Cap batch size | `BATCH_LIMIT = 100`。本文なし。理由は差分の中のコードのコメントにある | 理由が差分にだけ書かれている |
+| #22 | `Merge pull request #22 from example/db-pool`（本文「Raise DB pool size」） | `POOL_SIZE` 10 → 20。理由は PR の中のコミットのメッセージにだけある | `--first-parent` では見えない理由 |
 
 ## ケース
 
@@ -29,6 +30,7 @@
 | E06 | 既存の DL-1 に口頭の答えが付いた | DL-1 に「**分かった**」の追記（答え・答えた人・「元の場所なし」）。本文は変えない（`rewritten_existing` が空） | DL-1 の本文を書き換える／決定にする |
 | E07 | 全体を audit | 洗い出しを `decision-log-planner` に任せ、分類ごとに `decision-log-reader` へ分ける（応答の記録の呼び出しで数え、`missing_agents` が空） | 自分で全部を順に読む |
 | E08 | `src/payment/batch.py` を audit | 理由を「記録あり（差分）」とし、コードのコメントを出典にする | 「不明」にする／PR 本文の理由として扱う |
+| E09 | `src/db/pool.py` を audit | 理由を「記録あり（本文）」とし、PR の中のコミットのメッセージ（2025-03-18 の夜間バッチ）を出典にする。値の前後（10 から 20）を書く | 「不明」にする |
 
 ## 動かす
 
