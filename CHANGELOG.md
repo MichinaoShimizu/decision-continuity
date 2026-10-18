@@ -2,6 +2,12 @@
 
 decision-continuity の主な変更。[Keep a Changelog](https://keepachangelog.com/) の形で書く。変更は `changes/` の断片に書き（[changes/README.md](changes/README.md)）、リリースのときに版の節にまとめる。版は中身から決まり（[Semantic Versioning](https://semver.org/)、`sh tools/next-version.sh`）、各版の節がそのまま GitHub のリリースノートになる。手順は [docs/release.md](docs/release.md)。
 
+## v0.6.1 - 2026-10-18
+
+### Changed
+
+- decision-log: 「いま」の行を「## ステータス」の節に移し、`Active`（いまも有効）・`Superseded`（置き換わった）・`Removed`（なくなった）のどれかで始めるようにした。起きたこと（変更の履歴）と、いまのステータスを混ぜないため。行の中のハッシュもやめた（基準のコミットは `checked` とリンクにある）。前の形（`**いま**：…`）も読む
+
 ## v0.6.0 - 2026-10-18
 
 ### Changed
