@@ -2,6 +2,12 @@
 
 decision-continuity の主な変更。[Keep a Changelog](https://keepachangelog.com/) の形で書く。変更は `changes/` の断片に書き（[changes/README.md](changes/README.md)）、リリースのときに版の節にまとめる。版は中身から決まり（[Semantic Versioning](https://semver.org/)、`sh tools/next-version.sh`）、各版の節がそのまま GitHub のリリースノートになる。手順は [docs/release.md](docs/release.md)。
 
+## v0.7.0 - 2026-10-18
+
+### Added
+
+- change-history: マージされた変更を月ごとに並べ、月ごとの主な変更と年表（`timeline.md`）をまとめる新しいスキル。タグやリリースのないリポジトリで、いつ・どんな変更をしてきたかを読めるようにする。`tools/install.sh` は skills/ の全部を入れる
+
 ## v0.6.1 - 2026-10-18
 
 ### Changed
