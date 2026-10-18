@@ -31,16 +31,18 @@ rm -rf .kiro/skills/decision-log .kiro/skills/change-history .kiro/agents/decisi
 
 ## 使い方
 
+| スキル | 作るもの |
+|---|---|
+| change-history | `docs/change-history/`：月ごとの全変更の一覧、月ごとの主な変更、年表。タグやリリースがなくてもよい |
+| decision-log | `docs/decision-logs/`：大事な変更ごとに、なぜ（記録にある範囲で）、いまのステータス、分かっていないこと |
+
 ```text
+change-history で、いつどんな変更をしてきたかを月ごとにまとめて、年表まで作って。
 decision-log で audit して。範囲は src/payment/。
 洗い出しは decision-log-planner、読むのは decision-log-reader に、1 回でまとめて並列に任せて。
 ```
 
-既定は読むだけ。ファイルに書くのは `write` と頼んだときだけ。
-
-```text
-change-history で、いつどんな変更をしてきたかを docs/change-history/ に月ごとにまとめて。
-```
+まず change-history で流れをつかみ、「なぜ」まで要るテーマを decision-log で起こす。どちらも既定は下書きを返すだけで、ファイルに書くのは頼んだときだけ。
 
 ## その他
 
