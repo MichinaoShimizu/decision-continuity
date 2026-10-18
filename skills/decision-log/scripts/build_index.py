@@ -4,6 +4,8 @@
   build_index.py <フォルダー> [--repo NAME] [--lang ja|en]   README.md を書く
   build_index.py <フォルダー> --check         README.md が最新で、各 Decision log の形が崩れていないかを確かめる
                                              （どちらかが駄目なら終了コード 1）
+  build_index.py <フォルダー> --stale         「現在」のリンク先が、確かめたコミットより後に変わった Decision log を挙げる
+                                             （あれば終了コード 1。git が要る。references/recheck.md）
 
 Decision log は日本語でも英語でも読む（references/writing.md の「英語で書くとき」）。索引の言語は --lang、
 なければいまの索引の言語、なければ多いほうの言語（同じなら日本語）。標準ライブラリだけを使う。
@@ -50,11 +52,13 @@ WORDS = {
     "ja": dict(happened="起きたこと", reason="理由", recat="**分類を更新**", retire="**終了**", learned="**分かった**",
                reasons=("記録あり", "推測", "不明"), unknown="不明",
                states=("いまも同じ", "置き換え済み", "一部置き換え済み", "競合", "履歴のみ"), sep="：",
-               history="履歴：", now="現在："),
+               history="履歴：", now="現在：", today="**いま**", recheck="**再確認**",
+               today_re=r"^\*\*いま\*\*（([0-9a-f]{7,40})）：\S", recheck_re=r"^\*\*再確認\*\*（\d{4}-\d{2}-\d{2}、([0-9a-f]{7,40})）"),
     "en": dict(happened="What happened", reason="Reason", recat="**Category updated**", retire="**Retired**",
                learned="**Answered**", reasons=("Documented", "Inferred", "Unknown"), unknown="Unknown",
                states=("Still true", "Replaced", "Partly replaced", "Conflict", "History only"), sep=":",
-               history="History:", now="Now:"),
+               history="History:", now="Now:", today="**Now**", recheck="**Rechecked**",
+               today_re=r"^\*\*Now\*\* \(([0-9a-f]{7,40})\): \S", recheck_re=r"^\*\*Rechecked\*\* \(\d{4}-\d{2}-\d{2}, ([0-9a-f]{7,40})\)"),
 }
 # 0001.md、0001-auth-pkce.md のほか、0001-Short_Title.md・0001-認証の変更.md と、DL- を付けた DL-1.md・DL-0001-x.md も読む
 FILE_RE = re.compile(r"^(?:DL-(\d+)|(\d{4,})(?!-\d{2}-\d{2}))(?:[-_].*)?\.md$", re.I)
@@ -62,6 +66,9 @@ FRONT_RE = re.compile(r"\A---\n(.*?)\n---[ \t]*\n+", re.S)
 APPEND_RE = re.compile(r"^## (?:追記|Addendum) \d{4}-\d{2}-\d{2}.*$", re.M)
 CLAIM_DATE_RE = re.compile(r"^- C\d+ (\d{4}-\d{2}-\d{2}) ", re.M)
 CLAIM_RE = re.compile(r"^- C(\d+) \d{4}-\d{2}-\d{2} (.*)$", re.M)
+# コミットで固定した行・ファイルのリンク：/blob/<ハッシュ>/<パス>#L12 か #L12-L20（GitLab は /-/blob/）
+BLOB_RE = re.compile(r"/blob/([0-9a-f]{7,40})/([^\s)#?\]]+)(?:#L(\d+)(?:-L(\d+))?)?")
+HUNK_RE = re.compile(r"^@@ -(\d+)(?:,(\d+))? ", re.M)
 
 
 def claim_problems(happened, w):
@@ -105,9 +112,13 @@ def read_log(path):
     w = WORDS[lang]
     category = field(front, "category") or "other"
     retired = learned = False
+    checked = field(front, "checked")
     for note in appends:
         first = note.split("\n", 1)[0]
-        if first.startswith(w["recat"]):
+        again = re.match(w["recheck_re"], first)
+        if again:
+            checked = again.group(1)
+        elif first.startswith(w["recat"]):
             category = field(note, "category") or category
         elif first.startswith(w["retire"]):
             retired = True
@@ -131,12 +142,61 @@ def read_log(path):
     if not dates:
         problems.append(f"「## {w['happened']}」に `- C<番号> YYYY-MM-DD <状態>：` の行がない")
     problems += claim_problems(section(body, w["happened"]), w)
+    if field(front, "checked") is not None:
+        # checked を持つのは新しい形の Decision log。基準のコミットと「いま」の行を確かめる
+        if not re.fullmatch(r"[0-9a-f]{7,40}", field(front, "checked")):
+            problems.append("フロントマターの checked が基準のコミットのハッシュ（7〜40 桁）でない")
+        if not re.search(w["today_re"], body, re.M):
+            problems.append(f"checked があるのに、本文に「{w['today']}」の行（{w['today']}（<コミット>）：…）がない")
+    for note in appends:
+        first = note.split("\n", 1)[0]
+        if first.startswith(w["recheck"]) and not re.match(w["recheck_re"], first):
+            problems.append(f"「{w['recheck']}」の追記の 1 行目は {w['recheck']}（YYYY-MM-DD、<コミット>）の形にする")
     if not reason.startswith(w["reasons"]):
         problems.append(f"「## {w['reason']}」の 1 行目が「{'」「'.join(w['reasons'])}」で始まっていない")
     return dict(problems=problems, number=number(path.name), file=path.name, title=title,
                 category=category if category in LABELS else "other", retired=retired, lang=lang,
-                date=min(dates) if dates else None,
+                date=min(dates) if dates else None, checked=checked,
+                links=sorted(set(BLOB_RE.findall(text))),
                 unknown=reason.startswith(w["unknown"]) and not learned)
+
+
+def changed_lines(folder, base, path, first, last):
+    """base から HEAD までに path が変わったか。行の範囲があれば、その範囲に当たる変更だけを数える。
+    確かめられなければ None。"""
+    result = subprocess.run(["git", "-C", str(folder), "diff", "-U0", base, "HEAD", "--", f":(top){path}"],
+                            capture_output=True, text=True)
+    if result.returncode != 0:
+        return None
+    if not result.stdout:
+        return False
+    if not first:
+        return True
+    lo, hi = int(first), int(last or first)
+    for start, count in HUNK_RE.findall(result.stdout):
+        start, count = int(start), int(count or 1)
+        if count == 0 and lo <= start < hi:  # 範囲の中に行が足された
+            return True
+        if count and start <= hi and start + count - 1 >= lo:
+            return True
+    return False
+
+
+def stale_links(folder, logs):
+    """「現在」のリンク先が、確かめたコミット（再確認の追記、checked、なければリンクのハッシュ）より後に変わったもの。"""
+    found = []
+    for log in logs:
+        if log["retired"]:
+            continue
+        for sha, path, first, last in log["links"]:
+            base = log["checked"] or sha
+            where = path + (f"#L{first}" + (f"-L{last}" if last else "") if first else "")
+            changed = changed_lines(folder, base, path, first, last)
+            if changed is None:
+                found.append(f"{log['file']}: 確かめられない：{where}（{base[:7]} がない。浅いクローンなら git fetch --unshallow）")
+            elif changed:
+                found.append(f"{log['file']}: 要再確認：{where}（{base[:7]} より後に変わった）")
+    return found
 
 
 def line(log, lang="ja"):
@@ -217,11 +277,19 @@ def main():
     p.add_argument("--repo", help="見出しに出すリポジトリ名（既定はいまの索引の名前、なければ git の origin から）")
     p.add_argument("--lang", choices=("ja", "en"), help="索引の言語（既定はいまの索引の言語、なければ多いほうの言語）")
     p.add_argument("--check", action="store_true", help="書かずに、README.md が最新かを確かめる")
+    p.add_argument("--stale", action="store_true", help="書かずに、「現在」のリンク先が確かめたあとに変わった Decision log を挙げる")
     args = p.parse_args()
     if not args.folder.is_dir():
         print(f"{args.folder} がない", file=sys.stderr)
         return 2
     logs = read_logs(args.folder)
+    if args.stale:
+        found = stale_links(args.folder, logs)
+        for f in found:
+            print(f)
+        print(f"要再確認 {sum('要再確認' in f for f in found)} 件、確かめられない {sum('確かめられない' in f for f in found)} 件"
+              "（references/recheck.md の手順で確かめ、「再確認」の追記を足す）" if found else "確かめたあとに変わった「現在」はない")
+        return 1 if found else 0
     text = build(logs, args.repo or repo_name(args.folder), args.lang or index_lang(args.folder, logs))
     target = args.folder / "README.md"
     problems = [f"{l['file']}: {p}" for l in logs for p in l["problems"]]

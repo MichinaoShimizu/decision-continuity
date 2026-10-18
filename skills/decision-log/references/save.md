@@ -15,6 +15,7 @@
 ```sh
 python3 .claude/skills/decision-log/scripts/build_index.py <置き場所>
 python3 .claude/skills/decision-log/scripts/build_index.py <置き場所> --check   # 索引が最新で、形の崩れがなければ終了コード 0
+python3 .claude/skills/decision-log/scripts/build_index.py <置き場所> --stale   # 「現在」が確かめたあとに変わったものを挙げる（recheck.md）
 ```
 
 スクリプトがすること：分類（`category` に「分類を更新」を重ねたもの）ごとに見出しを分け、見出しの直下に分類の中身（[categories.md](categories.md) の表）を書き、「起きたこと」のいちばん古い日付の古い順に並べる。「理由」の 1 行目が「不明」で「分かった」の追記がないものに `・理由不明` を付け、「終了」の追記があるものは最後の「取り下げ」に移す。

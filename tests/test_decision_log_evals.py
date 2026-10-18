@@ -59,6 +59,19 @@ class RunnerTests(unittest.TestCase):
         result, _ = self.run_case([sys.executable, "-c", "print('自分で読んだ')"], "E07", "--skills-loaded")
         self.assertEqual(result["missing_agents"], ["decision-log-planner", "decision-log-reader"])
 
+    def test_recheck_case_counts_a_good_addendum(self):
+        add = [sys.executable, "-c", "import pathlib, subprocess, sys; p = pathlib.Path('docs/decision-logs/0001.md'); "
+               "head = subprocess.run(['git', 'rev-parse', '--short', 'HEAD'], capture_output=True, text=True).stdout.strip(); "
+               "p.write_text(p.read_text() + f'\\n---\\n\\n## 追記 2026-01-01（x、再確認）\\n\\n**再確認**（2026-01-01、{head}）\\n"
+               "**いま**：上限は 5。\\n- C1：いまも同じ → 置き換え済み。PR #13 で 3 から 5 になった（1 日後）\\n- C2 はいまも同じ\\n'); "
+               "subprocess.run([sys.executable, '.claude/skills/decision-log/scripts/build_index.py', 'docs/decision-logs'])"]
+        result, _ = self.run_case(add, "E10", "--skills-loaded")
+        files = result["files"]
+        self.assertEqual((files["missing_facts"], files["rewritten_existing"], files["stale_after"], files["index_check"]),
+                         ([], [], False, True), files)
+        result, _ = self.run_case([sys.executable, "-c", "print('見た')"], "E10", "--skills-loaded")
+        self.assertTrue(result["files"]["stale_after"])
+
     def test_answer_key_reports_missing_facts(self):
         write = [sys.executable, "-c", "import pathlib, subprocess, sys; d = pathlib.Path('docs/decision-logs'); d.mkdir(parents=True); "
                  "(d / '0001.md').write_text('---\\nkind: log\\ncategory: reliability\\n---\\n\\n# [payment-api] x\\n\\n## 起きたこと\\n\\n"

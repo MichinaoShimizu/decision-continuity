@@ -235,6 +235,58 @@ class BuildIndexTests(unittest.TestCase):
             out = self.run_script(d).stdout
             self.assertIn("C1 の状態が「Still true」", out)
 
+    def test_checked_logs_need_a_now_line_and_well_formed_rechecks(self):
+        def write(d, front, body, notes=""):
+            (d / "0001.md").write_text(f"---\nkind: log\ncategory: data\n{front}---\n\n# [demo] x\n\n> 過去の観察である。\n\n{body}"
+                                       "## 起きたこと\n\n- C1 2025-01-01 いまも同じ：a。履歴：PR #1 ／ 現在：x.py:1\n\n## 理由\n\n不明。\n" + notes,
+                                       encoding="utf-8")
+        with tempfile.TemporaryDirectory() as directory:
+            d = pathlib.Path(directory)
+            write(d, "checked: abc1234\n", "")
+            self.assertIn("「**いま**」の行", self.run_script(d).stdout)
+            write(d, "checked: abc1234\n", "**いま**（abc1234）：a のまま。\n\n")
+            self.assertEqual(self.run_script(d).returncode, 0, self.run_script(d).stdout)
+            write(d, "checked: main\n", "**いま**（abc1234）：a のまま。\n\n")
+            self.assertIn("checked が基準のコミット", self.run_script(d).stdout)
+            write(d, "", "", "\n---\n\n## 追記 2026-01-01（x）\n\n**再確認**（2026-01-01）\nいまも同じ。\n")
+            self.assertIn("「**再確認**」の追記の 1 行目", self.run_script(d).stdout)
+            write(d, "", "", "\n---\n\n## 追記 2026-01-01（x）\n\n**再確認**（2026-01-01、abc1234）\n**いま**：a のまま。\n")
+            self.assertEqual(self.run_script(d).returncode, 0, self.run_script(d).stdout)
+
+    def test_stale_reports_only_changes_inside_the_linked_lines(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = pathlib.Path(directory)
+            git = lambda *a: subprocess.run(["git", "-C", str(repo), *a], capture_output=True, text=True, check=True).stdout.strip()
+            git("init", "-q", "-b", "main"); git("config", "user.email", "t@example.com"); git("config", "user.name", "t")
+            (repo / "src").mkdir()
+            (repo / "src/a.py").write_text("MAX = 3\nTIMEOUT = 5\nNAME = 'x'\n", encoding="utf-8")
+            git("add", "-A"); git("commit", "-q", "-m", "first")
+            first = git("rev-parse", "HEAD")
+            folder = repo / "docs/decision-logs"; folder.mkdir(parents=True)
+            u = f"https://github.com/o/r/blob/{first}/src/a.py"
+            log = (f"---\nkind: log\ncategory: reliability\n---\n\n# [r] x\n\n## 起きたこと\n\n"
+                   f"- C1 2025-01-01 いまも同じ：MAX は 3。履歴：PR #1 ／ 現在：[a.py:1]({u}#L1)\n"
+                   f"- C2 2025-01-01 いまも同じ：TIMEOUT は 5。履歴：PR #1 ／ 現在：[a.py:2-3]({u}#L2-L3)\n\n## 理由\n\n不明。\n")
+            (folder / "0001.md").write_text(log, encoding="utf-8")
+            self.assertEqual(self.run_script(folder, "--stale").returncode, 0)
+            (repo / "src/a.py").write_text("MAX = 5\nTIMEOUT = 5\nNAME = 'x'\n", encoding="utf-8")
+            git("commit", "-qam", "bump"); second = git("rev-parse", "HEAD")
+            out = self.run_script(folder, "--stale")
+            self.assertEqual(out.returncode, 1)
+            self.assertIn("要再確認：src/a.py#L1（", out.stdout)
+            self.assertNotIn("#L2-L3", out.stdout)
+            # 確かめ直して「再確認」を足すと、その時点から比べる
+            (folder / "0001.md").write_text(log + f"\n---\n\n## 追記 2026-01-01（x）\n\n**再確認**（2026-01-01、{second[:7]}）\n"
+                                            "**いま**：MAX は 5（PR #2）。C1 の状態を置き換え済みに変更。\n", encoding="utf-8")
+            self.assertEqual(self.run_script(folder, "--stale").returncode, 0, self.run_script(folder, "--stale").stdout)
+            # 範囲の中に行が足されたら数える
+            (repo / "src/a.py").write_text("MAX = 5\nTIMEOUT = 5\nRETRY = 1\nNAME = 'x'\n", encoding="utf-8")
+            git("commit", "-qam", "insert")
+            self.assertIn("#L2-L3", self.run_script(folder, "--stale").stdout)
+            # ないコミットは「確かめられない」
+            (folder / "0001.md").write_text(log.replace(first, "0" * 40), encoding="utf-8")
+            self.assertIn("確かめられない", self.run_script(folder, "--stale").stdout)
+
     def test_check_without_repo_keeps_the_index_name(self):
         with tempfile.TemporaryDirectory() as directory:
             d = pathlib.Path(directory)
