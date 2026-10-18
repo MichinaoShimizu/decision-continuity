@@ -2,6 +2,22 @@
 
 decision-continuity の主な変更。[Keep a Changelog](https://keepachangelog.com/) の形で書く。変更は `changes/` の断片に書き（[changes/README.md](changes/README.md)）、リリースのときに版の節にまとめる。版は中身から決まり（[Semantic Versioning](https://semver.org/)、`sh tools/next-version.sh`）、各版の節がそのまま GitHub のリリースノートになる。手順は [docs/release.md](docs/release.md)。
 
+## v0.6.0 - 2026-10-18
+
+### Changed
+
+- BREAKING: decision-log: スキルと Decision log の形を、ぎりぎりまで簡素にした
+  - 指示は SKILL.md と `references/format.md` の 2 つだけ（合計で 54KB から 14KB）。モードは `audit` と `write`
+  - Decision log は「いま」の 1 行、起きたこと（`- YYYY-MM-DD <何が変わったか>（PR と関わった人）`）、理由、分かっていないことの 4 つ。フロントマターは `category` と `checked`
+  - 行ごとの番号（`C1`）・状態の語・「履歴：／現在：」・関わった人の節・「分類を更新」と「再確認」の追記をやめた。分類と `checked` はフロントマターを直す
+  - `--stale` は「いま」の行のリンクを見る。前の形の Decision log も読む（「分類を更新」と「再確認」の追記だけは読まないので、使っていたらフロントマターに写す）
+
+### Fixed
+
+- `build_index.py --stale`：ほかのリポジトリへのリンクを数えない。`checked` のあとに行がずれても、リンクの行を写してから比べる。git の出力を UTF-8 で読む
+- `build_index.py`：空の `checked:` などで次の行を値として読んでいた。`origin` がないときの索引のリポジトリ名を、リポジトリのフォルダー名にする（`docs` になっていた）
+- `tools/install.sh`：`CDPATH` を設定していると、パスが壊れていた
+
 ## v0.5.0 - 2026-10-18
 
 ### Added
