@@ -97,6 +97,15 @@ class BuildHistoryTests(unittest.TestCase):
         self.assertIn("## 2025\n\n- 決済の再試行を見直した（2 月）\n\n| 月 |", self.page("timeline.md"))
         self.assertEqual(self.run_script("--check").returncode, 0)
 
+    def test_branch_syncs_are_marked(self):
+        self.git("switch", "-q", "-c", "stable")
+        self.commit("src/auth/session.py", "TTL = 36", "Fix on stable", "2025-03-01T00:00:00Z")
+        self.git("switch", "-q", "main")
+        self.git("merge", "-q", "--no-ff", "stable", "-m", "Merge branch 'stable'",
+                 env={"GIT_AUTHOR_DATE": "2025-03-02T00:00:00Z", "GIT_COMMITTER_DATE": "2025-03-02T00:00:00Z"})
+        self.run_script()
+        self.assertIn("- 03-02 （ブランチの取り込み）Merge branch 'stable'（[", self.page("2025-03.md"))
+
     def test_since_and_depth(self):
         self.run_script("--since", "2025-02", "--depth", "1")
         self.assertFalse((self.repo / "docs/change-history/2025-01.md").exists())
