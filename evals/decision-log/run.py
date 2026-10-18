@@ -79,6 +79,38 @@ keywords: [MAX_RETRIES, retry]
 - なぜ 5 にしたか。
 """
 
+# 古くなった Decision log（E10 だけが使う）。#12 の時点で確かめたまま、#13 で 1 行目（MAX_RETRIES）が変わった
+STALE_LOG = """---
+kind: log
+category: reliability
+keywords: [MAX_RETRIES, retry]
+checked: {short}
+---
+
+# [payment-api] リトライの上限が 3 になった
+
+> 過去の観察である。決定ではなく、何も縛らない。
+
+**いま**（{short}）：上限は 3。理由は分かっていない。
+
+## 起きたこと
+
+- C1 2025-01-10 いまも同じ：リトライの上限が 3 になった。履歴：[コミット {short}][first] ／ 現在：[`client.py:1`][c1]
+- C2 {date} いまも同じ：タイムアウトが 5 から 30 になった。履歴：[PR #12][first] ／ 現在：[`client.py:2`][c2]
+
+## 理由
+
+不明（記録に書かれていない）。
+
+## 分かっていないこと
+
+- なぜ 3 にしたか。
+
+[first]: https://github.com/example/payment-api/commit/{sha}
+[c1]: https://github.com/example/payment-api/blob/{sha}/src/payment/http/client.py#L1
+[c2]: https://github.com/example/payment-api/blob/{sha}/src/payment/http/client.py#L2
+"""
+
 PREAMBLE = (
     "これは評価用の合成のリポジトリで、実在の履歴ではありません。このワークスペースに入っている decision-log スキルに従ってください。"
     "GitHub やネットワークには触れず、手元の git だけで調べてください（`gh` は使えないものとして扱う）。\n\n"
@@ -103,6 +135,8 @@ CASES = {
             [], ["status: accepted"], False, False),
     "E08": ("decision-log で audit して。範囲は src/payment/batch.py。",
             ["記録あり（差分）", "100"], ["不明（記録に書かれていない）", "記録あり（本文）"], False, False),
+    "E10": ("decision-log で recheck して。ブランチ・コミット・PR は作らず、ファイルを書くところまででよい。",
+            ["置き換え済み", "#13"], ["status: accepted"], True, True),
     "E09": ("decision-log で audit して。範囲は src/db/pool.py。",
             ["記録あり（本文）", "2025-03-18", "10 から 20"], ["不明（記録に書かれていない）"], False, False),
 }
@@ -121,6 +155,12 @@ ANSWERS = {
         "分類が reliability": [r"^category:\s*reliability\s*$"],
         "理由は不明": [r"^不明"],
         "#12 はタイトルと中身が違う": [r"(?i)typo"],
+    },
+    "E10": {
+        "再確認の追記": [r"^\*\*再確認\*\*（\d{4}-\d{2}-\d{2}、[0-9a-f]{7,40}）"],
+        "C1 が置き換え済みに": [r"C1[^\n]*置き換え済み"],
+        "置き換えた PR #13": [r"#13"],
+        "C2 はいまも同じ": [r"C2[^\n]*いまも同じ"],
     },
 }
 
@@ -168,12 +208,17 @@ def install(repo):
     shutil.copytree(ROOT / "agents" / "kiro", repo / ".kiro" / "agents")
 
 
-def seed_log(repo):
-    sha = git(repo, "log", "--format=%h", "-1", "--grep", "Bump retry count").strip()
+def seed_log(repo, case):
     folder = repo / "docs" / "decision-logs"
     folder.mkdir(parents=True)
     path = folder / "0001.md"
-    path.write_text(SEEDED_LOG.format(date="2025-01-12", sha=sha), encoding="utf-8")
+    if case == "E10":
+        sha = git(repo, "log", "--format=%H", "-1", "--grep", "Merge pull request #12").strip()
+        date = git(repo, "log", "--format=%ad", "--date=short", "-1", sha).strip()
+        path.write_text(STALE_LOG.format(sha=sha, short=sha[:7], date=date), encoding="utf-8")
+    else:
+        sha = git(repo, "log", "--format=%h", "-1", "--grep", "Bump retry count").strip()
+        path.write_text(SEEDED_LOG.format(date="2025-01-12", sha=sha), encoding="utf-8")
     subprocess.run([sys.executable, str(SCRIPT), str(folder), "--repo", "payment-api"], capture_output=True, check=True)
     return {p.name: p.read_text(encoding="utf-8") for p in folder.glob("*.md")}
 
@@ -213,6 +258,7 @@ def inspect(repo, before, answers=None):
     if not folder.is_dir():
         return {"wrote": False}
     checked = subprocess.run([sys.executable, str(SCRIPT), str(folder), "--check"], capture_output=True, text=True)
+    stale = subprocess.run([sys.executable, str(SCRIPT), str(folder), "--stale"], capture_output=True, text=True)
     rewritten = [name for name, text in before.items() if name != "README.md"
                  and not (folder / name).read_text(encoding="utf-8").startswith(text.rstrip("\n"))]
     written = "\n".join(p.read_text(encoding="utf-8") for p in folder.glob("*.md") if p.name != "README.md")
@@ -220,7 +266,8 @@ def inspect(repo, before, answers=None):
                if not any(re.search(pat, written, re.M) for pat in patterns)]
     return {"wrote": True, "files": sorted(p.name for p in folder.glob("*.md")),
             "index_check": checked.returncode == 0, "index_output": checked.stdout.strip(),
-            "rewritten_existing": rewritten, "missing_facts": missing}
+            "rewritten_existing": rewritten, "missing_facts": missing,
+            "stale_after": stale.returncode != 0, "stale_output": stale.stdout.strip()}
 
 
 def main():
@@ -246,7 +293,7 @@ def main():
             repo = pathlib.Path(work) / "payment-api"
             build_repo(repo)
             install(repo)
-            before = seed_log(repo) if seeded else {}
+            before = seed_log(repo, case) if seeded else {}
             text = PREAMBLE + prompt + "\n"
             prompt_file = pathlib.Path(work) / "prompt.txt"
             prompt_file.write_text(text, encoding="utf-8")
