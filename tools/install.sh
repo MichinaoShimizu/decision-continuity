@@ -1,9 +1,9 @@
 #!/bin/sh
-# decision-log のスキルとサブエージェントを、別のリポジトリに入れる。入れ直すと上書きして更新する。
+# スキル（skills/ の全部）とサブエージェントを、別のリポジトリに入れる。入れ直すと上書きして更新する。
 #   sh tools/install.sh <claude|kiro> [<入れ先のリポジトリ（既定はいまのディレクトリ）>]
 #
-# claude：skills/decision-log/ → .claude/skills/decision-log/、agents/claude/*.md → .claude/agents/
-# kiro：  skills/decision-log/ → .kiro/skills/decision-log/、agents/kiro/*.json と *.md → .kiro/agents/（CLI は JSON、IDE は Markdown を読む）
+# claude：skills/<名前>/ → .claude/skills/<名前>/、agents/claude/*.md → .claude/agents/
+# kiro：  skills/<名前>/ → .kiro/skills/<名前>/、agents/kiro/*.json と *.md → .kiro/agents/（CLI は JSON、IDE は Markdown を読む）
 set -eu
 
 die() { printf 'install: %s\n' "$*" >&2; exit 1; }
@@ -21,14 +21,16 @@ case $1 in
   *) die "unknown target: $1 (claude or kiro)" ;;
 esac
 
-skill=$dest/$dir/skills/decision-log
 mkdir -p "$dest/$dir/skills" "$dest/$dir/agents"
-# 前の版で消えたファイルが残らないよう、スキルは入れ替える
-rm -rf "$skill"
-cp -R "$src/skills/decision-log" "$skill"
-rm -rf "$skill/scripts/__pycache__"
-cp "$@" "$dest/$dir/agents/"
-
 echo "installed into $dest/$dir:"
-echo "  skills/decision-log/"
+for s in "$src"/skills/*/; do
+  name=$(basename "$s")
+  skill=$dest/$dir/skills/$name
+  # 前の版で消えたファイルが残らないよう、スキルは入れ替える
+  rm -rf "$skill"
+  cp -R "$s" "$skill"
+  rm -rf "$skill/scripts/__pycache__"
+  echo "  skills/$name/"
+done
+cp "$@" "$dest/$dir/agents/"
 for f in "$@"; do echo "  agents/${f##*/}"; done

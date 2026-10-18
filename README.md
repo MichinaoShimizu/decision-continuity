@@ -1,6 +1,6 @@
 # decision-continuity
 
-コードのリポジトリの履歴から、何が起きたか・なぜか・何が分かっていないかを Decision log に起こす。Claude Code と Kiro で動く。
+コードのリポジトリの履歴から、いつ・何が変わったか（change-history）と、なぜか・何が分かっていないか（decision-log）を起こす。Claude Code と Kiro で動く。
 
 ## Claude Code
 
@@ -26,7 +26,7 @@ claude plugin uninstall decision-continuity@decision-continuity
 d=$(mktemp -d) && git clone --depth 1 https://github.com/MichinaoShimizu/decision-continuity "$d" && sh "$d/tools/install.sh" kiro
 
 # 削除
-rm -rf .kiro/skills/decision-log .kiro/agents/decision-log-planner.* .kiro/agents/decision-log-reader.*
+rm -rf .kiro/skills/decision-log .kiro/skills/change-history .kiro/agents/decision-log-planner.* .kiro/agents/decision-log-reader.*
 ```
 
 ## 使い方
@@ -37,6 +37,10 @@ decision-log で audit して。範囲は src/payment/。
 ```
 
 既定は読むだけ。ファイルに書くのは `write` と頼んだときだけ。
+
+```text
+change-history で、いつどんな変更をしてきたかを docs/change-history/ に月ごとにまとめて。
+```
 
 ## その他
 
