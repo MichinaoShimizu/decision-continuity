@@ -57,6 +57,22 @@ npx skills add MichinaoShimizu/decision-continuity --skill decision-log -a claud
 
 使うときは「認証まわりがなぜこうなったか、履歴から起こして」のように頼む。既定は読むだけ（`audit`）で、書くのは `write` と頼んだときだけ。
 
+### サブエージェントを確実に使わせる
+
+手順はサブエージェントを使うように書いてあるが、Kiro は名前を出すか頼みごとが説明に合うときだけサブエージェントを使う。確実に使わせるには、頼む文に名前と「まとめて並列に」を書く。
+
+```text
+decision-log で audit して。範囲は src/payment/。
+洗い出しは decision-log-planner に任せ、返ってきた分担どおりに
+decision-log-reader を分類ごとに、1 回の呼び出しでまとめて並列に呼んで。
+```
+
+- 名前を出すと、既定のサブエージェントに替わらず、定義に書いた許可が効く
+- 「1 回の呼び出しでまとめて」で、1 つ呼んで待ってから次を呼ぶ直列を防ぐ。Kiro は 1 回に 4 つまでなので、分類が多ければ「件数の少ない分類をまとめて」と添える
+- 範囲を絞ると、洗い出しが速く、分類も 4 つに収まりやすい
+
+うまく動いていれば、最初の `git log` などに確認は出ず、確認が出るのは書き込み・`build_index.py`・コミット・PR を作るときだけになる。Kiro CLI では ctrl+g で、reader が同時に動いているかを見られる。
+
 ### Claude Code で確認を減らす
 
 スキルの `allowed-tools` がサブエージェント（decision-log-planner・decision-log-reader）にも効くかは、公式ドキュメントに書かれていない。サブエージェントのコマンドに毎回確認が出るときは、読むだけのコマンドを `.claude/settings.json` に足す（メインの会話とサブエージェントの両方に効く）。書くコマンド（`git commit`・`git push`・`gh pr create` など）は足さない。
