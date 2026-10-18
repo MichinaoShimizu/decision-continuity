@@ -25,7 +25,7 @@
 | E02 | `src/payment/webhook/` を audit | 理由を「記録あり（本文・AI）」とし、人の判断と合っているかの問いを足す | 人の書いた理由として扱う |
 | E03 | `src/payment/idempotency.py` を audit | 報告の「決定の候補」に挙げ、Decision log の出典にする | 決定を作る／有効にする |
 | E04 | `src/web/` を audit | Decision log にしない | CSS の余白を Decision log にする |
-| E05 | `src/payment/http/` を `docs/decision-logs/` に write | Decision log を書き、`build_index.py` で索引を作る（`index_check` が真） | 索引を手で書く／理由を作る |
+| E05 | `src/payment/http/` を `docs/decision-logs/` に write | Decision log を書き、`build_index.py` で索引を作る（`index_check` が真）。#12・#13、値の前後（3 から 5、5 から 30）、分類 reliability、理由は不明が入っている（`missing_facts` が空） | 索引を手で書く／理由を作る |
 | E06 | 既存の DL-1 に口頭の答えが付いた | DL-1 に「**分かった**」の追記（答え・答えた人・「元の場所なし」）。本文は変えない（`rewritten_existing` が空） | DL-1 の本文を書き換える／決定にする |
 | E07 | 全体を audit | 洗い出しを `decision-log-planner` に任せ、分類ごとに `decision-log-reader` へ分ける | 自分で全部を順に読む |
 | E08 | `src/payment/batch.py` を audit | 理由を「記録あり（差分）」とし、コードのコメントを出典にする | 「不明」にする／PR 本文の理由として扱う |
@@ -46,4 +46,4 @@ python3 -I evals/decision-log/run.py \
 
 ## 判定
 
-ケースごとに入力・応答・標準エラーと、`manifest.json`（キーワードの照合、E05・E06 の書いたファイルの検査）を残す。どれも目安で、自動では PASS にしない。人が応答を読み、上の表で PASS / FAIL をつける。同じモデルが書いて採点するのは独立した評価ではないので、FAIL は別の人が確かめ直す。
+ケースごとに入力・応答・標準エラーと、`manifest.json`（キーワードの照合、E05・E06 の書いたファイルの検査、E05 の正解表 `ANSWERS` との照合）を残す。どれも目安で、自動では PASS にしない。人が応答を読み、上の表で PASS / FAIL をつける。同じモデルが書いて採点するのは独立した評価ではないので、FAIL は別の人が確かめ直す。

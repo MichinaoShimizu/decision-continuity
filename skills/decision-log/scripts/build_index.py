@@ -48,15 +48,34 @@ CATEGORIES_EN = {
 # 決まった言葉。日本語と英語のどちらの Decision log も読む
 WORDS = {
     "ja": dict(happened="起きたこと", reason="理由", recat="**分類を更新**", retire="**終了**", learned="**分かった**",
-               reasons=("記録あり", "推測", "不明"), unknown="不明"),
+               reasons=("記録あり", "推測", "不明"), unknown="不明",
+               states=("いまも同じ", "置き換え済み", "一部置き換え済み", "競合", "履歴のみ"), sep="：",
+               history="履歴：", now="現在："),
     "en": dict(happened="What happened", reason="Reason", recat="**Category updated**", retire="**Retired**",
-               learned="**Answered**", reasons=("Documented", "Inferred", "Unknown"), unknown="Unknown"),
+               learned="**Answered**", reasons=("Documented", "Inferred", "Unknown"), unknown="Unknown",
+               states=("Still true", "Replaced", "Partly replaced", "Conflict", "History only"), sep=":",
+               history="History:", now="Now:"),
 }
 # 0001.md、0001-auth-pkce.md のほか、0001-Short_Title.md・0001-認証の変更.md と、DL- を付けた DL-1.md・DL-0001-x.md も読む
 FILE_RE = re.compile(r"^(?:DL-(\d+)|(\d{4,})(?!-\d{2}-\d{2}))(?:[-_].*)?\.md$", re.I)
 FRONT_RE = re.compile(r"\A---\n(.*?)\n---[ \t]*\n+", re.S)
 APPEND_RE = re.compile(r"^## (?:追記|Addendum) \d{4}-\d{2}-\d{2}.*$", re.M)
 CLAIM_DATE_RE = re.compile(r"^- C\d+ (\d{4}-\d{2}-\d{2}) ", re.M)
+CLAIM_RE = re.compile(r"^- C(\d+) \d{4}-\d{2}-\d{2} (.*)$", re.M)
+
+
+def claim_problems(happened, w):
+    """「起きたこと」の各行：状態の語、履歴と現在の証拠、番号の重なり。"""
+    problems, seen = [], set()
+    for num, rest in CLAIM_RE.findall(happened):
+        if num in seen:
+            problems.append(f"C{num} が重なっている。番号は Decision log の中で一意にする")
+        seen.add(num)
+        if not any(rest.startswith(s + w["sep"]) for s in w["states"]):
+            problems.append(f"C{num} の状態が「{'」「'.join(w['states'])}」のどれでもない")
+        if w["history"] not in rest or w["now"] not in rest:
+            problems.append(f"C{num} に「{w['history']}」と「{w['now']}」の両方がない（履歴と現在の証拠を 1 つずつ書く）")
+    return problems
 
 
 def field(text, key):
@@ -111,6 +130,7 @@ def read_log(path):
         problems.append("タイトル（# の行）がない")
     if not dates:
         problems.append(f"「## {w['happened']}」に `- C<番号> YYYY-MM-DD <状態>：` の行がない")
+    problems += claim_problems(section(body, w["happened"]), w)
     if not reason.startswith(w["reasons"]):
         problems.append(f"「## {w['reason']}」の 1 行目が「{'」「'.join(w['reasons'])}」で始まっていない")
     return dict(problems=problems, number=number(path.name), file=path.name, title=title,
