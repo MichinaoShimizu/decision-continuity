@@ -1,5 +1,0 @@
-- BREAKING: decision-log: スキルと Decision log の形を、ぎりぎりまで簡素にした
-  - 指示は SKILL.md と `references/format.md` の 2 つだけ（合計で 54KB から 14KB）。モードは `audit` と `write`
-  - Decision log は「いま」の 1 行、起きたこと（`- YYYY-MM-DD <何が変わったか>（PR と関わった人）`）、理由、分かっていないことの 4 つ。フロントマターは `category` と `checked`
-  - 行ごとの番号（`C1`）・状態の語・「履歴：／現在：」・関わった人の節・「分類を更新」と「再確認」の追記をやめた。分類と `checked` はフロントマターを直す
-  - `--stale` は「いま」の行のリンクを見る。前の形の Decision log も読む（「分類を更新」と「再確認」の追記だけは読まないので、使っていたらフロントマターに写す）
