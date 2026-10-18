@@ -6,7 +6,7 @@
     {
       "name": "decision-continuity",
       "source": ".",
-      "description": "decision-log（履歴から Decision log を起こす）と decision-log-planner・decision-log-reader"
+      "description": "change-history（マージされた変更を月ごとにまとめ、年表にする）と decision-log（履歴から Decision log を起こす）、decision-log-planner・decision-log-reader"
     }
   ]
 }
