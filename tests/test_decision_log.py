@@ -214,6 +214,27 @@ class BuildIndexTests(unittest.TestCase):
             self.assertIn("0001-other.md, 0001.md: 番号が重なっている", built.stdout)
             self.assertEqual(self.run_script(d, "--check").returncode, 1)
 
+    def test_reports_malformed_claim_lines(self):
+        body = ("---\nkind: log\ncategory: data\n---\n\n# [demo] x\n\n## 起きたこと\n\n"
+                "- C1 2025-01-01 いまも同じ：a。履歴：PR #1 ／ 現在：x.py:1\n"
+                "- C1 2025-01-02 置き換え済み：b。履歴：PR #2\n"
+                "- C3 2025-01-03 たぶん同じ：c。履歴：PR #3 ／ 現在：x.py:2\n"
+                "- C4 2025-01-04 一部置き換え済み：d。履歴：PR #4 ／ 現在：PR #5 で変わった\n\n## 理由\n\n不明。\n")
+        with tempfile.TemporaryDirectory() as directory:
+            d = pathlib.Path(directory)
+            (d / "0001.md").write_text(body, encoding="utf-8")
+            out = self.run_script(d).stdout
+            self.assertIn("C1 が重なっている", out)
+            self.assertIn("C1 に「履歴：」と「現在：」の両方がない", out)
+            self.assertIn("C3 の状態が", out)
+            self.assertNotIn("C4", out)
+            self.assertNotIn("C1 の状態", out)
+            en = body.replace("## 起きたこと", "## What happened").replace("## 理由\n\n不明。", "## Reason\n\nUnknown.")
+            en = en.replace("いまも同じ：a。履歴：PR #1 ／ 現在：", "Still true: a. History: PR #1 / Now: ")
+            (d / "0001.md").write_text(en, encoding="utf-8")
+            out = self.run_script(d).stdout
+            self.assertIn("C1 の状態が「Still true」", out)
+
     def test_check_without_repo_keeps_the_index_name(self):
         with tempfile.TemporaryDirectory() as directory:
             d = pathlib.Path(directory)

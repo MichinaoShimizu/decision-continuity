@@ -10,6 +10,7 @@ import datetime as dt
 import json
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -101,6 +102,20 @@ CASES = {
 }
 
 
+# 書いたファイルに入っているべき事実（正規表現のどれか 1 つに当たればよい）。目安で、人の判定を置き換えない
+ANSWERS = {
+    "E05": {
+        "PR #13（MAX_RETRIES）": [r"#13"],
+        "PR #12（TIMEOUT）": [r"#12"],
+        "MAX_RETRIES の前後": [r"3\s*(?:→|->|から|to)\s*5"],
+        "TIMEOUT の前後": [r"5\s*(?:→|->|から|to)\s*30"],
+        "分類が reliability": [r"^category:\s*reliability\s*$"],
+        "理由は不明": [r"^不明"],
+        "#12 はタイトルと中身が違う": [r"(?i)typo"],
+    },
+}
+
+
 def git(repo, *args, env=None):
     return subprocess.run(["git", "-C", str(repo), *args], capture_output=True, text=True, check=True, env=env).stdout
 
@@ -162,17 +177,21 @@ def final_text(stdout):
     return stdout
 
 
-def inspect(repo, before):
-    """書いたファイルの決まった検査：索引が最新で形が崩れていないか、前からあったファイルを書き換えていないか。"""
+def inspect(repo, before, answers=None):
+    """書いたファイルの決まった検査：索引が最新で形が崩れていないか、前からあったファイルを書き換えていないか、
+    正解表の事実が入っているか。"""
     folder = repo / "docs" / "decision-logs"
     if not folder.is_dir():
         return {"wrote": False}
     checked = subprocess.run([sys.executable, str(SCRIPT), str(folder), "--check"], capture_output=True, text=True)
     rewritten = [name for name, text in before.items() if name != "README.md"
                  and not (folder / name).read_text(encoding="utf-8").startswith(text.rstrip("\n"))]
+    written = "\n".join(p.read_text(encoding="utf-8") for p in folder.glob("*.md") if p.name != "README.md")
+    missing = [fact for fact, patterns in (answers or {}).items()
+               if not any(re.search(pat, written, re.M) for pat in patterns)]
     return {"wrote": True, "files": sorted(p.name for p in folder.glob("*.md")),
             "index_check": checked.returncode == 0, "index_output": checked.stdout.strip(),
-            "rewritten_existing": rewritten}
+            "rewritten_existing": rewritten, "missing_facts": missing}
 
 
 def main():
@@ -210,7 +229,7 @@ def main():
             except subprocess.TimeoutExpired as exc:
                 out = exc.stdout or ""
                 response, error, code, timed_out = out.decode("utf-8", "replace") if isinstance(out, bytes) else out, "Timed out", None, True
-            files = inspect(repo, before) if check_files else None
+            files = inspect(repo, before, ANSWERS.get(case)) if check_files else None
         (output / f"{case}.prompt.txt").write_text(text, encoding="utf-8")
         (output / f"{case}.response.txt").write_text(response, encoding="utf-8")
         (output / f"{case}.stderr.txt").write_text(error, encoding="utf-8")

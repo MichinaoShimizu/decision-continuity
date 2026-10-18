@@ -50,6 +50,15 @@ class RunnerTests(unittest.TestCase):
         result, _ = self.run_case(agent, "E02", "--skills-loaded")
         self.assertEqual(result["missing_keywords"], ["本文・AI", "人の判断"])
 
+    def test_answer_key_reports_missing_facts(self):
+        write = [sys.executable, "-c", "import pathlib, subprocess, sys; d = pathlib.Path('docs/decision-logs'); d.mkdir(parents=True); "
+                 "(d / '0001.md').write_text('---\\nkind: log\\ncategory: reliability\\n---\\n\\n# [payment-api] x\\n\\n## 起きたこと\\n\\n"
+                 "- C1 2025-01-11 いまも同じ：MAX_RETRIES が 3 から 5 になった。履歴：PR #13 ／ 現在：client.py:1\\n\\n## 理由\\n\\n不明（記録に書かれていない）。\\n'); "
+                 "subprocess.run([sys.executable, '.claude/skills/decision-log/scripts/build_index.py', str(d)])"]
+        result, _ = self.run_case(write, "E05", "--skills-loaded")
+        self.assertTrue(result["files"]["index_check"], result["files"]["index_output"])
+        self.assertEqual(result["files"]["missing_facts"], ["PR #12（TIMEOUT）", "TIMEOUT の前後", "#12 はタイトルと中身が違う"])
+
     def test_file_checks_catch_a_rewritten_log(self):
         rewrite = [sys.executable, "-c", "import pathlib; p = pathlib.Path('docs/decision-logs/0001.md'); "
                    "p.write_text(p.read_text().replace('不明', '監査の指摘'))"]
