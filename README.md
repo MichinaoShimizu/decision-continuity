@@ -16,13 +16,13 @@ Claude Code（全部入る）：
 /plugin install decision-continuity --marketplace MichinaoShimizu/decision-continuity
 ```
 
-Kiro など（スキルだけ。`main` の最新が入る。固定するなら `…/decision-continuity#v0.3.0`）：
+Kiro（スキルとサブエージェントを両方。入れ直すと更新。版を決めるなら `--branch vX.Y.Z` を足す）：
 
 ```sh
-npx skills add MichinaoShimizu/decision-continuity --skill decision-log -a claude-code -a kiro-cli
+d=$(mktemp -d) && git clone --depth 1 https://github.com/MichinaoShimizu/decision-continuity "$d" && sh "$d/tools/install.sh" kiro
 ```
 
-サブエージェントは手で写す：[agents/](agents/) の `claude/*.md` → `.claude/agents/`、`kiro/*.json` と `kiro/*.md` → `.kiro/agents/`。
+`claude` を渡すと Claude Code の `.claude/` に入る。スキルだけなら `npx skills add MichinaoShimizu/decision-continuity --skill decision-log -a claude-code -a kiro-cli`（サブエージェントは入らない）。
 
 ## 使い方
 
