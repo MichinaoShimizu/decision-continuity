@@ -68,12 +68,17 @@ CLAIM_DATE_RE = re.compile(r"^- C\d+ (\d{4}-\d{2}-\d{2}) ", re.M)
 CLAIM_RE = re.compile(r"^- C(\d+) \d{4}-\d{2}-\d{2} (.*)$", re.M)
 # コミットで固定した行・ファイルのリンク：/blob/<ハッシュ>/<パス>#L12 か #L12-L20（GitLab は /-/blob/）
 BLOB_RE = re.compile(r"/blob/([0-9a-f]{7,40})/([^\s)#?\]]+)(?:#L(\d+)(?:-L(\d+))?)?")
-HUNK_RE = re.compile(r"^@@ -(\d+)(?:,(\d+))? ", re.M)
+HUNK_RE = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@", re.M)
+REF_DEF_RE = re.compile(r"^\[([^\]]+)\]:[ \t]*(\S+)", re.M)
+ANY_CLAIM_RE = re.compile(r"^- C\d+ .*$", re.M)
 
 
 def claim_problems(happened, w):
     """「起きたこと」の各行：状態の語、履歴と現在の証拠、番号の重なり。"""
     problems, seen = [], set()
+    for bad in ANY_CLAIM_RE.findall(happened):
+        if not CLAIM_RE.match(bad):
+            problems.append(f"{bad.split(' ', 2)[1]} の行が `- C<番号> YYYY-MM-DD <状態>：` の形でない")
     for num, rest in CLAIM_RE.findall(happened):
         if num in seen:
             problems.append(f"C{num} が重なっている。番号は Decision log の中で一意にする")
@@ -86,7 +91,7 @@ def claim_problems(happened, w):
 
 
 def field(text, key):
-    m = re.search(rf"^{key}:\s*([^#\n]*?)\s*(#.*)?$", text, re.M)
+    m = re.search(rf"^{key}:[ \t]*([^#\n]*?)[ \t]*(#.*)?$", text, re.M)
     return m.group(1).strip("'\" ") if m else None
 
 
@@ -112,6 +117,7 @@ def read_log(path):
     w = WORDS[lang]
     category = field(front, "category") or "other"
     retired = learned = False
+    recat_bad = None
     checked = field(front, "checked")
     for note in appends:
         first = note.split("\n", 1)[0]
@@ -120,6 +126,8 @@ def read_log(path):
             checked = again.group(1)
         elif first.startswith(w["recat"]):
             category = field(note, "category") or category
+            if category not in LABELS:
+                recat_bad = category
         elif first.startswith(w["retire"]):
             retired = True
         elif first.startswith(w["learned"]):
@@ -137,6 +145,8 @@ def read_log(path):
         problems.append("フロントマターの kind が log でない")
     if (field(front, "category") or "other") not in LABELS:
         problems.append(f"category が分類の一覧にない: {field(front, 'category')}")
+    if recat_bad:
+        problems.append(f"「{w['recat']}」の追記の category が分類の一覧にない: {recat_bad}")
     if not title_m:
         problems.append("タイトル（# の行）がない")
     if not dates:
@@ -157,24 +167,64 @@ def read_log(path):
     return dict(problems=problems, number=number(path.name), file=path.name, title=title,
                 category=category if category in LABELS else "other", retired=retired, lang=lang,
                 date=min(dates) if dates else None, checked=checked,
-                links=sorted(set(BLOB_RE.findall(text))),
+                links=current_links(text, w),
                 unknown=reason.startswith(w["unknown"]) and not learned)
+
+
+def current_links(text, w):
+    """「起きたこと」の C 行（追記の C 行も）の「現在」より後にあるリンクだけを、(URL, ハッシュ, パス, 行, 行) で返す。
+    参照の定義（[c12]: <URL>）も引く。履歴のリンクや本文の他の節のリンクは数えない。"""
+    defs = {k.lower(): v for k, v in REF_DEF_RE.findall(text)}
+    found = set()
+    for claim in ANY_CLAIM_RE.findall(text):
+        if w["now"] not in claim:
+            continue
+        tail = claim.rsplit(w["now"], 1)[1]
+        urls = re.findall(r"\]\((\S+?)\)", tail) + [defs.get(k.lower(), "") for k in re.findall(r"\]\[([^\]]+)\]", tail)]
+        for url in urls:
+            m = BLOB_RE.search(url)
+            if m:
+                found.add((url,) + m.groups())
+    return sorted(found)
+
+
+def git_text(folder, *args):
+    """git を回して標準出力を返す。失敗したら None。"""
+    result = subprocess.run(["git", "-C", str(folder), *args], capture_output=True, text=True,
+                            encoding="utf-8", errors="replace")
+    return result.stdout if result.returncode == 0 else None
+
+
+def hunks(folder, old, new, path):
+    out = git_text(folder, "diff", "-U0", old, new, "--", f":(top){path}")
+    if out is None:
+        return None
+    return [(int(a), int(b or 1), int(c), int(d or 1)) for a, b, c, d in HUNK_RE.findall(out)]
+
+
+def map_range(changes, lo, hi):
+    """old の行の範囲を、diff の塊（hunk）を使って new の行の範囲に写す。範囲に当たる塊は new の側に広げる。"""
+    def move(n, end):
+        offset = 0
+        for a, b, c, d in changes:
+            if (b and a + b - 1 < n) or (not b and a < n):
+                offset += d - b
+            elif b and a <= n <= a + b - 1:
+                return max(c, c + d - 1) if end else c
+        return n + offset
+    return move(lo, False), max(move(lo, False), move(hi, True))
 
 
 def changed_lines(folder, base, path, first, last):
     """base から HEAD までに path が変わったか。行の範囲があれば、その範囲に当たる変更だけを数える。
     確かめられなければ None。"""
-    result = subprocess.run(["git", "-C", str(folder), "diff", "-U0", base, "HEAD", "--", f":(top){path}"],
-                            capture_output=True, text=True)
-    if result.returncode != 0:
+    changes = hunks(folder, base, "HEAD", path)
+    if changes is None:
         return None
-    if not result.stdout:
-        return False
     if not first:
-        return True
-    lo, hi = int(first), int(last or first)
-    for start, count in HUNK_RE.findall(result.stdout):
-        start, count = int(start), int(count or 1)
+        return bool(changes) or git_text(folder, "diff", "--quiet", base, "HEAD", "--", f":(top){path}") is None
+    lo, hi = first
+    for start, count, _, _ in changes:
         if count == 0 and lo <= start < hi:  # 範囲の中に行が足された
             return True
         if count and start <= hi and start + count - 1 >= lo:
@@ -185,13 +235,26 @@ def changed_lines(folder, base, path, first, last):
 def stale_links(folder, logs):
     """「現在」のリンク先が、確かめたコミット（再確認の追記、checked、なければリンクのハッシュ）より後に変わったもの。"""
     found = []
+    origin = (git_text(folder, "remote", "get-url", "origin") or "").strip()
+    m = re.search(r"[/:]([^/:]+/[^/]+?)(?:\.git)?/?$", origin)
+    repo = m.group(1).lower() if m else None
     for log in logs:
         if log["retired"]:
             continue
-        for sha, path, first, last in log["links"]:
+        for url, sha, path, first, last in log["links"]:
+            if repo and f"/{repo}/" not in url.lower():
+                continue  # ほかのリポジトリへのリンクは、このリポジトリの git では確かめられない
             base = log["checked"] or sha
             where = path + (f"#L{first}" + (f"-L{last}" if last else "") if first else "")
-            changed = changed_lines(folder, base, path, first, last)
+            lines = (int(first), int(last or first)) if first else None
+            if lines and base != sha:
+                # 行の範囲はリンクのコミットで書かれている。確かめたコミットの行に写してから比べる
+                moved = hunks(folder, sha, base, path)
+                lines = map_range(moved, *lines) if moved is not None else None
+                if lines is None:
+                    found.append(f"{log['file']}: 確かめられない：{where}（{sha[:7]} か {base[:7]} がない。浅いクローンなら git fetch --unshallow）")
+                    continue
+            changed = changed_lines(folder, base, path, lines, None)
             if changed is None:
                 found.append(f"{log['file']}: 確かめられない：{where}（{base[:7]} がない。浅いクローンなら git fetch --unshallow）")
             elif changed:
@@ -263,12 +326,11 @@ def repo_name(folder):
         m = re.match(r"# Decision logs(?:（(.+)）| \((.+)\))\n", index.read_text(encoding="utf-8"))
         if m:
             return m.group(1) or m.group(2)
-    try:
-        url = subprocess.run(["git", "-C", str(folder), "remote", "get-url", "origin"],
-                             capture_output=True, text=True, check=True).stdout.strip()
+    url = (git_text(folder, "remote", "get-url", "origin") or "").strip()
+    if url:
         return re.sub(r"\.git$", "", url.rstrip("/").split("/")[-1].split(":")[-1])
-    except (OSError, subprocess.CalledProcessError):
-        return folder.resolve().parent.name
+    top = (git_text(folder, "rev-parse", "--show-toplevel") or "").strip()
+    return pathlib.Path(top).name if top else folder.resolve().parent.name
 
 
 def main():

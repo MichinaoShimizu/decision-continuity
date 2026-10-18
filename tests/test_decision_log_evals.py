@@ -59,6 +59,11 @@ class RunnerTests(unittest.TestCase):
         result, _ = self.run_case([sys.executable, "-c", "print('自分で読んだ')"], "E07", "--skills-loaded")
         self.assertEqual(result["missing_agents"], ["decision-log-planner", "decision-log-reader"])
 
+    def test_renamed_seed_file_counts_as_rewritten_instead_of_crashing(self):
+        rename = [sys.executable, "-c", "import pathlib; p = pathlib.Path('docs/decision-logs'); (p / '0001.md').rename(p / '0001-retry.md')"]
+        result, _ = self.run_case(rename, "E06", "--skills-loaded")
+        self.assertEqual(result["files"]["rewritten_existing"], ["0001.md"])
+
     def test_recheck_case_counts_a_good_addendum(self):
         add = [sys.executable, "-c", "import pathlib, subprocess, sys; p = pathlib.Path('docs/decision-logs/0001.md'); "
                "head = subprocess.run(['git', 'rev-parse', '--short', 'HEAD'], capture_output=True, text=True).stdout.strip(); "

@@ -11,7 +11,6 @@ import json
 import os
 import pathlib
 import re
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -200,12 +199,9 @@ def build_repo(repo):
 
 
 def install(repo):
-    """README の入れ方どおり、Claude Code と Kiro の両方の場所に入れる。"""
-    for tool in (".claude", ".kiro"):
-        shutil.copytree(ROOT / "skills" / "decision-log", repo / tool / "skills" / "decision-log",
-                        ignore=shutil.ignore_patterns("__pycache__"))
-    shutil.copytree(ROOT / "agents" / "claude", repo / ".claude" / "agents")
-    shutil.copytree(ROOT / "agents" / "kiro", repo / ".kiro" / "agents")
+    """利用者と同じ tools/install.sh で、Claude Code と Kiro の両方の場所に入れる（install.sh が壊れたら評価も落ちる）。"""
+    for tool in ("claude", "kiro"):
+        subprocess.run(["sh", str(ROOT / "tools" / "install.sh"), tool, str(repo)], capture_output=True, text=True, check=True)
 
 
 def seed_log(repo, case):
@@ -259,8 +255,10 @@ def inspect(repo, before, answers=None):
         return {"wrote": False}
     checked = subprocess.run([sys.executable, str(SCRIPT), str(folder), "--check"], capture_output=True, text=True)
     stale = subprocess.run([sys.executable, str(SCRIPT), str(folder), "--stale"], capture_output=True, text=True)
+    # 名前を変えた・消したファイルも「書き換えた」に数える（読めずに評価全体が止まらないように）
     rewritten = [name for name, text in before.items() if name != "README.md"
-                 and not (folder / name).read_text(encoding="utf-8").startswith(text.rstrip("\n"))]
+                 and (not (folder / name).is_file()
+                      or not (folder / name).read_text(encoding="utf-8").startswith(text.rstrip("\n")))]
     written = "\n".join(p.read_text(encoding="utf-8") for p in folder.glob("*.md") if p.name != "README.md")
     missing = [fact for fact, patterns in (answers or {}).items()
                if not any(re.search(pat, written, re.M) for pat in patterns)]
