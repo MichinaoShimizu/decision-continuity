@@ -29,3 +29,9 @@ checked: 15e9528
 [pr69]: https://github.com/MichinaoShimizu/decision-continuity/pull/69
 [pr79]: https://github.com/MichinaoShimizu/decision-continuity/pull/79
 [s30]: https://github.com/MichinaoShimizu/decision-continuity/blob/15e95285ce29f297cca4ea408e8e1c21bb3d3e16/skills/decision-log/SKILL.md#L30-L31
+
+## 追記 2026-10-18
+
+**分かった**（2026-10-18）：「`sleep` で待たない決まりを PR #79 で落としたのは意図したことか」
+
+PR #79 を書いた Claude が、削るときに意図せず落としたもの。Decision log を書き直したときに見つかり、@MichinaoShimizu の判断で [PR #82](https://github.com/MichinaoShimizu/decision-continuity/pull/82) で戻した（会話で。元の場所なし）。
