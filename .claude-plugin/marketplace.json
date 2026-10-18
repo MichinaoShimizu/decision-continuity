@@ -6,7 +6,7 @@
     {
       "name": "decision-continuity",
       "source": ".",
-      "description": "decision-log（履歴から Decision log を起こす）と decision-log-reader"
+      "description": "decision-log（履歴から Decision log を起こす）と decision-log-planner・decision-log-reader"
     }
   ]
 }

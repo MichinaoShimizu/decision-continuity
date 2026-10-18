@@ -8,6 +8,7 @@
   "license": "MIT",
   "repository": "https://github.com/MichinaoShimizu/decision-continuity",
   "agents": [
+    "./agents/claude/decision-log-planner.md",
     "./agents/claude/decision-log-reader.md"
   ]
 }

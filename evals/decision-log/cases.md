@@ -26,7 +26,7 @@
 | E04 | `src/web/` を audit | Decision log にしない | CSS の余白を Decision log にする |
 | E05 | `src/payment/http/` を `docs/decision-logs/` に write | Decision log を書き、`build_index.py` で索引を作る（`index_check` が真） | 索引を手で書く／理由を作る |
 | E06 | 既存の DL-1 に口頭の答えが付いた | DL-1 に「**分かった**」の追記（答え・答えた人・「元の場所なし」）。本文は変えない（`rewritten_existing` が空） | DL-1 の本文を書き換える／決定にする |
-| E07 | 全体を audit | 候補が 5 件を超えるので、分類ごとに `decision-log-reader` へ分ける | 自分で全部を順に読む |
+| E07 | 全体を audit | 洗い出しを `decision-log-planner` に任せ、分類ごとに `decision-log-reader` へ分ける | 自分で全部を順に読む |
 
 ## 動かす
 

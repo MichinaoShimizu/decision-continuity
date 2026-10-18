@@ -5,16 +5,16 @@
 | 名前 | 種類 | すること |
 |---|---|---|
 | [decision-log](skills/decision-log/SKILL.md) | スキル | コードのリポジトリの履歴から、何が起きたか・なぜか・何が分かっていないかを Decision log に起こす |
+| [decision-log-planner](agents/claude/decision-log-planner.md) | サブエージェント | decision-log の範囲と候補を手元の git で洗い、読み手への分担を返す |
 | [decision-log-reader](agents/claude/decision-log-reader.md) | サブエージェント | decision-log の候補を分類ごとに並行に読み、決まった形で返す |
 
 ## decision-log の流れ
 
 ```mermaid
 flowchart TD
-    H[("PR・issue・コミット・コード")] --> L["decision-log<br>候補を絞る"]
-    L -- "候補が 5 件を超える" --> R["decision-log-reader<br>分類ごとに並行に読む"]
-    R --> V
-    L --> V["主張ごとに確かめる<br>履歴（PR・差分）と現在（基準のコミット）"]
+    H[("PR・issue・コミット・コード")] --> P["decision-log-planner<br>手元の git で候補を絞り、分担を決める"]
+    P --> R["decision-log-reader<br>分類ごとに並行に読む"]
+    R --> V["decision-log<br>主張ごとに確かめる<br>履歴（PR・差分）と現在（基準のコミット）"]
     V --> D[("Decision log<br>起きたこと・理由・分かっていないこと")]
     D -- "理由が不明" --> Q["知っていそうな人に聞く"]
     Q -- "分かった（追記）" --> D
@@ -32,7 +32,7 @@ flowchart TD
 /plugin install decision-continuity --marketplace MichinaoShimizu/decision-continuity
 ```
 
-Claude Code 2.1.275 より前なら `/plugin marketplace add MichinaoShimizu/decision-continuity` のあと `/plugin install decision-continuity@decision-continuity`。スキルは `decision-continuity:decision-log`、サブエージェントは `decision-continuity:decision-log-reader` という名前になる。
+Claude Code 2.1.275 より前なら `/plugin marketplace add MichinaoShimizu/decision-continuity` のあと `/plugin install decision-continuity@decision-continuity`。スキルは `decision-continuity:decision-log`、サブエージェントは `decision-continuity:decision-log-planner` と `decision-continuity:decision-log-reader` という名前になる。
 
 ### npx skills
 
@@ -44,14 +44,14 @@ npx skills add MichinaoShimizu/decision-continuity --skill decision-log -a claud
 
 入るのは `main` の最新。版を決めて入れるなら `MichinaoShimizu/decision-continuity#v0.2.0` のようにタグを付ける。
 
-サブエージェントは入らないので、使うなら下の表の 2 行目を写す。写さなくても、decision-log は既定のサブエージェントに切り替えて動く。
+サブエージェントは入らないので、使うなら下の表の 2 行目を写す。写さなくても、decision-log は洗い出しを自分で回し、読むのは既定のサブエージェントに切り替えて動く（Kiro では、そのぶんコマンドごとに確認が出やすい）。
 
 ### 手で写す
 
 | 写すもの | Claude Code | Kiro |
 |---|---|---|
 | [skills/decision-log/](skills/decision-log/SKILL.md) | `.claude/skills/decision-log/` | `.kiro/skills/decision-log/` |
-| [agents/](agents/) の decision-log-reader | `claude/` の `.md` を `.claude/agents/` | `kiro/` の `.json` と `.md` を両方 `.kiro/agents/` |
+| [agents/](agents/) の decision-log-planner と decision-log-reader | `claude/` の `.md` を `.claude/agents/` | `kiro/` の `.json` と `.md` を両方 `.kiro/agents/` |
 
 ## 使い方
 
@@ -59,7 +59,7 @@ npx skills add MichinaoShimizu/decision-continuity --skill decision-log -a claud
 
 ### Claude Code で確認を減らす
 
-スキルの `allowed-tools` がサブエージェント（decision-log-reader）にも効くかは、公式ドキュメントに書かれていない。reader のコマンドに毎回確認が出るときは、読むだけのコマンドを `.claude/settings.json` に足す（メインの会話とサブエージェントの両方に効く）。書くコマンド（`git commit`・`git push`・`gh pr create` など）は足さない。
+スキルの `allowed-tools` がサブエージェント（decision-log-planner・decision-log-reader）にも効くかは、公式ドキュメントに書かれていない。サブエージェントのコマンドに毎回確認が出るときは、読むだけのコマンドを `.claude/settings.json` に足す（メインの会話とサブエージェントの両方に効く）。書くコマンド（`git commit`・`git push`・`gh pr create` など）は足さない。
 
 ```json
 {
@@ -81,7 +81,7 @@ npx skills add MichinaoShimizu/decision-continuity --skill decision-log -a claud
 
 `gh api repos/*` は、`gh pr view` が使えない環境（GraphQL が止められているなど）で PR を REST API で読むため。書き込みになる指定（`-X`・`-f` など）は `deny` で止める。
 
-Kiro は、`agents/kiro/` の定義に読むだけのコマンドの許可が入っている。
+Kiro は、`agents/kiro/` の定義に読むだけのコマンドの許可が入っている。この許可はサブエージェントの中でだけ効くので、decision-log は洗い出しを decision-log-planner に、読むのを decision-log-reader に任せ、メインの会話ではコマンドをほとんど回さない。
 
 このリポジトリ自身の経緯は、decision-log で起こして [docs/decision-logs/](docs/decision-logs/README.md) に置いている（組織の記録の置き場所ではない）。
 

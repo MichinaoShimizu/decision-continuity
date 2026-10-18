@@ -57,7 +57,7 @@ allowed-tools: Bash(git log:*) Bash(git show:*) Bash(git grep:*) Bash(git rev-pa
 - [ ] 5. 報告
 ```
 
-ネットワークは候補にだけ、まとめて使う。読む候補が 5 件を超えたら、自分で読まずにサブエージェント（`decision-log-reader`）に分ける。差分が小さくても、件数だけで決める。分類ごとに 1 つ、同時に呼ぶ。呼び方は [references/investigation.md](references/investigation.md#サブエージェントに分ける)。
+手順 0〜1 の洗い出しはサブエージェント `decision-log-planner` に、候補を読むのは `decision-log-reader` に任せる（分類ごとに 1 つ、同時に呼ぶ）。件数や差分の小ささで自分で読まない。呼び方は [references/investigation.md](references/investigation.md#サブエージェントに分ける)。
 
 手順 0〜3 は [references/investigation.md](references/investigation.md) を読んで進める。
 
