@@ -2,6 +2,7 @@
 kind: log
 category: security
 keywords: [allowed-tools, allowedCommands, permissions, gh api, TZ=, env, 1 回に 1 コマンド, 信頼できない本文]
+checked: fbc765a
 ---
 
 # [decision-continuity] 確認なしで通すコマンドが、読むだけのものに絞られていった

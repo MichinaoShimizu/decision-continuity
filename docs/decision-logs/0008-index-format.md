@@ -2,6 +2,7 @@
 kind: log
 category: compatibility
 keywords: [build_index.py, FILE_RE, DL-, 索引, 理由不明, 日付順, frontmatter, 起きたこと]
+checked: fbc765a
 ---
 
 # [decision-continuity] Decision log の形と索引の作り方が、手書きの表からスクリプト生成の日付順の一覧になった

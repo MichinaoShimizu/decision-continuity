@@ -2,6 +2,7 @@
 kind: log
 category: product
 keywords: [append-only, updateDiscussion, 追記, 書き換えない, premises]
+checked: fbc765a
 ---
 
 # [decision-continuity] 記録の本文は書き換えず、追記で育てる形になった

@@ -2,6 +2,7 @@
 kind: log
 category: engineering
 keywords: [evals, test.yml, markdownlint, verify-docs, run.py, MD013, MD041, 評価]
+checked: fbc765a
 ---
 
 # [decision-continuity] 評価と CI が、旧キット向けのものから decision-log 向けに作り直された

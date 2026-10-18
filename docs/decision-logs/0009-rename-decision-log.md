@@ -2,6 +2,7 @@
 kind: log
 category: compatibility
 keywords: [reverse-adr, decision-log, リネーム, Decision log]
+checked: fbc765a
 ---
 
 # [decision-continuity] スキルの名前が reverse-adr から decision-log になった
