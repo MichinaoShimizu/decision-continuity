@@ -5,9 +5,9 @@ checked: 15e9528
 
 # スキルの名前が reverse-adr から decision-log になった
 
-## 状態
+## ステータス
 
-いまも同じ：スキルの名前は `decision-log`（[SKILL.md:2][s2]）。`reverse-adr` はどこにも残っていない。
+Active：スキルの名前は `decision-log`（[SKILL.md:2][s2]）。`reverse-adr` はどこにも残っていない。
 
 ## 起きたこと
 

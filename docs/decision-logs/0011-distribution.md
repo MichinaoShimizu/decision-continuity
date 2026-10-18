@@ -5,9 +5,9 @@ checked: 15e9528
 
 # 入れ方が、ファイルを写すだけから、プラグインと install.sh の 1 行になった
 
-## 状態
+## ステータス
 
-いまも同じ：Claude Code はプラグインとして `claude plugin install` で、Kiro は `tools/install.sh` を呼ぶ 1 行で入れる（[README.md:8-27][readme]、[install.sh][install]）。
+Active：Claude Code はプラグインとして `claude plugin install` で、Kiro は `tools/install.sh` を呼ぶ 1 行で入れる（[README.md:8-27][readme]、[install.sh][install]）。
 
 ## 起きたこと
 

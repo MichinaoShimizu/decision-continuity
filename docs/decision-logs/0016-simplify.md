@@ -5,9 +5,9 @@ checked: 15e9528
 
 # スキルと Decision log の形を、ぎりぎりまで簡素にした
 
-## 状態
+## ステータス
 
-いまも同じ：指示は [SKILL.md][skill] と [format.md][format] の 2 つだけで、モードは `audit` と `write`。Decision log は「いま」、起きたこと、理由、分かっていないことの 4 つで、前の形も [build_index.py][bi] が読む。
+Active：指示は [SKILL.md][skill] と [format.md][format] の 2 つだけで、モードは `audit` と `write`。Decision log は「いま」、起きたこと、理由、分かっていないことの 4 つで、前の形も [build_index.py][bi] が読む。
 
 ## 起きたこと
 
@@ -31,4 +31,4 @@ checked: 15e9528
 
 ## 追記 2026-10-18
 
-- 2026-10-18 「いま」の行を「## 状態」の節に移し、`いまも同じ`・`変わった`・`なくなった` のどれかで始めるようにした。起きたこと（履歴）と状態を混ぜないため。行の中のハッシュもやめた（[PR #83](https://github.com/MichinaoShimizu/decision-continuity/pull/83)。作成 @MichinaoShimizu）
+- 2026-10-18 「いま」の行を「## ステータス」の節に移し、`Active`・`Superseded`・`Removed` のどれかで始めるようにした。起きたこと（履歴）とステータスを混ぜないため。行の中のハッシュもやめた（[PR #83](https://github.com/MichinaoShimizu/decision-continuity/pull/83)。作成 @MichinaoShimizu）

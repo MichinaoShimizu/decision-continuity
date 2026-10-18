@@ -191,7 +191,7 @@ class BuildIndexTests(unittest.TestCase):
             self.assertEqual(self.run_script(d, "--check").returncode, 1)
 
     def test_reads_the_minimal_format_and_reports_missing_claims(self):
-        new = ("---\ncategory: data\nchecked: abc1234\n---\n\n# x\n\n## 状態\n\nいまも同じ：a のまま（[x.py:1](https://github.com/o/r/blob/abc1234/x.py#L1)）。\n\n"
+        new = ("---\ncategory: data\nchecked: abc1234\n---\n\n# x\n\n## ステータス\n\nActive：a のまま（[x.py:1](https://github.com/o/r/blob/abc1234/x.py#L1)）。\n\n"
                "## 起きたこと\n\n- 2025-01-01 a を 1 から 2 に（PR #1。作成・マージ @a）\n\n## 理由\n\n不明。\n\n## 分かっていないこと\n\n- なぜ 2 か\n")
         with tempfile.TemporaryDirectory() as directory:
             d = pathlib.Path(directory)
@@ -210,10 +210,10 @@ class BuildIndexTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             d = pathlib.Path(directory)
             write(d, "checked: abc1234\n", "")
-            self.assertIn("「## 状態」の 1 行目", self.run_script(d).stdout)
-            write(d, "checked: abc1234\n", "## 状態\n\nたぶん同じ：a。\n\n")
-            self.assertIn("「## 状態」の 1 行目", self.run_script(d).stdout)
-            write(d, "checked: abc1234\n", "## 状態\n\nなくなった：a は消えた。\n\n")
+            self.assertIn("「## ステータス」の 1 行目", self.run_script(d).stdout)
+            write(d, "checked: abc1234\n", "## ステータス\n\nMaybe：a。\n\n")
+            self.assertIn("「## ステータス」の 1 行目", self.run_script(d).stdout)
+            write(d, "checked: abc1234\n", "## ステータス\n\nRemoved：a は消えた。\n\n")
             self.assertEqual(self.run_script(d).returncode, 0, self.run_script(d).stdout)
             # 前の形（「いま」の行）も読む
             write(d, "checked: abc1234\n", "**いま**（abc1234）：a のまま。\n\n")
@@ -236,7 +236,7 @@ class BuildIndexTests(unittest.TestCase):
             folder = repo / "docs/decision-logs"; folder.mkdir(parents=True)
             u = f"https://github.com/o/r/blob/{first}/src/a.py"
             log = (f"---\ncategory: reliability\nchecked: {first[:7]}\n---\n\n# x\n\n"
-                   f"## 状態\n\nいまも同じ：MAX は 3（[a.py:1]({u}#L1)）、TIMEOUT は 5（[a.py:2-3]({u}#L2-L3)）。\n\n"
+                   f"## ステータス\n\nActive：MAX は 3（[a.py:1]({u}#L1)）、TIMEOUT は 5（[a.py:2-3]({u}#L2-L3)）。\n\n"
                    f"## 起きたこと\n\n- 2025-01-01 MAX を 3 に（PR #1）\n\n## 理由\n\n不明。\n")
             (folder / "0001.md").write_text(log, encoding="utf-8")
             self.assertEqual(self.run_script(folder, "--stale").returncode, 0)
@@ -248,7 +248,7 @@ class BuildIndexTests(unittest.TestCase):
             self.assertNotIn("#L2-L3", out.stdout)
             # 確かめ直して checked を進めると、その時点から比べる
             (folder / "0001.md").write_text(log.replace(f"checked: {first[:7]}", f"checked: {second[:7]}")
-                                            + "\n---\n\n## 追記 2026-01-01（x）\n\n変わった：MAX は 5 になった（PR #2）。\n", encoding="utf-8")
+                                            + "\n---\n\n## 追記 2026-01-01（x）\n\nSuperseded：MAX は 5 になった（PR #2）。\n", encoding="utf-8")
             self.assertEqual(self.run_script(folder, "--stale").returncode, 0, self.run_script(folder, "--stale").stdout)
             # 範囲の中に行が足されたら数える
             (repo / "src/a.py").write_text("MAX = 5\nTIMEOUT = 5\nRETRY = 1\nNAME = 'x'\n", encoding="utf-8")

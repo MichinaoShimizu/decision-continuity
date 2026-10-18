@@ -5,9 +5,9 @@ checked: 15e9528
 
 # Kiro の対応が、薄い入口の方式から、reader を JSON と Markdown の両方で置く形になった
 
-## 状態
+## ステータス
 
-いまも同じ：Kiro 用の `decision-log-reader` は JSON と Markdown の両方で置かれ（[decision-log-reader.json:2][kj2]、[decision-log-reader.md:2][km2]）、planner も同じ形で置かれている（DL-13）。スキルは分類ごとに reader を名前で呼び、Kiro では 1 回に 4 つまで並べる（[SKILL.md:31][s31]）。
+Active：Kiro 用の `decision-log-reader` は JSON と Markdown の両方で置かれ（[decision-log-reader.json:2][kj2]、[decision-log-reader.md:2][km2]）、planner も同じ形で置かれている（DL-13）。スキルは分類ごとに reader を名前で呼び、Kiro では 1 回に 4 つまで並べる（[SKILL.md:31][s31]）。
 
 ## 起きたこと
 

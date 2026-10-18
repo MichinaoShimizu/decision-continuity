@@ -5,9 +5,9 @@ checked: 15e9528
 
 # 版の番号を変更の断片から決め、マージでタグとリリースを出す形になった
 
-## 状態
+## ステータス
 
-いまも同じ：PR は `changes/` に断片を足し、`tools/release.sh` が版を決めてリリースの PR を作り、マージで `tag.yml` がタグとリリースを出す（[release.md:15-17][rel]、[tag.yml][tag]）。
+Active：PR は `changes/` に断片を足し、`tools/release.sh` が版を決めてリリースの PR を作り、マージで `tag.yml` がタグとリリースを出す（[release.md:15-17][rel]、[tag.yml][tag]）。
 
 ## 起きたこと
 
