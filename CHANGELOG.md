@@ -2,6 +2,14 @@
 
 decision-continuity の主な変更。[Keep a Changelog](https://keepachangelog.com/) の形で書く。変更は `changes/` の断片に書き（[changes/README.md](changes/README.md)）、リリースのときに版の節にまとめる。版は中身から決まり（[Semantic Versioning](https://semver.org/)、`sh tools/next-version.sh`）、各版の節がそのまま GitHub のリリースノートになる。手順は [docs/release.md](docs/release.md)。
 
+## v0.5.1 - 2026-10-18
+
+### Fixed
+
+- `build_index.py --stale`：数えるのを「起きたこと」の「現在」のリンクだけにし（履歴のリンクやほかのリポジトリへのリンクは数えない）、再確認のあとに行がずれても、リンクの行を確かめたコミットの行に写してから比べる。git の出力を UTF-8 で読む
+- `build_index.py`：空の `checked:` などで次の行を値として読んでいた。「分類を更新」の追記の分類名と、形の崩れた C 行も `--check` で挙げる。`origin` がないときの索引のリポジトリ名を、リポジトリのフォルダー名にする（`docs` になっていた）
+- `tools/install.sh`：`CDPATH` を設定していると、パスが壊れていた
+
 ## v0.5.0 - 2026-10-18
 
 ### Added
