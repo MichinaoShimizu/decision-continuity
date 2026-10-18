@@ -5,7 +5,7 @@ checked: 15e9528
 
 # 洗い出しと読むことをサブエージェントに任せ、メインの会話はコマンドをほとんど回さない形になった
 
-**いま**（15e9528）：洗い出しは `decision-log-planner`、読むのは分類ごとの `decision-log-reader` で、reader は 1 回の応答でまとめて呼ぶ（Kiro は 4 つまで）（[SKILL.md:30-31][s30]）。`sleep` で待たない決まりは、いまの指示にはない。
+**いま**：洗い出しは `decision-log-planner`、読むのは分類ごとの `decision-log-reader` で、reader は 1 回の応答でまとめて呼ぶ（Kiro は 4 つまで）（[SKILL.md:30-31][s30]）。`sleep` で待たない決まりは、いまの指示にはない。
 
 ## 起きたこと
 

@@ -5,7 +5,7 @@ checked: 15e9528
 
 # スキルと Decision log の形を、ぎりぎりまで簡素にした
 
-**いま**（15e9528）：指示は [SKILL.md][skill] と [format.md][format] の 2 つだけで、モードは `audit` と `write`。Decision log は「いま」、起きたこと、理由、分かっていないことの 4 つで、前の形も [build_index.py][bi] が読む。
+**いま**：指示は [SKILL.md][skill] と [format.md][format] の 2 つだけで、モードは `audit` と `write`。Decision log は「いま」、起きたこと、理由、分かっていないことの 4 つで、前の形も [build_index.py][bi] が読む。
 
 ## 起きたこと
 

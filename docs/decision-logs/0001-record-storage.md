@@ -5,7 +5,7 @@ checked: 15e9528
 
 # 記録の置き場所が Discussions から records/ を経て、置き場所を持たない汎用ツールになった
 
-**いま**（15e9528）：このリポジトリは記録の置き場所を兼ねず、`decision-log` とその planner・reader だけを配る。Decision log は `docs/decision-logs/` か、言われたフォルダーに書く（[SKILL.md:14][s14]）。
+**いま**：このリポジトリは記録の置き場所を兼ねず、`decision-log` とその planner・reader だけを配る。Decision log は `docs/decision-logs/` か、言われたフォルダーに書く（[SKILL.md:14][s14]）。
 
 ## 起きたこと
 

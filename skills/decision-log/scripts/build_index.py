@@ -118,7 +118,7 @@ def read_log(path):
         if not re.fullmatch(r"[0-9a-f]{7,40}", checked):
             problems.append("フロントマターの checked が基準のコミットのハッシュ（7〜40 桁）でない")
         if not re.search(w["today_re"], rest, re.M):
-            problems.append(f"checked があるのに「{w['today']}」の行（{w['today']}（<コミット>）：…）がない")
+            problems.append(f"checked があるのに「{w['today']}」の行がない")
     if not reason.startswith(w["reasons"]):
         problems.append(f"「## {w['reason']}」の 1 行目が「{'」「'.join(w['reasons'])}」で始まっていない")
     return dict(problems=problems, number=number(path.name), file=path.name, title=title,

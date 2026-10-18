@@ -5,7 +5,7 @@ checked: 15e9528
 
 # 評価と CI が、旧キット向けのものから decision-log 向けに作り直された
 
-**いま**（15e9528）：評価は E01〜E10（[cases.md][cases]）。キーワードは最後の応答で、書いたファイルは正解表で、サブエージェントは呼び出しで判定する（[run.py][run]）。CI は Python 3.10 と 3.13、markdownlint などを回す（[test.yml][ci]）。
+**いま**：評価は E01〜E10（[cases.md][cases]）。キーワードは最後の応答で、書いたファイルは正解表で、サブエージェントは呼び出しで判定する（[run.py][run]）。CI は Python 3.10 と 3.13、markdownlint などを回す（[test.yml][ci]）。
 
 ## 起きたこと
 

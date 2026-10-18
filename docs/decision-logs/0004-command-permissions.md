@@ -5,7 +5,7 @@ checked: 15e9528
 
 # 確認なしで通すコマンドが、読むだけのものに絞られていった
 
-**いま**（15e9528）：スキルの `allowed-tools` は読むだけのコマンドと索引のスクリプトだけ（[SKILL.md:4][s4]）で、コマンドは 1 回に 1 つ、`;`・`&&`・`|`・`cd`・`git -C` を使わず記号は一重引用符で囲む（[SKILL.md:25][s25]）。Kiro の reader は REST の GET（`gh api repos/*`）を許し、書き込みの指定は deny で止める（[decision-log-reader.json:39][kj39]、[decision-log-reader.json:46][kj46]）。
+**いま**：スキルの `allowed-tools` は読むだけのコマンドと索引のスクリプトだけ（[SKILL.md:4][s4]）で、コマンドは 1 回に 1 つ、`;`・`&&`・`|`・`cd`・`git -C` を使わず記号は一重引用符で囲む（[SKILL.md:25][s25]）。Kiro の reader は REST の GET（`gh api repos/*`）を許し、書き込みの指定は deny で止める（[decision-log-reader.json:39][kj39]、[decision-log-reader.json:46][kj46]）。
 
 ## 起きたこと
 

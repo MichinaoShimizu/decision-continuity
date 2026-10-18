@@ -191,7 +191,7 @@ class BuildIndexTests(unittest.TestCase):
             self.assertEqual(self.run_script(d, "--check").returncode, 1)
 
     def test_reads_the_minimal_format_and_reports_missing_claims(self):
-        new = ("---\ncategory: data\nchecked: abc1234\n---\n\n# x\n\n**いま**（abc1234）：a のまま（[x.py:1](https://github.com/o/r/blob/abc1234/x.py#L1)）。\n\n"
+        new = ("---\ncategory: data\nchecked: abc1234\n---\n\n# x\n\n**いま**：a のまま（[x.py:1](https://github.com/o/r/blob/abc1234/x.py#L1)）。\n\n"
                "## 起きたこと\n\n- 2025-01-01 a を 1 から 2 に（PR #1。作成・マージ @a）\n\n## 理由\n\n不明。\n\n## 分かっていないこと\n\n- なぜ 2 か\n")
         with tempfile.TemporaryDirectory() as directory:
             d = pathlib.Path(directory)
