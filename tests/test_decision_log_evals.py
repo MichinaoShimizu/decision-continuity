@@ -110,7 +110,7 @@ class CandidateScanTests(unittest.TestCase):
         hits = self.scan()
         for subject in ("Merge pull request #12 from example/fix-typo", "Bump retry count (#13)",
                         "Lower webhook timeout to 3s (#14)", "Extend session (#17)", "Keep logs longer (#18)",
-                        "Rotate webhook secret (#19)"):
+                        "Rotate webhook secret (#19)", "Merge pull request #22 from example/db-pool"):
             self.assertIn(subject, hits)
         for subject in ("Update button padding (#16)", "Refactor helper (#20)"):
             self.assertNotIn(subject, hits)
@@ -120,6 +120,12 @@ class CandidateScanTests(unittest.TestCase):
         joined = self.subjects("-i", "-G", f"{self.words}|{self.constant}", "--", ".")
         self.assertIn("Refactor helper (#20)", joined)
         self.assertNotIn("Refactor helper (#20)", self.scan())
+
+    def test_reason_of_pr_22_is_only_in_its_inner_commit(self):
+        # E09：--first-parent の一覧には出ず、マージの親 1 からの範囲で読むと見える（reader の手順 2）
+        merge = run.git(self.repo, "log", "--first-parent", "--merges", "--format=%h", "--grep", "#22").strip()
+        self.assertNotIn("2025-03-25", run.git(self.repo, "log", "--first-parent", "--format=%B"))
+        self.assertIn("ran dry during the 2025-03-25 nightly batch", run.git(self.repo, "log", "--format=%B", f"{merge}^1..{merge}"))
 
     def test_merge_commit_body_gives_the_pr_title(self):
         bodies = run.git(self.repo, "log", "--first-parent", "--merges", "--format=@@ %h %b")

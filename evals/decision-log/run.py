@@ -20,7 +20,8 @@ import time
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "skills" / "decision-log" / "scripts" / "build_index.py"
 
-# (件名, 本文, {パス: 中身})。マージコミットは件名が "Merge pull request" で始まるもの。
+# (件名, 本文, {パス: 中身}[, PR の中のコミットのメッセージ])。マージコミットは件名が "Merge pull request" で始まるもの。
+# 中のコミットのメッセージを省くと、本文の 1 行目を使う。
 HISTORY = [
     ("Initial import", "", {
         "README.md": "# payment-api\n\nPayment APIs.\n",
@@ -30,6 +31,7 @@ HISTORY = [
         "src/auth/session.py": "SESSION_TTL_HOURS = 24\n",
         "config/logging.yml": "retention_days: 30\n",
         "src/web/button.css": ".button { padding: 4px; }\n",
+        "src/db/pool.py": "POOL_SIZE = 10\n",
     }),
     ("Merge pull request #12 from example/fix-typo", "Fix typo in README", {
         "README.md": "# payment-api\n\nPayment APIs.\n",
@@ -49,6 +51,8 @@ HISTORY = [
     ("Rotate webhook secret (#19)", "", {"src/payment/webhook/client.py": "TIMEOUT = 3\nSECRET_NAME = \"webhook-v2\"\n"}),
     ("Refactor helper (#20)", "", {"src/payment/helper.py": "values = [1, 2]\nresult = sum(values)\n"}),
     ("Cap batch size (#21)", "", {"src/payment/batch.py": "# The gateway rejects more than 100 items per call (incident 2025-03-15).\nBATCH_LIMIT = 100\n"}),
+    ("Merge pull request #22 from example/db-pool", "Raise DB pool size", {"src/db/pool.py": "POOL_SIZE = 20\n"},
+     "Raise DB pool size\n\nThe pool ran dry during the 2025-03-25 nightly batch. 20 covers the peak with headroom."),
 ]
 
 # 既存の Decision log（E06 だけが使う）
@@ -99,6 +103,8 @@ CASES = {
             [], ["status: accepted"], False, False),
     "E08": ("decision-log で audit して。範囲は src/payment/batch.py。",
             ["記録あり（差分）", "100"], ["不明（記録に書かれていない）", "記録あり（本文）"], False, False),
+    "E09": ("decision-log で audit して。範囲は src/db/pool.py。",
+            ["記録あり（本文）", "2025-03-25", "10 から 20"], ["不明（記録に書かれていない）"], False, False),
 }
 
 
@@ -130,7 +136,7 @@ def build_repo(repo):
     git(repo, "config", "user.name", "eval")
     git(repo, "config", "user.email", "eval@example.com")
     git(repo, "remote", "add", "origin", "https://github.com/example/payment-api.git")
-    for i, (subject, body, files) in enumerate(HISTORY):
+    for i, (subject, body, files, *inner) in enumerate(HISTORY):
         date = f"2025-0{1 + i // 4}-{10 + i:02d}T12:00:00+09:00"
         env = dict(os.environ, GIT_AUTHOR_DATE=date, GIT_COMMITTER_DATE=date)
         merge = subject.startswith("Merge pull request")
@@ -141,7 +147,11 @@ def build_repo(repo):
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(text, encoding="utf-8")
         git(repo, "add", "-A")
-        message = ["-m", body.split("\n")[0] or subject] if merge else ["-m", subject] + (["-m", body] if body else [])
+        if merge:
+            parts = (inner[0] if inner else body.split("\n")[0] or subject).split("\n\n", 1)
+            message = ["-m", parts[0]] + (["-m", parts[1]] if len(parts) > 1 else [])
+        else:
+            message = ["-m", subject] + (["-m", body] if body else [])
         git(repo, "commit", "-q", "--allow-empty", *message, env=env)
         if merge:
             git(repo, "checkout", "-q", "main")
