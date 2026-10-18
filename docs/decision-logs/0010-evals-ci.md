@@ -55,3 +55,15 @@ PR #53 以降の変化。評価を初めて実際のエージェント（Claude 
 - C8 2026-10-18 いまも同じ：合成の履歴に、理由がコードのコメントにだけある #21 と、ケース E08 を足した。履歴：[PR #67](https://github.com/MichinaoShimizu/decision-continuity/pull/67) ／ 現在：[`evals/decision-log/cases.md`](https://github.com/MichinaoShimizu/decision-continuity/blob/f54494031bc571248825a61557e34f3b9f75da34/evals/decision-log/cases.md)
 - C9 2026-10-18 いまも同じ：E05 の書いたファイルを正解表（`ANSWERS`）と照らし、足りない事実を `missing_facts` に残すようにした。履歴：[PR #68](https://github.com/MichinaoShimizu/decision-continuity/pull/68) ／ 現在：[`evals/decision-log/run.py`](https://github.com/MichinaoShimizu/decision-continuity/blob/f54494031bc571248825a61557e34f3b9f75da34/evals/decision-log/run.py)
 - C10 2026-10-18 いまも同じ：E07 を、最後の応答の言葉ではなく、応答の記録のサブエージェントの呼び出しで判定するようにした（`missing_agents`）。理由は記録あり（本文・AI）：reader を実際に呼んでいても、最後の応答に名前が出ないと「足りない」になっていた（PR #69 本文）。履歴：[PR #69](https://github.com/MichinaoShimizu/decision-continuity/pull/69) ／ 現在：`run.py`
+
+## 追記 2026-10-18（Claude、再確認）
+
+**再確認**（2026-10-18、fbc765a）
+**いま**：評価は E01〜E10。キーワードは最後の応答で、書いたファイルは正解表で、サブエージェントは呼び出しで判定する。CI は Python 3.10 と 3.13、リンク、frontmatter、markdownlint。
+
+- C4：いまも同じ → 一部置き換え済み。評価が E01〜E07 から E01〜E10 になった（[PR #67][pr67] で E08、[PR #72][pr72] で E09、[PR #73][pr73] で E10。1 日後）
+- C3・C5・C6・C7・C8・C9・C10 はいまも同じ
+
+[pr67]: https://github.com/MichinaoShimizu/decision-continuity/pull/67
+[pr72]: https://github.com/MichinaoShimizu/decision-continuity/pull/72
+[pr73]: https://github.com/MichinaoShimizu/decision-continuity/pull/73

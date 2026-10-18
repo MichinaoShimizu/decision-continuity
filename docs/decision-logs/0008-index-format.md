@@ -47,3 +47,15 @@ PR の記録から。決めた人とは限らない。いずれも承認は見�
 ## 関係する記録
 
 - DL-1
+
+---
+
+## 追記 2026-10-18（Claude、再確認）
+
+**再確認**（2026-10-18、fbc765a）
+**いま**：索引は「起きたこと」の最古の日付順の 1 行の一覧。フロントマターは `kind`・`category`・`keywords` と、新しく書く記録の `checked`。
+
+- C1：一部置き換え済みのまま。[PR #73][pr73] でフロントマターに `checked`（基準のコミット）が足された（2 日後）
+- C2・C3・C4・C5・C7・C8 はいまも同じ（SKILL.md・writing.md・build_index.py は変わったが、索引の形と `DL-` の扱いは同じ）
+
+[pr73]: https://github.com/MichinaoShimizu/decision-continuity/pull/73

@@ -41,3 +41,14 @@ PR の記録から。決めた人とは限らない。いずれも承認は見�
 ## 関係する記録
 
 - DL-5、DL-6
+
+---
+
+## 追記 2026-10-18（Claude、再確認）
+
+**再確認**（2026-10-18、fbc765a）
+**いま**：候補は手元の git で洗い、3 つの洗い出し（言葉・定数・設定ファイル）を合わせる。洗い出しは [PR #59][pr59] から `decision-log-planner` が行う（DL-13）。
+
+- C1・C2・C4・C5 はいまも同じ（手順の中身は同じで、[PR #59][pr59] で planner の定義にも同じ手順が書かれた）
+
+[pr59]: https://github.com/MichinaoShimizu/decision-continuity/pull/59
