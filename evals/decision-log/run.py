@@ -52,7 +52,7 @@ HISTORY = [
     ("Refactor helper (#20)", "", {"src/payment/helper.py": "values = [1, 2]\nresult = sum(values)\n"}),
     ("Cap batch size (#21)", "", {"src/payment/batch.py": "# The gateway rejects more than 100 items per call (incident 2025-03-15).\nBATCH_LIMIT = 100\n"}),
     ("Merge pull request #22 from example/db-pool", "Raise DB pool size", {"src/db/pool.py": "POOL_SIZE = 20\n"},
-     "Raise DB pool size\n\nThe pool ran dry during the 2025-03-25 nightly batch. 20 covers the peak with headroom."),
+     "Raise DB pool size\n\nThe pool ran dry during the 2025-03-18 nightly batch. 20 covers the peak with headroom."),
 ]
 
 # 既存の Decision log（E06 だけが使う）
@@ -104,7 +104,7 @@ CASES = {
     "E08": ("decision-log で audit して。範囲は src/payment/batch.py。",
             ["記録あり（差分）", "100"], ["不明（記録に書かれていない）", "記録あり（本文）"], False, False),
     "E09": ("decision-log で audit して。範囲は src/db/pool.py。",
-            ["記録あり（本文）", "2025-03-25", "10 から 20"], ["不明（記録に書かれていない）"], False, False),
+            ["記録あり（本文）", "2025-03-18", "10 から 20"], ["不明（記録に書かれていない）"], False, False),
 }
 
 

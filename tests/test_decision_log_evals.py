@@ -124,8 +124,8 @@ class CandidateScanTests(unittest.TestCase):
     def test_reason_of_pr_22_is_only_in_its_inner_commit(self):
         # E09：--first-parent の一覧には出ず、マージの親 1 からの範囲で読むと見える（reader の手順 2）
         merge = run.git(self.repo, "log", "--first-parent", "--merges", "--format=%h", "--grep", "#22").strip()
-        self.assertNotIn("2025-03-25", run.git(self.repo, "log", "--first-parent", "--format=%B"))
-        self.assertIn("ran dry during the 2025-03-25 nightly batch", run.git(self.repo, "log", "--format=%B", f"{merge}^1..{merge}"))
+        self.assertNotIn("2025-03-18", run.git(self.repo, "log", "--first-parent", "--format=%B"))
+        self.assertIn("ran dry during the 2025-03-18 nightly batch", run.git(self.repo, "log", "--format=%B", f"{merge}^1..{merge}"))
 
     def test_merge_commit_body_gives_the_pr_title(self):
         bodies = run.git(self.repo, "log", "--first-parent", "--merges", "--format=@@ %h %b")
