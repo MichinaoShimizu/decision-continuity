@@ -132,9 +132,30 @@ class AgentTests(unittest.TestCase):
                 for cmd in DANGEROUS:
                     self.assertFalse(any(p.fullmatch(cmd) for p in allowed), cmd)
                 for rule in data.get("permissions", {}).get("rules", []):
+                    if rule.get("effect") != "allow" or rule.get("match") == ["gh api repos/*"]:
+                        continue
                     for glob in rule.get("match", []):
                         # 「git *」「gh *」のようにコマンド全体を許す形にしない。サブコマンドまで書く
                         self.assertRegex(glob, r"^(\S+=\S+ )?\S+ [a-z-]+( [a-z-]+)? \*$")
+
+
+    def test_kiro_v3_rules_allow_rest_reads_but_deny_writes(self):
+        """Kiro 3.x の照合をまねる：* は何にでも当たり、deny が allow に勝つ。`gh api repos/*` を許すなら、書き込みの指定を deny で止める。"""
+        def allowed(cmd, rules):
+            globs = lambda effect: [re.compile(re.escape(g).replace(r"\*", ".*")) for r in rules if r.get("effect") == effect
+                                    for g in r.get("match", [])]
+            return any(p.fullmatch(cmd) for p in globs("allow")) and not any(p.fullmatch(cmd) for p in globs("deny"))
+        for path in KIRO_AGENTS:
+            rules = json.loads(path.read_text(encoding="utf-8")).get("permissions", {}).get("rules", [])
+            if not any(r.get("match") == ["gh api repos/*"] for r in rules):
+                continue
+            with self.subTest(agent=path.stem):
+                for cmd in ("gh api repos/o/r/pulls/45", "gh api repos/o/r/pulls/45/comments", "gh api repos/o/my-flow/issues/42/comments"):
+                    self.assertTrue(allowed(cmd, rules), cmd)
+                for cmd in [c for c in DANGEROUS if c.startswith("gh api")] + [
+                        "gh api repos/o/r/issues --method POST", "gh api repos/o/r/issues -F title=x",
+                        "gh api repos/o/r/issues --raw-field title=x", "gh api repos/o/r/issues --input body.json"]:
+                    self.assertFalse(allowed(cmd, rules), cmd)
 
 
 if __name__ == "__main__":
