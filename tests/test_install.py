@@ -44,6 +44,15 @@ class InstallTests(unittest.TestCase):
             self.assertFalse(stale.exists())
             self.assertTrue(mine.exists(), "ほかのエージェントは消さない")
 
+    def test_cdpath_does_not_break_the_paths(self):
+        import os
+        with tempfile.TemporaryDirectory() as d:
+            (pathlib.Path(d) / "target").mkdir()
+            env = dict(os.environ, CDPATH=f".:{d}")
+            result = subprocess.run(["sh", str(SCRIPT), "kiro", "target"], capture_output=True, text=True, cwd=d, env=env, check=False)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertTrue((pathlib.Path(d) / "target/.kiro/skills/decision-log/SKILL.md").exists())
+
     def test_refuses_bad_arguments(self):
         with tempfile.TemporaryDirectory() as d:
             self.assertNotEqual(install("cursor", d).returncode, 0)

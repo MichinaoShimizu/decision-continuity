@@ -287,6 +287,64 @@ class BuildIndexTests(unittest.TestCase):
             (folder / "0001.md").write_text(log.replace(first, "0" * 40), encoding="utf-8")
             self.assertIn("確かめられない", self.run_script(folder, "--stale").stdout)
 
+    def test_review_findings_on_format_checks(self):
+        head = "---\nkind: log\ncategory: data\n{front}---\n\n# [demo] x\n\n## 起きたこと\n\n{claims}\n\n## 理由\n\n不明。\n{notes}"
+        ok = "- C1 2025-01-01 いまも同じ：a。履歴：PR #1 ／ 現在：x.py:1"
+        with tempfile.TemporaryDirectory() as directory:
+            d = pathlib.Path(directory)
+            # 空の checked: が、次の行（category）を値として読まない
+            (d / "0001.md").write_text("---\nkind: log\nchecked:\ncategory: data\n---\n\n# [demo] x\n\n## 起きたこと\n\n" + ok + "\n\n## 理由\n\n不明。\n", encoding="utf-8")
+            out = self.run_script(d).stdout
+            self.assertIn("checked が基準のコミット", out)
+            self.assertIn("（data）", (d / "README.md").read_text(encoding="utf-8"))
+            # 追記で直した分類も一覧にあるかを確かめる
+            (d / "0001.md").write_text(head.format(front="", claims=ok, notes="\n---\n\n## 追記 2026-01-01（x）\n\n**分類を更新**（2026-01-01）\ncategory: reliabilty\n"), encoding="utf-8")
+            self.assertIn("「**分類を更新**」の追記の category が分類の一覧にない: reliabilty", self.run_script(d).stdout)
+            # 日付の形が崩れた C 行も挙げる
+            (d / "0001.md").write_text(head.format(front="", claims=ok + "\n- C2 2025-1-5 いまも同じ：b", notes=""), encoding="utf-8")
+            self.assertIn("C2 の行が", self.run_script(d).stdout)
+
+    def test_repo_name_without_origin_is_the_repository_folder(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = pathlib.Path(directory) / "my-service"
+            folder = repo / "docs" / "decision-logs"; folder.mkdir(parents=True)
+            subprocess.run(["git", "-C", str(repo), "init", "-q"], check=True)
+            (folder / "0001.md").write_text(self.log("data", "x", ["2025-01-01"], "不明。"), encoding="utf-8")
+            subprocess.run([sys.executable, str(self.SCRIPT), str(folder)], capture_output=True, check=False)
+            self.assertTrue((folder / "README.md").read_text(encoding="utf-8").startswith("# Decision logs（my-service）"))
+
+    def test_stale_follows_moved_lines_and_ignores_history_and_other_repos(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = pathlib.Path(directory)
+            git = lambda *a: subprocess.run(["git", "-C", str(repo), *a], capture_output=True, text=True, check=True).stdout.strip()
+            git("init", "-q", "-b", "main"); git("config", "user.email", "t@example.com"); git("config", "user.name", "t")
+            git("remote", "add", "origin", "https://github.com/o/r.git")
+            (repo / "a.py").write_text("MAX = 3\nNAME = 'x'\n", encoding="utf-8")
+            git("add", "-A"); git("commit", "-q", "-m", "a"); first = git("rev-parse", "HEAD")
+            # 上にコメントが足され、MAX は 2 行目に動いた。この時点で確かめ直した
+            (repo / "a.py").write_text("# limits\nMAX = 3\nNAME = 'x'\n", encoding="utf-8")
+            git("commit", "-qam", "comment"); second = git("rev-parse", "HEAD")
+            folder = repo / "docs"; folder.mkdir()
+            u = f"https://github.com/o/r/blob/{first}/a.py"
+            log = (f"---\nkind: log\ncategory: reliability\n---\n\n# [r] x\n\n## 起きたこと\n\n"
+                   f"- C1 2025-01-01 いまも同じ：MAX は 3。履歴：[a.py:2]({u}#L2) ／ 現在：[a.py:1][c1]、"
+                   f"[lib]({'https://github.com/other/lib/blob/' + '1' * 40 + '/x.py#L1'})\n\n## 理由\n\n不明。\n\n[c1]: {u}#L1\n"
+                   f"\n---\n\n## 追記 2026-01-01（x、再確認）\n\n**再確認**（2026-01-01、{second[:7]}）\n\n- C1 はいまも同じ\n")
+            (folder / "0001.md").write_text(log, encoding="utf-8")
+            self.assertEqual(self.run_script(folder, "--stale").returncode, 0, self.run_script(folder, "--stale").stdout)
+            # 動いた先（2 行目）の MAX が変わったら挙げる。履歴のリンクと、ほかのリポジトリのリンクは数えない
+            (repo / "a.py").write_text("# limits\nMAX = 5\nNAME = 'x'\n", encoding="utf-8")
+            git("commit", "-qam", "bump")
+            out = self.run_script(folder, "--stale").stdout
+            self.assertIn("要再確認：a.py#L1（", out)
+            self.assertEqual(out.count("要再確認："), 1, out)
+            self.assertNotIn("確かめられない：", out)
+            # 1 行目のコメントだけが変わったときは挙げない
+            git("reset", "-q", "--hard", second)
+            (repo / "a.py").write_text("# limits (v2)\nMAX = 3\nNAME = 'x'\n", encoding="utf-8")
+            git("commit", "-qam", "comment only")
+            self.assertEqual(self.run_script(folder, "--stale").returncode, 0, self.run_script(folder, "--stale").stdout)
+
     def test_check_without_repo_keeps_the_index_name(self):
         with tempfile.TemporaryDirectory() as directory:
             d = pathlib.Path(directory)

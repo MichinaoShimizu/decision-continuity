@@ -9,10 +9,10 @@ set -eu
 die() { printf 'install: %s\n' "$*" >&2; exit 1; }
 
 [ $# -ge 1 ] && [ $# -le 2 ] || die "usage: sh tools/install.sh <claude|kiro> [<repository>]"
-src=$(cd "$(dirname "$0")/.." && pwd)
+src=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd -P)
 dest=${2:-.}
 [ -d "$dest" ] || die "$dest is not a directory"
-dest=$(cd "$dest" && pwd)
+dest=$(CDPATH= cd -- "$dest" && pwd -P)
 [ "$dest" != "$src" ] || die "install into another repository, not decision-continuity itself"
 
 case $1 in
