@@ -35,4 +35,4 @@ allowed-tools: Bash(git log:*) Bash(git show:*) Bash(git grep:*) Bash(git rev-pa
 
 サブエージェントは `.claude/agents/`・`.kiro/agents/` にあるとき名前で呼ぶ（プラグインは `decision-continuity:decision-log-planner`）。ないときは自分で同じことをする：`TZ=Asia/Tokyo git log --first-parent --date=short-local --format='@@ %h %ad %s' --name-only` で一覧を取り、`git log --first-parent -i -G 'timeout|retr(y|ies)|limit|auth|token|secret|schema|migrat' --format='%h'` と `git log --first-parent -G '^[A-Z][A-Z0-9_]{2,} *[:=]' --format='%h'` でタイトルに出ない変更も拾い、`gh pr view <番号> --json title,body,author,mergedAt,mergedBy,url,reviews,comments` と `git show <コミット>` で読む。
 
-`--stale` は、「いま」のリンク先が `checked` のコミットより後に変わった Decision log を挙げる。確かめ直しを頼まれたら、サブエージェントを呼ばず、挙がった行を `git show HEAD:<パス>` で確かめ、変わったものに追記して `checked` を進める。
+`--stale` は、「ステータス」のリンク先が `checked` のコミットより後に変わった Decision log を挙げる。確かめ直しを頼まれたら、サブエージェントを呼ばず、挙がった行を `git show HEAD:<パス>` で確かめ、変わったものには `Superseded：…`（消えたなら `Removed：…`）の追記を足し、`checked` を進める。
