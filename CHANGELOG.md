@@ -2,6 +2,12 @@
 
 decision-continuity の主な変更。[Keep a Changelog](https://keepachangelog.com/) の形で書く。変更は `changes/` の断片に書き（[changes/README.md](changes/README.md)）、リリースのときに版の節にまとめる。版は中身から決まり（[Semantic Versioning](https://semver.org/)、`sh tools/next-version.sh`）、各版の節がそのまま GitHub のリリースノートになる。手順は [docs/release.md](docs/release.md)。
 
+## v0.8.0 - 2026-10-18
+
+### Added
+
+- decision-log: 変える前に関係する判断を照らす `check` と、人が決めた判断を変更と同じ PR に記録する `record` を足した。`build_index.py --related <パス>… --words <言葉>` が、パスと言葉で関係する Decision log を挙げる。回し方は `docs/ai-workflow.md`
+
 ## v0.7.1 - 2026-10-18
 
 ### Fixed
