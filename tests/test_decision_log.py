@@ -63,7 +63,7 @@ class SkillAllowedToolsTests(unittest.TestCase):
         line = next(l for l in front.splitlines() if l.startswith("allowed-tools:"))
         rules = re.findall(r"Bash\(([^)]*)\)", line)
         self.assertTrue(rules)
-        read_only = re.compile(r"^(TZ=Asia/Tokyo )?git (log|show|grep|rev-parse|remote get-url):\*$"
+        read_only = re.compile(r"^(TZ=Asia/Tokyo )?git (log|show|diff|grep|rev-parse|remote get-url):\*$"
                                r"|^(gh (pr|issue|release)|glab (mr|issue)) view:\*$"
                                r"|^python3 (\.(claude|kiro)/skills/decision-log|\$\{CLAUDE_SKILL_DIR\})/scripts/build_index\.py:\*$")
         for rule in rules:
@@ -201,6 +201,28 @@ class BuildIndexTests(unittest.TestCase):
             self.assertIn("- 2025-01-01 [DL-1](0001-x.md) x・理由不明", (d / "README.md").read_text(encoding="utf-8"))
             (d / "0001-x.md").write_text(new.replace("- 2025-01-01 a を", "- a を"), encoding="utf-8")
             self.assertIn("「## 起きたこと」に `- YYYY-MM-DD", self.run_script(d).stdout)
+
+    def test_related_matches_paths_and_words(self):
+        u = "https://github.com/o/r/blob/abc1234/src/payment/http/client.py#L1"
+        with tempfile.TemporaryDirectory() as directory:
+            d = pathlib.Path(directory)
+            (d / "0001-retry.md").write_text(
+                "---\ncategory: reliability\nchecked: abc1234\n---\n\n# リトライの上限\n\n## ステータス\n\n"
+                f"Active：上限は 5（[client.py:1]({u})）。\n\n## 起きたこと\n\n- 2025-01-12 MAX_RETRIES を 3 から 5 に（PR #13）\n\n"
+                "## 理由\n\n不明。\n", encoding="utf-8")
+            (d / "0002-auth.md").write_text(
+                "---\ncategory: security\n---\n\n# 認証\n\n## 起きたこと\n\n- 2025-02-01 `src/auth/session.py` の TTL を 48 に（PR #17）\n\n"
+                "## 理由\n\n不明。\n", encoding="utf-8")
+            out = self.run_script(d, "--related", "src/payment/").stdout
+            self.assertIn("DL-1 0001-retry.md：リトライの上限（当たり：src/payment/）", out)
+            self.assertIn("  Active：上限は 5", out)
+            self.assertNotIn("DL-2", out)
+            out = self.run_script(d, "--related", "src/auth/session.py", "--words", "max_retries").stdout
+            self.assertIn("DL-1 0001-retry.md：リトライの上限（当たり：「max_retries」）", out)
+            self.assertIn("DL-2 0002-auth.md：認証（当たり：src/auth/session.py）", out)
+            out = self.run_script(d, "--related", "docs/")
+            self.assertEqual(out.returncode, 0)
+            self.assertIn("関係する Decision log はない", out.stdout)
 
     def test_checked_logs_need_a_status(self):
         def write(d, front, body, notes=""):

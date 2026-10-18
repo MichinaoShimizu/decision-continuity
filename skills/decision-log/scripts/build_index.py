@@ -4,6 +4,7 @@
   build_index.py <フォルダー> [--repo NAME] [--lang ja|en]   README.md を書く
   build_index.py <フォルダー> --check         README.md が最新で、各 Decision log の形が崩れていないかを確かめる
                                              （どちらかが駄目なら終了コード 1）
+  build_index.py <フォルダー> --related <パス>... [--words 言葉,…]   パスや言葉に関係する Decision log を挙げる（照合）
   build_index.py <フォルダー> --stale         「ステータス」のリンク先が checked のコミットより後に変わった Decision log を挙げる
                                              （あれば終了コード 1。git が要る）
 
@@ -59,7 +60,7 @@ WORDS = {
 }
 # ステータスの値。日本語でも英語でも同じ語を使う
 STATES = ("Active", "Superseded", "Removed")
-STATE_RE = re.compile(r"^(?:Active|Superseded|Removed)(?:：|: )\S")
+STATE_RE = re.compile(r"^(?:- )?(?:Active|Superseded|Removed)(?:：|: )\S")
 # 0001.md、0001-auth-pkce.md のほか、0001-Short_Title.md・0001-認証の変更.md と、DL- を付けた DL-1.md・DL-0001-x.md も読む
 FILE_RE = re.compile(r"^(?:DL-(\d+)|(\d{4,})(?!-\d{2}-\d{2}))(?:[-_].*)?\.md$", re.I)
 FRONT_RE = re.compile(r"\A---\n(.*?)\n---[ \t]*\n+", re.S)
@@ -67,6 +68,8 @@ APPEND_RE = re.compile(r"^## (?:追記|Addendum) \d{4}-\d{2}-\d{2}.*$", re.M)
 # 「起きたこと」の行。v0.5 までは日付の前に C1 などの番号を付けていたので、それも読む
 CLAIM_RE = re.compile(r"^- (?:C\d+ )?(\d{4}-\d{2}-\d{2}) .*$", re.M)
 # コミットで固定した行・ファイルのリンク：/blob/<ハッシュ>/<パス>#L12 か #L12-L20（GitLab は /-/blob/）
+# 本文に出てくるパス：リンクのほか、`src/payment/client.py` のようなコードの書き方
+CODE_PATH_RE = re.compile(r"`([\w.-]+(?:/[\w.-]+)+/?)(?::\d+)?`")
 BLOB_RE = re.compile(r"/blob/([0-9a-f]{7,40})/([^\s)#?\]]+)(?:#L(\d+)(?:-L(\d+))?)?")
 HUNK_RE = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@", re.M)
 REF_DEF_RE = re.compile(r"^\[([^\]]+)\]:[ \t]*(\S+)", re.M)
@@ -129,7 +132,9 @@ def read_log(path):
     return dict(problems=problems, number=number(path.name), file=path.name, title=title,
                 category=category if category in LABELS else "other", retired=retired, lang=lang,
                 date=min(dates) if dates else None, checked=checked,
-                links=current_links(text, w),
+                links=current_links(text, w), text=text,
+                status=next((l for l in rest.splitlines() if STATE_RE.match(l) or re.match(w["old_today"], l)), ""),
+                paths=sorted({m.group(2) for m in BLOB_RE.finditer(text)} | set(CODE_PATH_RE.findall(text))),
                 unknown=reason.startswith(w["unknown"]) and not learned)
 
 
@@ -147,6 +152,22 @@ def current_links(text, w):
             if m:
                 found.add((url,) + m.groups())
     return sorted(found)
+
+
+def related(logs, paths, words):
+    """パス（どちらかがもう一方を含む）か言葉（大文字と小文字を区別しない）で、関係する Decision log を挙げる。"""
+    norm = lambda x: x.strip("/").lower()
+    def touches(a, b):
+        a, b = norm(a), norm(b)
+        return a == b or a.startswith(b + "/") or b.startswith(a + "/")
+    found = []
+    for log in logs:
+        on_path = sorted({t for t in paths for q in log["paths"] if touches(t, q)})
+        on_word = [f"「{x}」" for x in words if x.lower() in log["text"].lower()]
+        if on_path or on_word:
+            found.append(((-len(on_path), -len(on_word), order(log)), log, on_path + on_word))
+    # パスに当たったものを先に、当たりの多い順に
+    return [(log, hits) for _, log, hits in sorted(found, key=lambda x: x[0])]
 
 
 def git_text(folder, *args):
@@ -300,12 +321,24 @@ def main():
     p.add_argument("--repo", help="見出しに出すリポジトリ名（既定はいまの索引の名前、なければ git の origin から）")
     p.add_argument("--lang", choices=("ja", "en"), help="索引の言語（既定はいまの索引の言語、なければ多いほうの言語）")
     p.add_argument("--check", action="store_true", help="書かずに、README.md が最新かを確かめる")
+    p.add_argument("--related", nargs="+", metavar="PATH", help="書かずに、このパスに関係する Decision log を挙げる")
+    p.add_argument("--words", default="", help="--related と一緒に、この言葉（, で区切る）を含む Decision log も挙げる")
     p.add_argument("--stale", action="store_true", help="書かずに、「ステータス」のリンク先が checked より後に変わった Decision log を挙げる")
     args = p.parse_args()
     if not args.folder.is_dir():
         print(f"{args.folder} がない", file=sys.stderr)
         return 2
     logs = read_logs(args.folder)
+    if args.related:
+        words = [x.strip() for x in args.words.split(",") if x.strip()]
+        found = related(logs, args.related, words)
+        for log, hits in found:
+            mark = "（取り下げ）" if log["retired"] else ""
+            print(f"DL-{log['number']} {log['file']}{mark}：{log['title']}（当たり：{'、'.join(hits)}）")
+            if log["status"]:
+                print(f"  {log['status']}")
+        print(f"関係する Decision log {len(found)} 件" if found else "関係する Decision log はない")
+        return 0
     if args.stale:
         found = stale_links(args.folder, logs)
         for f in found:

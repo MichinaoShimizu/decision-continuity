@@ -104,6 +104,31 @@ Active：上限は 3（[client.py:1][c1]）、タイムアウトは 30（[client
 [c2]: https://github.com/example/payment-api/blob/{sha}/src/payment/http/client.py#L2
 """
 
+# いまのコードと合っている Decision log（E11・E12 が使う）。#13 で上限が 5 になったまま
+CURRENT_LOG = """---
+category: reliability
+checked: {short}
+---
+
+# リトライの上限が 3 から 5 になった
+
+## ステータス
+
+Active：上限は 5（`src/payment/http/client.py:1`）。
+
+## 起きたこと
+
+- 2025-01-12 リトライの上限を 3 から 5 に（PR #13）
+
+## 理由
+
+不明。
+
+## 分かっていないこと
+
+- なぜ 5 にしたか。
+"""
+
 PREAMBLE = (
     "これは評価用の合成のリポジトリで、実在の履歴ではありません。このワークスペースに入っている decision-log スキルに従ってください。"
     "GitHub やネットワークには触れず、手元の git だけで調べてください（`gh` は使えないものとして扱う）。\n\n"
@@ -130,6 +155,12 @@ CASES = {
             ["記録あり", "コメント", "100"], ["不明（記録に書かれていない）"], False, False),
     "E10": ("decision-log で、既存の Decision log を確かめ直して。ブランチ・コミット・PR は作らず、ファイルを書くところまででよい。",
             ["#13"], ["status: accepted"], True, True),  # 中身はファイルの正解表（ANSWERS）で見る
+    "E11": ("decision-log で check して。これから src/payment/http/client.py の MAX_RETRIES を 3 に戻したい。",
+            ["DL-1", "MAX_RETRIES"], ["status: accepted"], True, True),
+    "E12": ("decision-log で record して。@alice が今日、MAX_RETRIES を 5 から 7 に上げると決めた。理由は、相手先のメンテナンス中に失敗が増えたため。"
+            "ほかの案はタイムアウトを延ばすことだったが、待ち時間が長くなりすぎるので見送った。コードの変更はこれから。"
+            "ブランチ・コミット・PR は作らず、ファイルを書くところまででよい。",
+            ["記録"], ["status: accepted"], True, True),
     "E09": ("decision-log で audit して。範囲は src/db/pool.py。",
             ["記録あり", "2025-03-18", "10 から 20"], ["不明（記録に書かれていない）"], False, False),
 }
@@ -149,8 +180,14 @@ ANSWERS = {
         "理由は不明": [r"^不明"],
         "#12 はタイトルと中身が違う": [r"(?i)typo"],
     },
+    "E12": {
+        "5 から 7": [r"5\s*(?:→|->|から|to)\s*7"],
+        "決めた人": [r"@alice"],
+        "理由": [r"メンテナンス"],
+        "ほかの案": [r"タイムアウト"],
+    },
     "E10": {
-        "追記のステータスの行": [r"^Superseded[：:]"],
+        "追記のステータスの行": [r"^(?:- )?Superseded[：:]"],
         "上限が 5 に": [r"(?:上限|MAX_RETRIES)[^\n]*5"],
         "変えた PR #13": [r"#13"],
     },
@@ -201,7 +238,10 @@ def seed_log(repo, case):
     folder = repo / "docs" / "decision-logs"
     folder.mkdir(parents=True)
     path = folder / "0001.md"
-    if case == "E10":
+    if case in ("E11", "E12"):
+        short = git(repo, "rev-parse", "--short", "HEAD").strip()
+        path.write_text(CURRENT_LOG.format(short=short), encoding="utf-8")
+    elif case == "E10":
         sha = git(repo, "log", "--format=%H", "-1", "--grep", "Merge pull request #12").strip()
         date = git(repo, "log", "--format=%ad", "--date=short", "-1", sha).strip()
         path.write_text(STALE_LOG.format(sha=sha, short=sha[:7], date=date), encoding="utf-8")
