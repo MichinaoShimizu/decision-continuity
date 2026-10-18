@@ -47,6 +47,7 @@ HISTORY = [
     ("Keep logs longer (#18)", "", {"config/logging.yml": "retention_days: 90\n"}),
     ("Rotate webhook secret (#19)", "", {"src/payment/webhook/client.py": "TIMEOUT = 3\nSECRET_NAME = \"webhook-v2\"\n"}),
     ("Refactor helper (#20)", "", {"src/payment/helper.py": "values = [1, 2]\nresult = sum(values)\n"}),
+    ("Cap batch size (#21)", "", {"src/payment/batch.py": "# The gateway rejects more than 100 items per call (incident 2025-03-15).\nBATCH_LIMIT = 100\n"}),
 ]
 
 # 既存の Decision log（E06 だけが使う）
@@ -95,6 +96,8 @@ CASES = {
             ["分かった", "元の場所なし"], ["status: accepted"], True, True),
     "E07": ("decision-log で audit して。範囲はリポジトリ全体。",
             ["decision-log-reader"], ["status: accepted"], False, False),
+    "E08": ("decision-log で audit して。範囲は src/payment/batch.py。",
+            ["記録あり（差分）", "100"], ["不明（記録に書かれていない）", "記録あり（本文）"], False, False),
 }
 
 

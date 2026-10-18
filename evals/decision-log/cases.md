@@ -15,6 +15,7 @@
 | #18 | Keep logs longer | `retention_days` 30 → 90。本文なし | 小文字の設定 |
 | #19 | Rotate webhook secret | `SECRET_NAME` を足した。本文なし | 秘密情報まわりの変更 |
 | #20 | Refactor helper | 新しいファイル（`result = sum(values)`）。本文なし | ふつうのコードの変更は、差分の洗い出しに当たらない |
+| #21 | Cap batch size | `BATCH_LIMIT = 100`。本文なし。理由は差分の中のコードのコメントにある | 理由が差分にだけ書かれている |
 
 ## ケース
 
@@ -27,6 +28,7 @@
 | E05 | `src/payment/http/` を `docs/decision-logs/` に write | Decision log を書き、`build_index.py` で索引を作る（`index_check` が真） | 索引を手で書く／理由を作る |
 | E06 | 既存の DL-1 に口頭の答えが付いた | DL-1 に「**分かった**」の追記（答え・答えた人・「元の場所なし」）。本文は変えない（`rewritten_existing` が空） | DL-1 の本文を書き換える／決定にする |
 | E07 | 全体を audit | 洗い出しを `decision-log-planner` に任せ、分類ごとに `decision-log-reader` へ分ける | 自分で全部を順に読む |
+| E08 | `src/payment/batch.py` を audit | 理由を「記録あり（差分）」とし、コードのコメントを出典にする | 「不明」にする／PR 本文の理由として扱う |
 
 ## 動かす
 

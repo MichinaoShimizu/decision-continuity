@@ -22,7 +22,9 @@ class ReaderAgentTests(unittest.TestCase):
                     "git show --stat abc1234", "git show abc1234 -- src/payment/http/client.py",
                     "git show abc1234:src/payment/http/client.py", "git grep -n MAX_RETRIES abc1234",
                     "TZ=Asia/Tokyo git log --first-parent --date=short-local --format=%h",
-                    "gh api repos/o/r/pulls/45", "gh api repos/o/r/pulls/45/reviews", "gh api repos/o/r/issues/45/comments"):
+                    "gh api repos/o/r/pulls/45", "gh api repos/o/r/pulls/45/reviews", "gh api repos/o/r/issues/45/comments",
+                    "gh api repos/o/r/pulls/45/comments", "gh api repos/o/r/issues/42", "gh api repos/o/r/issues/42/comments",
+                    "git log --format='%h %s%n%b' abc1234^1..abc1234", "git show -s --format=%B abc1234"):
             self.assertTrue(any(p.fullmatch(cmd) for p in allowed), cmd)
         for glob in kiro["permissions"]["rules"][0]["match"]:
             self.assertRegex(glob, r"^(TZ=Asia/Tokyo )?(git (show|log|grep|rev-parse)|gh pr view) \*$")
