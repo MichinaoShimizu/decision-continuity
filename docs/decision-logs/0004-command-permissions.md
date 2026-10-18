@@ -54,3 +54,9 @@ checked: 15e9528
 [s25]: https://github.com/MichinaoShimizu/decision-continuity/blob/15e95285ce29f297cca4ea408e8e1c21bb3d3e16/skills/decision-log/SKILL.md#L25
 [kj39]: https://github.com/MichinaoShimizu/decision-continuity/blob/15e95285ce29f297cca4ea408e8e1c21bb3d3e16/agents/kiro/decision-log-reader.json#L39
 [kj46]: https://github.com/MichinaoShimizu/decision-continuity/blob/15e95285ce29f297cca4ea408e8e1c21bb3d3e16/agents/kiro/decision-log-reader.json#L46
+
+## 追記 2026-10-18
+
+**分かった**（2026-10-18）：「PR #79 で `env TZ=…`・`gh pr list` の注意を外したのは、不要になったからか、短くするためか」
+
+PR #79 を書いた Claude が、削るときに意図せず落としたもの。Decision log を書き直したときに見つかり、@MichinaoShimizu の判断で [PR #82](https://github.com/MichinaoShimizu/decision-continuity/pull/82) で戻した（会話で。元の場所なし）。
