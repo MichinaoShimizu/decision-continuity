@@ -82,6 +82,21 @@ class BuildHistoryTests(unittest.TestCase):
         self.commit("src/auth/session.py", "TTL = 48", "Longer session (#4)", "2025-02-10T00:00:00Z")
         self.assertEqual(self.run_script("--check").returncode, 1)
 
+    def test_timeline_collects_first_points_and_keeps_year_summaries(self):
+        self.run_script()
+        timeline = self.page("timeline.md")
+        self.assertLess(timeline.index("## 2025"), timeline.index("| [2 月](2025-02.md) | 2 | まだ |"))
+        self.assertLess(timeline.index("| [2 月](2025-02.md)"), timeline.index("| [1 月](2025-01.md) | 1 | まだ |"))
+        path = self.repo / "docs/change-history/2025-02.md"
+        path.write_text(path.read_text(encoding="utf-8").replace("（まだ書いていない）", "- 決済の再試行を a|b に（#3）\n- 小さなこと"), encoding="utf-8")
+        self.run_script()
+        self.assertIn("| [2 月](2025-02.md) | 2 | 決済の再試行を a\\|b に（#3） |", self.page("timeline.md"))
+        path = self.repo / "docs/change-history/timeline.md"
+        path.write_text(path.read_text(encoding="utf-8").replace("（まだ書いていない）", "- 決済の再試行を見直した（2 月）"), encoding="utf-8")
+        self.assertEqual(self.run_script().returncode, 0)
+        self.assertIn("## 2025\n\n- 決済の再試行を見直した（2 月）\n\n| 月 |", self.page("timeline.md"))
+        self.assertEqual(self.run_script("--check").returncode, 0)
+
     def test_since_and_depth(self):
         self.run_script("--since", "2025-02", "--depth", "1")
         self.assertFalse((self.repo / "docs/change-history/2025-01.md").exists())
