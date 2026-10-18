@@ -22,13 +22,13 @@ allowed-tools: Bash(git log:*) Bash(git show:*) Bash(git grep:*) Bash(git rev-pa
 4. 書いた本文は書き換えない。後の変化は追記で足す。
 5. 見た目の変更、ふつうのバグ修正、依存の更新は書かない。
 6. 秘密と個人情報を写さない。人はアカウント名で書く。リンクは確かめたものだけ書く。
-7. コマンドは 1 回に 1 つ。`;`・`&&`・`|`・`cd`・`git -C` を使わず、引数の記号は一重引用符で囲む（確認なしの許可に当たるように）。
+7. コマンドは 1 回に 1 つ。`;`・`&&`・`|`・`cd`・`git -C`・`env TZ=…`・`gh pr list` を使わず（`TZ=` は先頭にそのまま書く）、引数の記号は一重引用符で囲む（確認なしの許可に当たるように）。
 
 ## 手順
 
 1. 既存の Decision log の `category:` の行だけを読む（読む・探す道具で）。重なりそうなものだけ全文を読む。
 2. サブエージェント `decision-log-planner` に範囲を渡し、候補を洗わせる。
-3. 返ってきた分類ごとに `decision-log-reader` を 1 つずつ、1 回の応答でまとめて呼ぶ（Kiro は 1 回に 4 つまで）。件数が少なくても自分で読まない。
+3. 返ってきた分類ごとに `decision-log-reader` を 1 つずつ、1 回の応答でまとめて呼ぶ（Kiro は 1 回に 4 つまで）。件数が少なくても自分で読まない。結果は呼び出しの戻りで受け取り、`sleep` で待たない。
 4. 一つの流れの変更を 1 つの Decision log にまとめる。形は [references/format.md](references/format.md)。
 5. `write` なら書き、索引を作り直して確かめる（`python3 .claude/skills/decision-log/scripts/build_index.py <置き場所>`、続けて `--check`。Kiro は `.kiro/skills/…`、プラグインは `${CLAUDE_SKILL_DIR}/scripts/…`）。ブランチを切り、PR を出す。
 6. 報告する：食い違い（PR の本文と差分など）、範囲と基準のコミット、Decision log（`audit` なら下書き）、決定の候補（決定の言葉と決めた人が記録にあるもの）、見た変更の数と全体の数、読み残し。
