@@ -1,9 +1,20 @@
 # 手順 0〜3：範囲を決め、候補を読み、確かめ、振り分ける（decision-log）
 
+## 調べ役に任せる
+
+`.kiro/agents/decision-log-planner.json` か `.kiro/agents/decision-log-planner.md`（Kiro）か `.claude/agents/decision-log-planner.md`（Claude Code）があるときは、手順 0 の 1・3・4 と手順 1 の洗い出し・並べ方を自分で回さず、名前で指定して調べ役に任せる。Claude Code のプラグインで入れたときは `decision-continuity:decision-log-planner` という名前で呼ぶ。調べ役は手元の git だけを使い、そのコマンドは調べ役の定義の許可で確認なしに通る。
+
+1. 自分でするのは手順 0 の 2（既存の記録を読む）だけにする。
+2. 範囲・`depth`・時間帯と、既存の Decision log の `keywords` を渡す。例：「decision-log-planner サブエージェントで、範囲 src/payment/、depth 20、keywords は MAX_RETRIES|webhook で洗って」。
+3. 返ってきた「前提」（リポジトリ・基準のコミット）と「分担」で reader を呼び（下の「サブエージェントに分ける」）、「広さ」「`depth` の外」「落としたもの」「注意」を報告に使う。
+4. 浅いクローンと返ってきたら、`git fetch --unshallow` をしてから呼び直す（確認が出る）。できなければ、見えた範囲を報告に書く。
+
+ないとき、または名前で呼んで失敗したとき（Kiro は登録のない名前を既定に切り替えない）は、下の手順 0〜1 を自分で回す。
+
 ## 0. 範囲と既存の記録
 
 1. リポジトリ名（`git remote get-url origin` の末尾）、基準のコミット（`git rev-parse HEAD`）、範囲を決める。
-2. 既存の Decision log の、`category` と `keywords` の行だけを読む（`grep -H -E '^(category|keywords):' <置き場所>/*.md`）。全文は、手順 1 で候補と重なったものだけ読む。索引の `README.md` は参考にとどめる。
+2. 既存の Decision log の、`category` と `keywords` の行だけを読む。シェルの `grep` ではなく、エージェントの読む・探す道具で `^(category|keywords):` を探す（確認なしで通る）。全文は、手順 1 で候補と重なったものだけ読む。索引の `README.md` は参考にとどめる。
 3. 履歴の一覧を手元で 1 回で取る。`TZ=Asia/Tokyo git log --first-parent --date=short-local --format='@@ %h %ad %s' --name-only [-- <scope のパス>]`。`TZ=` は先頭にそのまま書き、`env` を付けない（`env TZ=…` は確認なしの許可に当たらない）。PR の一覧もこの git の履歴から作り、`gh pr list` は使わない。日付はすべて JST（日本時間）の YYYY-MM-DD で書く（ほかの時間帯を頼まれたら `TZ=<時間帯>` に替え、報告に書く。このときは確認が出る）。PR の `mergedAt` などは UTC なので、9 時間足して JST の日付にする（例：`gh pr view 101 --json mergedAt --jq '.mergedAt | fromdate + 32400 | strftime("%Y-%m-%d")'`）。メッセージの `(#123)` や `Merge pull request #123` で PR の番号に結びつける。マージコミットの件名はブランチ名なので（`Merge pull request #12 from x/fix-typo`）、`git log --first-parent --merges --format='@@ %h %b' [-- <scope のパス>]` も取り、本文の 1 行目を PR のタイトルとして読む。浅いクローンなら先に `git fetch --unshallow`。できなければ、見えた範囲を報告に書く。
 4. マージされた変更を全部数え、総数とどこまで見たかを記録する。
 
@@ -36,7 +47,7 @@
 
 ## サブエージェントに分ける
 
-読む候補が 5 件を超えたとき（SKILL.md の「手順」）、分類ごとに 1 つ、同時に呼ぶ。差分が小さい、自分で読んだほうが速い、は分けない理由にしない。
+読む候補があれば、件数によらず reader に読ませる。分類ごとに 1 つ、同時に呼ぶ。差分が小さい、自分で読んだほうが速い、は分けない理由にしない（reader の中なら、読むコマンドが reader の定義の許可で確認なしに通る）。
 
 - `.kiro/agents/decision-log-reader.json` か `.kiro/agents/decision-log-reader.md`（Kiro）か `.claude/agents/decision-log-reader.md`（Claude Code）があるときだけ、名前で指定して呼ぶ。Claude Code のプラグインで入れたときは `decision-continuity:decision-log-reader` という名前で呼ぶ。例：「decision-log-reader サブエージェントで、reliability の PR #101、#117 を基準のコミット abc1234 で読んで」。
 - ないとき、または名前で呼んで失敗したとき（Kiro は登録のない名前を既定に切り替えない）は、既定のサブエージェントにリポジトリ・基準のコミット・分類・PR の番号を渡し、「起きたこと」「理由」「関わった人」の行、決定の言葉、問い、keywords の候補を返させる。ファイルは書かせない。

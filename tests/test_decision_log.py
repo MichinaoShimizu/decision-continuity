@@ -28,6 +28,39 @@ class ReaderAgentTests(unittest.TestCase):
             self.assertRegex(glob, r"^(TZ=Asia/Tokyo )?(git (show|log|grep|rev-parse)|gh pr view) \*$")
 
 
+class PlannerAgentTests(unittest.TestCase):
+    """decision-log-planner に固有の検査。メインの会話でコマンドを回さずに済むよう、手順 0〜1 のコマンドが確認なしで通るか。"""
+    ROOT = pathlib.Path(__file__).resolve().parents[1]
+    COMMANDS = ("git remote get-url origin", "git rev-parse HEAD", "git rev-parse --is-shallow-repository",
+                "TZ=Asia/Tokyo git log --first-parent --date=short-local --format='@@ %h %ad %s' --name-only -- src/payment/",
+                "git log --first-parent --merges --format='@@ %h %b'",
+                "git log --first-parent -i -G 'timeout|retr(y|ies)|limit' --format='%h' -- . ':(exclude)*lock*' ':(exclude)*.snap'",
+                "git log --first-parent -G '^[A-Z][A-Z0-9_]{2,} *[:=]' --format='%h' -- .",
+                "git log --first-parent --format='%h' -- '*.yml' '*.yaml' ':(exclude)*lock*'",
+                "git show --stat abc1234")
+
+    def test_skill_calls_the_planner_by_name(self):
+        self.assertIn("decision-log-planner", (self.ROOT / "skills/decision-log/SKILL.md").read_text(encoding="utf-8"))
+
+    def test_kiro_planner_auto_approves_the_commands_it_needs(self):
+        import re
+        kiro = json.loads((self.ROOT / "agents/kiro/decision-log-planner.json").read_text(encoding="utf-8"))
+        allowed = [re.compile(p) for p in kiro["toolsSettings"]["shell"]["allowedCommands"]]
+        for cmd in self.COMMANDS:
+            self.assertTrue(any(p.fullmatch(cmd) for p in allowed), cmd)
+        for cmd in ("git log 'x'$(id)", "git log \"$(id)\"", "git log 'a\nb'", "gh pr view 1", "git fetch --unshallow"):
+            self.assertFalse(any(p.fullmatch(cmd) for p in allowed), cmd)
+
+    def test_planner_uses_the_same_words_as_the_fallback_steps(self):
+        # 調べ役がないときはメインが investigation.md の手順を回すので、言葉と定数の正規表現を揃えておく
+        import re
+        planner = (self.ROOT / "agents/claude/decision-log-planner.md").read_text(encoding="utf-8")
+        steps = (self.ROOT / "skills/decision-log/references/investigation.md").read_text(encoding="utf-8")
+        for pattern in (r"既定：(`[^`]+`)", r"(`\^\[A-Z\]\[A-Z0-9_\]\{2,\} \*\[:=\]`)"):
+            self.assertEqual(re.findall(pattern, planner), re.findall(pattern, steps), pattern)
+            self.assertTrue(re.findall(pattern, planner), pattern)
+
+
 class SkillAllowedToolsTests(unittest.TestCase):
     """decision-log は信頼できない PR の本文を読むので、確認なしで通すのは読むだけのコマンドに限る。"""
     SKILL = pathlib.Path(__file__).resolve().parents[1] / "skills" / "decision-log" / "SKILL.md"
