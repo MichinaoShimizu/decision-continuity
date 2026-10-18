@@ -42,7 +42,7 @@ decision-log で audit して。範囲は src/payment/。
 洗い出しは decision-log-planner、読むのは decision-log-reader に、1 回でまとめて並列に任せて。
 ```
 
-まず change-history で流れをつかみ、「なぜ」まで要るテーマを decision-log で起こす。どちらも既定は下書きを返すだけで、ファイルに書くのは頼んだときだけ。
+まず change-history で流れをつかみ、「なぜ」まで要るテーマを decision-log で起こす。どちらも既定は下書きを返すだけで、ファイルに書くのは頼んだときだけ。履歴は手元の git から読むので、浅いクローンなら先に `git fetch --unshallow` する。
 
 ## その他
 
