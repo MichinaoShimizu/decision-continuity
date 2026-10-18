@@ -40,3 +40,17 @@ PR の記録から。決めた人とは限らない。いずれも承認は見�
 ## 関係する記録
 
 - DL-3
+
+---
+
+## 追記 2026-10-18（Claude）
+
+**分かった**（2026-10-18）：「Kiro V3 で REST の GET を毎回の確認なしで許可する方法は見つかったか。」
+reader の `permissions` に `gh api repos/*` を allow で足し、書き込みになる指定（`-X`・`--method`・`-f`・`-F`・`--raw-field`・`--input`）を deny で止める。Kiro 3.x は deny が allow に勝つ、という公式ドキュメントの説明による。答えたのは PR の記録で、作成 @MichinaoShimizu。元の場所：[PR #69](https://github.com/MichinaoShimizu/decision-continuity/pull/69)。PR の本文は Kiro 3.x の実機では確かめていないとする。
+
+## 追記 2026-10-18（Claude、PR #53 以降の変化）
+
+PR #53 以降の変化。
+
+- C6 2026-10-18 いまも同じ：新しい `decision-log-planner` の定義に、手順 0〜1 の git のコマンドだけの許可を入れた。Kiro 2.x 向けの正規表現は、記号を一重引用符の中だけ許す形にした。履歴：[PR #59](https://github.com/MichinaoShimizu/decision-continuity/pull/59) ／ 現在：[`agents/kiro/decision-log-planner.json`](https://github.com/MichinaoShimizu/decision-continuity/blob/f54494031bc571248825a61557e34f3b9f75da34/agents/kiro/decision-log-planner.json)
+- C7 2026-10-18 いまも同じ：`git -C <パス>` を付けない、引数の記号は一重引用符で囲む、と手順に書いた。理由は記録あり（本文・AI）：評価で reader と planner が `git -C /…/repo show …` と書いて許可に当たらず拒否されていた（PR #68 の中のコミット `a98c49c` のメッセージ）。PR #53 の本文にも、`git -C` で確認待ちや拒否になったとある。履歴：[PR #68](https://github.com/MichinaoShimizu/decision-continuity/pull/68) ／ 現在：[`skills/decision-log/references/commands.md`](https://github.com/MichinaoShimizu/decision-continuity/blob/f54494031bc571248825a61557e34f3b9f75da34/skills/decision-log/references/commands.md)

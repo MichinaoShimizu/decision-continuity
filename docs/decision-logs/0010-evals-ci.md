@@ -45,3 +45,13 @@ PR の記録から。決めた人とは限らない。いずれも承認は見�
 ## 関係する記録
 
 - DL-1、DL-4
+
+---
+
+## 追記 2026-10-18（Claude）
+
+PR #53 以降の変化。評価を初めて実際のエージェント（Claude Code 2.1.302）で 8 件回し、そこで見つかったものを直した、と PR #68 の中のコミット `a98c49c` と PR #69 の本文にある。
+
+- C8 2026-10-18 いまも同じ：合成の履歴に、理由がコードのコメントにだけある #21 と、ケース E08 を足した。履歴：[PR #67](https://github.com/MichinaoShimizu/decision-continuity/pull/67) ／ 現在：[`evals/decision-log/cases.md`](https://github.com/MichinaoShimizu/decision-continuity/blob/f54494031bc571248825a61557e34f3b9f75da34/evals/decision-log/cases.md)
+- C9 2026-10-18 いまも同じ：E05 の書いたファイルを正解表（`ANSWERS`）と照らし、足りない事実を `missing_facts` に残すようにした。履歴：[PR #68](https://github.com/MichinaoShimizu/decision-continuity/pull/68) ／ 現在：[`evals/decision-log/run.py`](https://github.com/MichinaoShimizu/decision-continuity/blob/f54494031bc571248825a61557e34f3b9f75da34/evals/decision-log/run.py)
+- C10 2026-10-18 いまも同じ：E07 を、最後の応答の言葉ではなく、応答の記録のサブエージェントの呼び出しで判定するようにした（`missing_agents`）。理由は記録あり（本文・AI）：reader を実際に呼んでいても、最後の応答に名前が出ないと「足りない」になっていた（PR #69 本文）。履歴：[PR #69](https://github.com/MichinaoShimizu/decision-continuity/pull/69) ／ 現在：`run.py`
