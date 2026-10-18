@@ -49,6 +49,8 @@
 
 読む候補があれば、件数によらず reader に読ませる。分類ごとに 1 つ、同時に呼ぶ。差分が小さい、自分で読んだほうが速い、は分けない理由にしない（reader の中なら、読むコマンドが reader の定義の許可で確認なしに通る）。
 
+同時に呼ぶとは、全部の reader を 1 回の応答（1 回の呼び出し）でまとめて渡すことである。1 つ呼んで返りを待ち、次を呼ぶ、という順に呼ばない。Claude Code は 1 つの応答に呼び出しを並べる。Kiro はサブエージェントの呼び出し 1 回に 4 つまで並べられるので、分類が 4 つを超えたら、件数の少ない分類をまとめて 4 つ以内にする。
+
 - `.kiro/agents/decision-log-reader.json` か `.kiro/agents/decision-log-reader.md`（Kiro）か `.claude/agents/decision-log-reader.md`（Claude Code）があるときだけ、名前で指定して呼ぶ。Claude Code のプラグインで入れたときは `decision-continuity:decision-log-reader` という名前で呼ぶ。例：「decision-log-reader サブエージェントで、reliability の PR #101、#117 を基準のコミット abc1234 で読んで」。
 - ないとき、または名前で呼んで失敗したとき（Kiro は登録のない名前を既定に切り替えない）は、既定のサブエージェントにリポジトリ・基準のコミット・分類・PR の番号を渡し、「起きたこと」「理由」「関わった人」の行、決定の言葉、問い、keywords の候補を返させる。ファイルは書かせない。
 - 返ってきたものの重なりを除き、自分で Decision log にまとめる。
