@@ -2,6 +2,12 @@
 
 decision-continuity の主な変更。[Keep a Changelog](https://keepachangelog.com/) の形で書く。変更は `changes/` の断片に書き（[changes/README.md](changes/README.md)）、リリースのときに版の節にまとめる。版は中身から決まり（[Semantic Versioning](https://semver.org/)、`sh tools/next-version.sh`）、各版の節がそのまま GitHub のリリースノートになる。手順は [docs/release.md](docs/release.md)。
 
+## v0.7.1 - 2026-10-18
+
+### Fixed
+
+- change-history: PR を通さないブランチの取り込み（`Merge branch …`）に一覧で印を付け、月の主な変更の 1 行目にしないようにした。取り込みしかない月は「目立った変更なし」と書く
+
 ## v0.7.0 - 2026-10-18
 
 ### Added
