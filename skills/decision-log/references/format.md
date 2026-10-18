@@ -34,7 +34,7 @@ checked: abc1234
 - 理由の 1 行目は `記録あり：<要約>（<どこに書かれていたか>）`、`推測：<内容>`、`不明。` のどれか。本文に AI の印（`Generated with Claude Code` など）があれば出典に添え、人の判断と合っているかを問いに足す。
 - 分かっていないことには、知っていそうな人への問いを書く。なければ「なし」。
 - 後の変化や答えは末尾に `## 追記 YYYY-MM-DD` で足す。理由が分かったら 1 行目を `**分かった**（YYYY-MM-DD）：「<問い>」`、取り下げるなら `**終了**（YYYY-MM-DD）：<理由>` にする（索引が読む）。分類と `checked` はフロントマターを直す。
-- リポジトリが英語なら英語で書く：`**Now** (<commit>):`、`## What happened`・`## Reason`・`## Open questions`、`Documented:`・`Inferred:`・`Unknown.`、`## Addendum`、`**Answered**`・`**Retired**`。
+- 頼んだ人の言葉で書く。英語を求められたら（頼まれた、リポジトリの `CLAUDE.md` などの指示）英語で書く：`**Now** (<commit>):`、`## What happened`・`## Reason`・`## Open questions`、`Documented:`・`Inferred:`・`Unknown.`、`## Addendum`、`**Answered**`・`**Retired**`。
 
 ## 分類
 
