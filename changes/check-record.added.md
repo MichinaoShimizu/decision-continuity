@@ -1,0 +1,1 @@
+- decision-log: 変える前に関係する判断を照らす `check` と、人が決めた判断を変更と同じ PR に記録する `record` を足した。`build_index.py --related <パス>… --words <言葉>` が、パスと言葉で関係する Decision log を挙げる。回し方は `docs/ai-workflow.md`
