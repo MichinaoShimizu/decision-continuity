@@ -53,16 +53,6 @@ class PlannerAgentTests(unittest.TestCase):
         for cmd in ("git log 'x'$(id)", "git log \"$(id)\"", "git log 'a\nb'", "gh pr view 1", "git fetch --unshallow"):
             self.assertFalse(any(p.fullmatch(cmd) for p in allowed), cmd)
 
-    def test_planner_uses_the_same_words_as_the_fallback_steps(self):
-        # 調べ役がないときはメインが investigation.md の手順を回すので、言葉と定数の正規表現を揃えておく
-        import re
-        planner = (self.ROOT / "agents/claude/decision-log-planner.md").read_text(encoding="utf-8")
-        steps = (self.ROOT / "skills/decision-log/references/investigation.md").read_text(encoding="utf-8")
-        for pattern in (r"既定：(`[^`]+`)", r"(`\^\[A-Z\]\[A-Z0-9_\]\{2,\} \*\[:=\]`)"):
-            self.assertEqual(re.findall(pattern, planner), re.findall(pattern, steps), pattern)
-            self.assertTrue(re.findall(pattern, planner), pattern)
-
-
 class SkillAllowedToolsTests(unittest.TestCase):
     """decision-log は信頼できない PR の本文を読むので、確認なしで通すのは読むだけのコマンドに限る。"""
     SKILL = pathlib.Path(__file__).resolve().parents[1] / "skills" / "decision-log" / "SKILL.md"
@@ -117,27 +107,15 @@ class BuildIndexTests(unittest.TestCase):
             self.assertEqual(self.run_script(d, "--check").returncode, 1)
 
     def test_categories_match_the_reference_table(self):
-        """索引に出す分類と中身が、references/categories.md の表と同じかを確かめる。"""
+        """索引に出す分類と中身が、references/format.md の表と同じかを確かめる。"""
         import importlib.util
         spec = importlib.util.spec_from_file_location("build_index", self.SCRIPT)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        table = (self.SCRIPT.parents[1] / "references" / "categories.md").read_text(encoding="utf-8").split("## 英語で書くとき")[0]
+        table = (self.SCRIPT.parents[1] / "references" / "format.md").read_text(encoding="utf-8").split("## 分類")[1]
         rows = [[c.strip() for c in line.strip("|").split("|")] for line in table.splitlines()
                 if line.startswith("| `") and not line.startswith("| `category`")]
         self.assertEqual([(k.strip("`"), l, d) for k, l, d in rows], [tuple(c) for c in module.CATEGORIES])
-
-    def test_categories_en_match_the_reference_table(self):
-        """英語の索引に出す分類と中身が、references/categories.md の英語の表と同じかを確かめる。"""
-        import importlib.util
-        spec = importlib.util.spec_from_file_location("build_index", self.SCRIPT)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        table = (self.SCRIPT.parents[1] / "references" / "categories.md").read_text(encoding="utf-8").split("## 英語で書くとき")[1]
-        rows = [[c.strip() for c in line.strip("|").split("|")] for line in table.splitlines()
-                if line.startswith("| `") and not line.startswith("| `category`")]
-        self.assertEqual({k.strip("`"): (l, d) for k, l, d in rows}, module.CATEGORIES_EN)
-        self.assertEqual(list(module.CATEGORIES_EN), [k for k, _, _ in module.CATEGORIES])
 
     @staticmethod
     def log_en(category, title, dates, reason, notes=""):
@@ -212,32 +190,17 @@ class BuildIndexTests(unittest.TestCase):
             self.assertIn("0001-other.md, 0001.md: 番号が重なっている", built.stdout)
             self.assertEqual(self.run_script(d, "--check").returncode, 1)
 
-    def test_reports_malformed_claim_lines(self):
-        body = ("---\nkind: log\ncategory: data\n---\n\n# [demo] x\n\n## 起きたこと\n\n"
-                "- 2025-01-01 いまも同じ：a。履歴：PR #1 ／ 現在：x.py:1\n"
-                "- 2025-01-02 置き換え済み：b。履歴：PR #2\n"
-                "- 2025-01-03 たぶん同じ：c。履歴：PR #3 ／ 現在：x.py:2\n"
-                "- 2025-1-5 いまも同じ：e。履歴：PR #6 ／ 現在：x.py:3\n"
-                "- C4 2025-01-04 一部置き換え済み：d。履歴：PR #4 ／ 現在：PR #5 で変わった\n"
-                "- C4 2025-01-05 競合：f。履歴：PR #7 ／ 現在：x.py:4\n\n## 理由\n\n不明。\n")
+    def test_reads_the_minimal_format_and_reports_missing_claims(self):
+        new = ("---\ncategory: data\nchecked: abc1234\n---\n\n# x\n\n**いま**（abc1234）：a のまま（[x.py:1](https://github.com/o/r/blob/abc1234/x.py#L1)）。\n\n"
+               "## 起きたこと\n\n- 2025-01-01 a を 1 から 2 に（PR #1。作成・マージ @a）\n\n## 理由\n\n不明。\n\n## 分かっていないこと\n\n- なぜ 2 か\n")
         with tempfile.TemporaryDirectory() as directory:
             d = pathlib.Path(directory)
-            (d / "0001.md").write_text(body, encoding="utf-8")
-            lines = self.run_script(d).stdout.splitlines()
-            has = lambda *words: any(all(w in l for w in words) for l in lines)
-            self.assertTrue(has("2025-01-02 置き換え済み", "両方がない"), lines)
-            self.assertTrue(has("2025-01-03 たぶん同じ", "状態が"), lines)
-            self.assertTrue(has("2025-1-5", "の形でない"), lines)
-            # 前の形（C 番号付き、前の状態の語）も読み、番号の重なりだけを挙げる
-            self.assertTrue(has("C4 が重なっている"), lines)
-            self.assertFalse(has("2025-01-01"), lines)
-            self.assertFalse(has("一部置き換え済み：d"), lines)
-            en = body.replace("## 起きたこと", "## What happened").replace("## 理由\n\n不明。", "## Reason\n\nUnknown.")
-            en = en.replace("いまも同じ：a。履歴：PR #1 ／ 現在：", "Still true: a. History: PR #1 / Now: ")
-            (d / "0001.md").write_text(en, encoding="utf-8")
-            lines = self.run_script(d).stdout.splitlines()
-            self.assertFalse(has("2025-01-01"), lines)
-            self.assertTrue(has("2025-01-02", "Still true"), lines)
+            (d / "0001-x.md").write_text(new, encoding="utf-8")
+            out = self.run_script(d)
+            self.assertEqual(out.returncode, 0, out.stdout)
+            self.assertIn("- 2025-01-01 [DL-1](0001-x.md) x・理由不明", (d / "README.md").read_text(encoding="utf-8"))
+            (d / "0001-x.md").write_text(new.replace("- 2025-01-01 a を", "- a を"), encoding="utf-8")
+            self.assertIn("「## 起きたこと」に `- YYYY-MM-DD", self.run_script(d).stdout)
 
     def test_checked_logs_need_a_now_line(self):
         def write(d, front, body, notes=""):
@@ -267,9 +230,9 @@ class BuildIndexTests(unittest.TestCase):
             first = git("rev-parse", "HEAD")
             folder = repo / "docs/decision-logs"; folder.mkdir(parents=True)
             u = f"https://github.com/o/r/blob/{first}/src/a.py"
-            log = (f"---\nkind: log\ncategory: reliability\n---\n\n# [r] x\n\n## 起きたこと\n\n"
-                   f"- 2025-01-01 いまも同じ：MAX は 3。履歴：PR #1 ／ 現在：[a.py:1]({u}#L1)\n"
-                   f"- 2025-01-01 いまも同じ：TIMEOUT は 5。履歴：PR #1 ／ 現在：[a.py:2-3]({u}#L2-L3)\n\n## 理由\n\n不明。\n")
+            log = (f"---\ncategory: reliability\nchecked: {first[:7]}\n---\n\n# x\n\n"
+                   f"**いま**（{first[:7]}）：MAX は 3（[a.py:1]({u}#L1)）、TIMEOUT は 5（[a.py:2-3]({u}#L2-L3)）。\n\n"
+                   f"## 起きたこと\n\n- 2025-01-01 MAX を 3 に（PR #1）\n\n## 理由\n\n不明。\n")
             (folder / "0001.md").write_text(log, encoding="utf-8")
             self.assertEqual(self.run_script(folder, "--stale").returncode, 0)
             (repo / "src/a.py").write_text("MAX = 5\nTIMEOUT = 5\nNAME = 'x'\n", encoding="utf-8")
@@ -279,7 +242,7 @@ class BuildIndexTests(unittest.TestCase):
             self.assertIn("要再確認：src/a.py#L1（", out.stdout)
             self.assertNotIn("#L2-L3", out.stdout)
             # 確かめ直して checked を進めると、その時点から比べる
-            (folder / "0001.md").write_text(log.replace("category: reliability\n", f"category: reliability\nchecked: {second[:7]}\n")
+            (folder / "0001.md").write_text(log.replace(f"checked: {first[:7]}", f"checked: {second[:7]}")
                                             + f"\n---\n\n## 追記 2026-01-01（x）\n\n**いま**（{second[:7]}）：MAX は 5（PR #2）。\n\n"
                                             "- 「MAX は 3」は置き換え済みになった：PR #2\n", encoding="utf-8")
             self.assertEqual(self.run_script(folder, "--stale").returncode, 0, self.run_script(folder, "--stale").stdout)
@@ -301,9 +264,6 @@ class BuildIndexTests(unittest.TestCase):
             out = self.run_script(d).stdout
             self.assertIn("checked が基準のコミット", out)
             self.assertIn("（data）", (d / "README.md").read_text(encoding="utf-8"))
-            # 日付の形が崩れた C 行も挙げる
-            (d / "0001.md").write_text(head.format(front="", claims=ok + "\n- 2025-1-5 いまも同じ：b", notes=""), encoding="utf-8")
-            self.assertIn("2025-1-5 いまも同じ：b…」 の行が", self.run_script(d).stdout)
 
     def test_repo_name_without_origin_is_the_repository_folder(self):
         with tempfile.TemporaryDirectory() as directory:

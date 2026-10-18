@@ -100,13 +100,13 @@ class RunnerTests(unittest.TestCase):
 
 
 class CandidateScanTests(unittest.TestCase):
-    """references/investigation.md に書いた候補の洗い出しを、合成の履歴で実際に回す。"""
+    """decision-log-planner に書いた候補の洗い出しを、合成の履歴で実際に回す。"""
 
     def setUp(self):
         self.work = tempfile.TemporaryDirectory()
         self.repo = pathlib.Path(self.work.name) / "payment-api"
         run.build_repo(self.repo)
-        doc = (ROOT / "skills/decision-log/references/investigation.md").read_text(encoding="utf-8")
+        doc = (ROOT / "agents/claude/decision-log-planner.md").read_text(encoding="utf-8")
         self.words = re.search(r"既定：`([^`]+)`", doc).group(1)
         self.constant = re.search(r"定数・設定の値の変更：`([^`]+)`", doc).group(1)
         config_line = next(l for l in doc.splitlines() if "設定ファイルの変更" in l)
@@ -119,7 +119,7 @@ class CandidateScanTests(unittest.TestCase):
         return run.git(self.repo, "log", "--first-parent", "--format=%s", *args).splitlines()
 
     def scan(self):
-        """investigation.md の手順 1 の 2：3 つを別々に回して合わせる。"""
+        """planner の手順 3：3 つを別々に回して合わせる。"""
         exclude = ["--", ".", ":(exclude)*lock*", ":(exclude)*.snap"]
         return (set(self.subjects("-i", "-G", self.words, *exclude))
                 | set(self.subjects("-G", self.constant, *exclude))

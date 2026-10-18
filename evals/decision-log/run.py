@@ -56,22 +56,18 @@ HISTORY = [
 
 # 既存の Decision log（E06 だけが使う）
 SEEDED_LOG = """---
-kind: log
 category: reliability
-keywords: [MAX_RETRIES, retry]
 ---
 
-# [payment-api] リトライの上限が 3 から 5 になった
-
-> 過去の観察である。決定ではなく、何も縛らない。
+# リトライの上限が 3 から 5 になった
 
 ## 起きたこと
 
-- {date} いまも同じ：リトライの上限が 3 から 5 になった。履歴：コミット {sha} ／ 現在：`src/payment/http/client.py:1`
+- {date} リトライの上限を 3 から 5 に（コミット {sha}）
 
 ## 理由
 
-不明（記録に書かれていない）。
+不明。
 
 ## 分かっていないこと
 
@@ -80,26 +76,22 @@ keywords: [MAX_RETRIES, retry]
 
 # 古くなった Decision log（E10 だけが使う）。#12 の時点で確かめたまま、#13 で 1 行目（MAX_RETRIES）が変わった
 STALE_LOG = """---
-kind: log
 category: reliability
-keywords: [MAX_RETRIES, retry]
 checked: {short}
 ---
 
-# [payment-api] リトライの上限が 3 になった
+# リトライの上限が 3 になった
 
-> 過去の観察である。決定ではなく、何も縛らない。
-
-**いま**（{short}）：上限は 3。理由は分かっていない。
+**いま**（{short}）：上限は 3（[client.py:1][c1]）、タイムアウトは 30（[client.py:2][c2]）。
 
 ## 起きたこと
 
-- 2025-01-10 いまも同じ：リトライの上限が 3 になった。履歴：[コミット {short}][first] ／ 現在：[`client.py:1`][c1]
-- {date} いまも同じ：タイムアウトが 5 から 30 になった。履歴：[PR #12][first] ／ 現在：[`client.py:2`][c2]
+- 2025-01-10 リトライの上限を 3 に（[コミット {short}][first]）
+- {date} タイムアウトを 5 から 30 に（[PR #12][first]）
 
 ## 理由
 
-不明（記録に書かれていない）。
+不明。
 
 ## 分かっていないこと
 
@@ -129,13 +121,13 @@ CASES = {
             ["docs/decision-logs", "不明"], [], False, True),
     "E06": ("decision-log で write して。DL-1 の「分かっていないこと」の「なぜ 5 にしたか」に、@alice が口頭で「外部監査で指摘されたから」と答えた。決めた人や決定の言葉はない。"
             "ブランチ・コミット・PR は作らず、ファイルを書くところまででよい。",
-            ["分かった", "元の場所なし"], ["status: accepted"], True, True),
+            ["分かった"], ["status: accepted"], True, True),
     "E07": ("decision-log で audit して。範囲はリポジトリ全体。",
             [], ["status: accepted"], False, False),
     "E08": ("decision-log で audit して。範囲は src/payment/batch.py。",
             ["記録あり", "コメント", "100"], ["不明（記録に書かれていない）"], False, False),
-    "E10": ("decision-log で recheck して。ブランチ・コミット・PR は作らず、ファイルを書くところまででよい。",
-            ["#13"], ["status: accepted"], True, True),  # 状態はファイルの正解表（ANSWERS）で見る
+    "E10": ("decision-log で、既存の Decision log を確かめ直して。ブランチ・コミット・PR は作らず、ファイルを書くところまででよい。",
+            ["#13"], ["status: accepted"], True, True),  # 中身はファイルの正解表（ANSWERS）で見る
     "E09": ("decision-log で audit して。範囲は src/db/pool.py。",
             ["記録あり", "2025-03-18", "10 から 20"], ["不明（記録に書かれていない）"], False, False),
 }
@@ -157,9 +149,8 @@ ANSWERS = {
     },
     "E10": {
         "追記のいまの行": [r"^\*\*いま\*\*（[0-9a-f]{7,40}）："],
-        "上限の行が置き換え済みに": [r"(?:上限|MAX_RETRIES)[^\n]*置き換え済み", r"置き換え済み[^\n]*(?:上限|MAX_RETRIES)"],
-        "置き換えた PR #13": [r"#13"],
-        "タイムアウトの行はいまも同じ": [r"(?:タイムアウト|TIMEOUT)[^\n]*いまも同じ", r"いまも同じ[^\n]*(?:タイムアウト|TIMEOUT)"],
+        "上限が 5 に": [r"(?:上限|MAX_RETRIES)[^\n]*5"],
+        "変えた PR #13": [r"#13"],
     },
 }
 

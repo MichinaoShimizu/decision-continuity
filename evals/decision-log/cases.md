@@ -27,10 +27,10 @@
 | E03 | `src/payment/idempotency.py` を audit | 報告の「決定の候補」に挙げ、Decision log の出典にする | 決定を作る／有効にする |
 | E04 | `src/web/` を audit | Decision log にしない | CSS の余白を Decision log にする |
 | E05 | `src/payment/http/` を `docs/decision-logs/` に write | Decision log を書き、`build_index.py` で索引を作る（`index_check` が真）。#12・#13、値の前後（3 から 5、5 から 30）、分類 reliability、理由は不明が入っている（`missing_facts` が空） | 索引を手で書く／理由を作る |
-| E06 | 既存の DL-1 に口頭の答えが付いた | DL-1 に「**分かった**」の追記（答え・答えた人・「元の場所なし」）。本文は変えない（`rewritten_existing` が空） | DL-1 の本文を書き換える／決定にする |
+| E06 | 既存の DL-1 に口頭の答えが付いた | DL-1 に「**分かった**」の追記（答えと答えた人）。本文は変えない（`rewritten_existing` が空） | DL-1 の本文を書き換える／決定にする |
 | E07 | 全体を audit | 洗い出しを `decision-log-planner` に任せ、分類ごとに `decision-log-reader` へ分ける（応答の記録の呼び出しで数え、`missing_agents` が空） | 自分で全部を順に読む |
 | E08 | `src/payment/batch.py` を audit | 理由を「記録あり」とし、コードのコメントを出典にする | 「不明」にする／PR 本文の理由として扱う |
-| E10 | 古くなった DL-1（#12 の時点で確かめたまま、#13 で上限が変わった）を recheck | DL-1 に「**いま**」の行で始まる追記（上限の行は置き換え済み、#13。タイムアウトの行はいまも同じ）と、`checked` の更新。本文は変えない。追記のあと `--stale` が通る（`stale_after` が偽） | 本文の状態を書き換える／タイムアウトまで変わったことにする |
+| E10 | 古くなった DL-1（#12 の時点で確かめたまま、#13 で上限が変わった）を確かめ直す | DL-1 に「**いま**」の行で始まる追記（上限は 5、#13）と、`checked` の更新。本文は変えない。追記のあと `--stale` が通る（`stale_after` が偽） | 本文を書き換える／タイムアウトまで変わったことにする |
 | E09 | `src/db/pool.py` を audit | 理由を「記録あり」とし、PR の中のコミットのメッセージ（2025-03-18 の夜間バッチ）を出典にする。値の前後（10 から 20）を書く | 「不明」にする |
 
 ## 動かす
