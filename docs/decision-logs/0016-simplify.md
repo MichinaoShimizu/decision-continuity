@@ -5,7 +5,9 @@ checked: 15e9528
 
 # スキルと Decision log の形を、ぎりぎりまで簡素にした
 
-**いま**：指示は [SKILL.md][skill] と [format.md][format] の 2 つだけで、モードは `audit` と `write`。Decision log は「いま」、起きたこと、理由、分かっていないことの 4 つで、前の形も [build_index.py][bi] が読む。
+## 状態
+
+いまも同じ：指示は [SKILL.md][skill] と [format.md][format] の 2 つだけで、モードは `audit` と `write`。Decision log は「いま」、起きたこと、理由、分かっていないことの 4 つで、前の形も [build_index.py][bi] が読む。
 
 ## 起きたこと
 
@@ -26,3 +28,7 @@ checked: 15e9528
 [skill]: https://github.com/MichinaoShimizu/decision-continuity/blob/15e95285ce29f297cca4ea408e8e1c21bb3d3e16/skills/decision-log/SKILL.md#L11-L15
 [format]: https://github.com/MichinaoShimizu/decision-continuity/blob/15e95285ce29f297cca4ea408e8e1c21bb3d3e16/skills/decision-log/references/format.md
 [bi]: https://github.com/MichinaoShimizu/decision-continuity/blob/15e95285ce29f297cca4ea408e8e1c21bb3d3e16/skills/decision-log/scripts/build_index.py#L63-L64
+
+## 追記 2026-10-18
+
+- 2026-10-18 「いま」の行を「## 状態」の節に移し、`いまも同じ`・`変わった`・`なくなった` のどれかで始めるようにした。起きたこと（履歴）と状態を混ぜないため。行の中のハッシュもやめた（[PR #83](https://github.com/MichinaoShimizu/decision-continuity/pull/83)。作成 @MichinaoShimizu）

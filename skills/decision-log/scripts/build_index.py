@@ -4,7 +4,7 @@
   build_index.py <フォルダー> [--repo NAME] [--lang ja|en]   README.md を書く
   build_index.py <フォルダー> --check         README.md が最新で、各 Decision log の形が崩れていないかを確かめる
                                              （どちらかが駄目なら終了コード 1）
-  build_index.py <フォルダー> --stale         「いま」のリンク先が checked のコミットより後に変わった Decision log を挙げる
+  build_index.py <フォルダー> --stale         「状態」のリンク先が checked のコミットより後に変わった Decision log を挙げる
                                              （あれば終了コード 1。git が要る）
 
 Decision log は日本語でも英語でも読む（references/format.md）。索引の言語は --lang、
@@ -47,14 +47,17 @@ CATEGORIES_EN = {
     "product": ("Product policy", "Where the spec draws the line, things decided not to do"),
     "other": ("Other", "Anything that fits none of the above; if there are many, revisit the categories"),
 }
-# 決まった言葉。日本語と英語のどちらの Decision log も読む。old_now は v0.5 までの「起きたこと」の行の「現在：」
+# 決まった言葉。日本語と英語のどちらの Decision log も読む。old_today は v0.6 までの「いま」の行、
+# old_now は v0.5 までの「起きたこと」の行の「現在：」
 WORDS = {
     "ja": dict(happened="起きたこと", reason="理由", retire="**終了**", learned="**分かった**",
-               reasons=("記録あり", "推測", "不明"), unknown="不明", old_now="現在：",
-               today="**いま**", today_re=r"^\*\*いま\*\*(?:（[0-9a-f]{7,40}）)?：\S"),
+               reasons=("記録あり", "推測", "不明"), unknown="不明", status="状態",
+               states=("いまも同じ", "変わった", "なくなった"), state_re=r"^(?:いまも同じ|変わった|なくなった)：\S",
+               old_today=r"^\*\*いま\*\*(?:（[0-9a-f]{7,40}）)?：\S", old_now="現在："),
     "en": dict(happened="What happened", reason="Reason", retire="**Retired**", learned="**Answered**",
-               reasons=("Documented", "Inferred", "Unknown"), unknown="Unknown", old_now="Now:",
-               today="**Now**", today_re=r"^\*\*Now\*\*(?: \([0-9a-f]{7,40}\))?: \S"),
+               reasons=("Documented", "Inferred", "Unknown"), unknown="Unknown", status="Status",
+               states=("Still true", "Changed", "Gone"), state_re=r"^(?:Still true|Changed|Gone): \S",
+               old_today=r"^\*\*Now\*\*(?: \([0-9a-f]{7,40}\))?: \S", old_now="Now:"),
 }
 # 0001.md、0001-auth-pkce.md のほか、0001-Short_Title.md・0001-認証の変更.md と、DL- を付けた DL-1.md・DL-0001-x.md も読む
 FILE_RE = re.compile(r"^(?:DL-(\d+)|(\d{4,})(?!-\d{2}-\d{2}))(?:[-_].*)?\.md$", re.I)
@@ -114,11 +117,12 @@ def read_log(path):
     if not dates:
         problems.append(f"「## {w['happened']}」に `- YYYY-MM-DD <何が変わったか>` の行がない")
     if checked is not None:
-        # checked を持つのは新しい形の Decision log。基準のコミットと「いま」の行（本文か追記）を確かめる
+        # checked を持つのは新しい形の Decision log。基準のコミットと「状態」の節（前の形なら「いま」の行）を確かめる
         if not re.fullmatch(r"[0-9a-f]{7,40}", checked):
             problems.append("フロントマターの checked が基準のコミットのハッシュ（7〜40 桁）でない")
-        if not re.search(w["today_re"], rest, re.M):
-            problems.append(f"checked があるのに「{w['today']}」の行がない")
+        first = next((l for l in section(body, w["status"]).splitlines() if l.strip()), "")
+        if not re.match(w["state_re"], first) and not re.search(w["old_today"], rest, re.M):
+            problems.append(f"checked があるのに「## {w['status']}」の 1 行目が「{'」「'.join(w['states'])}」のどれかで始まっていない")
     if not reason.startswith(w["reasons"]):
         problems.append(f"「## {w['reason']}」の 1 行目が「{'」「'.join(w['reasons'])}」で始まっていない")
     return dict(problems=problems, number=number(path.name), file=path.name, title=title,
@@ -129,10 +133,10 @@ def read_log(path):
 
 
 def current_links(text, w):
-    """「いま」の行（本文と追記）と、前の形の「起きたこと」の行の「現在：」より後にあるリンクを、
+    """状態の行（本文と追記）、前の形の「いま」の行、「起きたこと」の行の「現在：」より後にあるリンクを、
     (URL, ハッシュ, パス, 行, 行) で返す。参照の定義（[c12]: <URL>）も引く。"""
     defs = {k.lower(): v for k, v in REF_DEF_RE.findall(text)}
-    tails = [l for l in text.splitlines() if re.match(w["today_re"], l)]
+    tails = [l for l in text.splitlines() if re.match(w["state_re"], l) or re.match(w["old_today"], l)]
     tails += [l.rsplit(w["old_now"], 1)[1] for l in (m.group(0) for m in CLAIM_RE.finditer(text)) if w["old_now"] in l]
     found = set()
     for tail in tails:
@@ -295,7 +299,7 @@ def main():
     p.add_argument("--repo", help="見出しに出すリポジトリ名（既定はいまの索引の名前、なければ git の origin から）")
     p.add_argument("--lang", choices=("ja", "en"), help="索引の言語（既定はいまの索引の言語、なければ多いほうの言語）")
     p.add_argument("--check", action="store_true", help="書かずに、README.md が最新かを確かめる")
-    p.add_argument("--stale", action="store_true", help="書かずに、「いま」のリンク先が checked より後に変わった Decision log を挙げる")
+    p.add_argument("--stale", action="store_true", help="書かずに、「状態」のリンク先が checked より後に変わった Decision log を挙げる")
     args = p.parse_args()
     if not args.folder.is_dir():
         print(f"{args.folder} がない", file=sys.stderr)
@@ -306,7 +310,7 @@ def main():
         for f in found:
             print(f)
         print(f"要再確認 {sum('要再確認' in f for f in found)} 件、確かめられない {sum('確かめられない' in f for f in found)} 件"
-              "（確かめ直しを頼まれたら、変わったものに追記し checked を進める）" if found else "checked より後に変わった「いま」はない")
+              "（確かめ直しを頼まれたら、変わったものに追記し checked を進める）" if found else "checked より後に変わった「状態」はない")
         return 1 if found else 0
     text = build(logs, args.repo or repo_name(args.folder), args.lang or index_lang(args.folder, logs))
     target = args.folder / "README.md"

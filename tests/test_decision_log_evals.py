@@ -68,8 +68,7 @@ class RunnerTests(unittest.TestCase):
         add = [sys.executable, "-c", "import pathlib, subprocess, sys; p = pathlib.Path('docs/decision-logs/0001.md'); "
                "head = subprocess.run(['git', 'rev-parse', '--short', 'HEAD'], capture_output=True, text=True).stdout.strip(); "
                "import re; t = re.sub(r'checked: \\w+', 'checked: ' + head, p.read_text()); "
-               "p.write_text(t + f'\\n---\\n\\n## 追記 2026-01-01（x）\\n\\n**いま**（{head}）：上限は 5。\\n\\n"
-               "- 上限の行は置き換え済みになった：PR #13 で 3 から 5 になった（1 日後）\\n- タイムアウトの行はいまも同じ\\n'); "
+               "p.write_text(t + f'\\n---\\n\\n## 追記 2026-01-01（x）\\n\\n変わった：上限は 3 から 5 になった（PR #13、1 日後）。タイムアウトはいまも 30。\\n'); "
                "subprocess.run([sys.executable, '.claude/skills/decision-log/scripts/build_index.py', 'docs/decision-logs'])"]
         result, _ = self.run_case(add, "E10", "--skills-loaded")
         files = result["files"]
