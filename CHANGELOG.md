@@ -2,6 +2,14 @@
 
 decision-continuity の主な変更。[Keep a Changelog](https://keepachangelog.com/) の形で書く。変更は `changes/` の断片に書き（[changes/README.md](changes/README.md)）、リリースのときに版の節にまとめる。版は中身から決まり（[Semantic Versioning](https://semver.org/)、`sh tools/next-version.sh`）、各版の節がそのまま GitHub のリリースノートになる。手順は [docs/release.md](docs/release.md)。
 
+## v0.11.2 - 2026-10-19
+
+### Changed
+
+- change-history: `--list` は、マージコミットの下に、取り込んだ側のコミット（PR の中のコミットや、`release/1.2` などの読んでいないブランチでマージされた PR）を字下げして出す。主な変更の表は、その中の PR やコミットを指してよい（日付は読んだブランチに入った日）
+- decision-log: 調べ役は、読んでいないブランチからのマージ（`Merge branch 'release/1.2'` など）の中の PR も候補にする
+- change-history: `--github` を付けると、Author を GitHub の PR の作成者にする（`gh api` で閉じた PR を 100 件ずつ取る。読むだけ）。取れない変更は、今までどおり noreply のメール（`.mailmap` を通す）から取る
+
 ## v0.11.1 - 2026-10-19
 
 ### Changed

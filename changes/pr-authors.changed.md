@@ -1,1 +1,0 @@
-- change-history: `--github` を付けると、Author を GitHub の PR の作成者にする（`gh api` で閉じた PR を 100 件ずつ取る。読むだけ）。取れない変更は、今までどおり noreply のメール（`.mailmap` を通す）から取る
