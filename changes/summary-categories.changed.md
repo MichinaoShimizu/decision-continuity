@@ -1,0 +1,1 @@
+- change-history: 月の主な変更と年の要点を、3〜5 行に限らず、分類ごとの `### <分類>` の下に書くようにした。分類は decision-log と同じ 11 種（`architecture`・`data`・`security`・`privacy`・`compatibility`・`reliability`・`release`・`engineering`・`cost`・`product`・`other`）で、行のある分類だけを書く。いちばん大事な変更を最初の分類の 1 行目に書き、`README.md` の表に入る

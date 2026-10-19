@@ -15,7 +15,7 @@ tools: Read, Grep, Glob, Bash
    - 言葉：`git log --first-parent -i -G '<言葉>' --format='%h'`。既定：`timeout|retr(y|ies)|limit|max_|ttl|expire|auth|permission|role|token|secret|encrypt|signature|hmac|verify|email|phone|schema|migrat|deprecat|feature_?flag|instance_type|sampling|sample_rate`
    - 定数・設定の値の変更：`^[A-Z][A-Z0-9_]{2,} *[:=]` を `-i` なしで `-G` に。
    - 設定ファイルの変更：`git log --first-parent --format='%h' -- '*.yml' '*.yaml' '*.toml' '*.ini' '*.properties' '*.env'`
-5. 見た目・ふつうのバグ修正・依存の更新は、上の 4 に当たらなければ落とす。大事なものから 20 件を、分類（`architecture`・`data`・`security`・`privacy`・`compatibility`・`reliability`・`release`・`engineering`・`cost`・`product`・`other`）に分ける。
+5. 見た目・ふつうのバグ修正・依存の更新は、上の 4 に当たらなければ落とす。版を上げるだけの定型のリリース（`Release v1.2.0`・`Bump version to 1.2.0`・`chore(release): 1.2.0`・`v1.2.0` の形の件名。change-history と同じ）は、版の番号の書き換えが上の 4 に当たっても落とす。大事なものから 20 件を、分類（`architecture`・`data`・`security`・`privacy`・`compatibility`・`reliability`・`release`・`engineering`・`cost`・`product`・`other`）に分ける。
 
 コマンドは上のものと `git show --stat` だけ。1 回に 1 つ、`;`・`&&`・`|`・`cd`・`git -C` を使わず、引数の記号は一重引用符で囲む。
 

@@ -24,3 +24,7 @@ Active：`build_history.py` は一覧に作成者を書き出さず、版を上�
 - 人の名前を出さない理由は何か（公開・共有する先の都合か、評価に使われるのを避けるためか）。decision-log は人をアカウント名で書くので、そちらも同じにすべきか（@MichinaoShimizu に聞く）。
 - PR やコミットのタイトルそのものに入った名前（`Revert "…" by alice` など）は残る。そこまで消す必要があるか（@MichinaoShimizu に聞く）。
 - リリースの見分けは件名の形だけで決める。`Release automation for v2.0` のように版の番号を含む別の変更にも印が付きうる。実際のリポジトリで外れが出ないか。
+
+## 追記 2026-10-19
+
+- 2026-10-19 decision-log でも、版を上げるだけの定型のリリース（`Release v1.2.0`・`Bump version to 1.2.0`・`chore(release): 1.2.0`・`v1.2.0` の形の件名）を書かず、`decision-log-planner` の候補からも落とすことにした。版の番号の書き換えは設定ファイルの洗い出しに当たるが、それでも落とす。4 つの形が change-history の `build_history.py` と 2 つの SKILL.md・planner で揃うことは `tests/test_docs.py` が確かめる（ブランチ change-history-categories。作成 @MichinaoShimizu）。理由：「定型的なリリース、バージョンアップは年表に書かない点はデシジョンログと同じにしたい」（@MichinaoShimizu、会話 2026-10-19）
