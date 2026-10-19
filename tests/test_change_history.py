@@ -122,6 +122,46 @@ class BuildHistoryTests(unittest.TestCase):
                      "- 04-05 Release automation for the docs site（[#91]", "- 04-06 Bump requests from 2.31 to 2.32（"]:
             self.assertIn(line, april)
 
+    def merge(self, branch, message, date):
+        self.git("merge", "-q", "--no-ff", branch, "-m", message, env={"GIT_AUTHOR_DATE": date, "GIT_COMMITTER_DATE": date})
+
+    def test_development_and_production_branches(self):
+        # 機能の修正は develop へ、リリースは develop から main へ、緊急の修正は main へ直接
+        self.git("switch", "-q", "-c", "develop")
+        self.git("switch", "-q", "-c", "feature-x")
+        self.commit("src/search/index.py", "LIMIT = 50", "Raise search limit", "2025-05-01T00:00:00Z")
+        self.git("switch", "-q", "develop")
+        self.merge("feature-x", "Merge pull request #10 from o/feature-x\n\nRaise search limit", "2025-05-02T00:00:00Z")
+        self.git("switch", "-q", "main")
+        self.merge("develop", "Merge pull request #11 from o/develop\n\nRelease 2025-05", "2025-05-03T00:00:00Z")
+        self.commit("src/auth/session.py", "TTL = 12", "Shorten session (#12)", "2025-05-04T00:00:00Z")
+        self.git("switch", "-q", "develop")
+        self.merge("main", "Merge branch 'main' into develop", "2025-05-05T00:00:00Z")
+        self.git("switch", "-q", "main")
+        # develop が origin にしかなくても読む
+        self.git("update-ref", "refs/remotes/origin/develop", "develop")
+        self.git("branch", "-q", "-D", "develop", "feature-x")
+        # 手元の main が古くても、origin/main を読む
+        self.git("update-ref", "refs/remotes/origin/main", "main")
+        self.git("update-ref", "refs/heads/main", "main~1")
+        self.git("switch", "-q", "--detach", "origin/main")
+        self.assertEqual(self.run_script().returncode, 0)
+        may = self.page("2025-05.md")
+        for line in ["- 05-02 Raise search limit（[#10](https://github.com/o/r/pull/10)、src/search/、develop へ）",
+                     "- 05-03 （develop から取り込み）Release 2025-05（[#11](https://github.com/o/r/pull/11)、",
+                     "- 05-04 Shorten session（[#12](https://github.com/o/r/pull/12)、src/auth/、main へ）",
+                     "- 05-05 （main から取り込み）Merge branch 'main' into develop（["]:
+            self.assertIn(line, may)
+        # どちらにも入ったコミットは 1 件
+        self.assertEqual(self.page("2025-02.md").count("Extend session"), 1)
+        self.assertIn("Extend session（[#2](https://github.com/o/r/pull/2)、src/auth/、main・develop へ）", self.page("2025-02.md"))
+        self.assertIn("読んだブランチ：main（origin/main）、develop（origin/develop）。", self.page("README.md"))
+        # 1 つに絞れば、ブランチは書かない
+        self.assertEqual(self.run_script("--branch", "main").returncode, 0)
+        self.assertNotIn("Raise search limit（", self.page("2025-05.md"))
+        self.assertNotIn(" へ）", self.page("2025-05.md"))
+        self.assertEqual(self.run_script("--branch", "nope").returncode, 2)
+
     def test_since_and_depth(self):
         self.run_script("--since", "2025-02", "--depth", "1")
         self.assertFalse((self.repo / "docs/change-history/2025-01.md").exists())
