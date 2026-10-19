@@ -21,3 +21,9 @@ Active：`build_history.py` は月ごとの `YYYY-MM.md` と、年表を兼ね�
 
 - 月が数百あるリポジトリで、`README.md` 1 つが長くなりすぎないか（年ごとの見出しで足りるか）。
 - `timeline.md` へのリンクを外から張っている利用者がいるか。いれば、消さずに `README.md` への案内を残す案もある（@MichinaoShimizu に聞く）。
+
+## 追記 2026-10-19
+
+**分かった**（2026-10-19）：「`timeline.md` へのリンクを外から張っている利用者がいるか。いれば、消さずに `README.md` への案内を残す案もある」
+
+- 2026-10-19 @MichinaoShimizu が「タイムライン消す」と決めた（会話）。案内は残さず、`build_history.py` は年の要点を `README.md` に移して `timeline.md` を消す。リンクが切れることは断片の `BREAKING:` で知らせる
