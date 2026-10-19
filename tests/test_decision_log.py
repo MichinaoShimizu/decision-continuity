@@ -20,6 +20,8 @@ class ReaderAgentTests(unittest.TestCase):
         allowed = [re.compile(p) for p in kiro["toolsSettings"]["shell"]["allowedCommands"]]
         for cmd in ("gh pr view 101 --json number,title,body,author,createdAt,mergedAt,mergedBy,url,reviews,comments,files",
                     "git show --stat abc1234", "git show abc1234 -- src/payment/http/client.py",
+                    "git show --shortstat abc1234", "git show --dirstat=files abc1234",
+                    "git show --stat=200 --stat-count=50 abc1234 -- src/payment/", "git show -U0 abc1234 -- src/payment/http/client.py",
                     "git show abc1234:src/payment/http/client.py", "git grep -n MAX_RETRIES abc1234",
                     "TZ=Asia/Tokyo git log --first-parent --date=short-local --format=%h",
                     "gh api repos/o/r/pulls/45", "gh api repos/o/r/pulls/45/reviews", "gh api repos/o/r/issues/45/comments",

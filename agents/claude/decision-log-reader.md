@@ -11,8 +11,10 @@ tools: Read, Grep, Glob, Bash
 1. `gh pr view <番号> --json number,title,body,author,createdAt,mergedAt,mergedBy,url,reviews,comments,files` と、行のコメント `gh api repos/<owner>/<repo>/pulls/<番号>/comments`。`gh pr view` が失敗したら `gh api repos/<owner>/<repo>/pulls/<番号>` などの GET で読む（`-X`・`-f`・`-F`・`--input` は付けない）。
 2. PR の中のコミットのメッセージ：`git log --format='%h %s%n%b' <コミット>^1..<コミット>`（squash なら `git show -s --format=%B <コミット>`）。
 3. 本文やコメントが参照する issue を 1 段だけ開く（`gh api repos/<owner>/<repo>/issues/<番号>` と `…/comments`）。開けないリンク（Slack など）は挙げるだけにする。
-4. 差分は必ず読む：`git show --stat <コミット>`、続けて当たるファイルだけ `git show <コミット> -- <パス>`。足されたコードのコメントも理由の出典になる。
+4. 差分は必ず読む：まず `git show --shortstat <コミット>`。続けて `git show --stat <コミット>`、当たるファイルだけ `git show <コミット> -- <パス>`。足されたコードのコメントも理由の出典になる。
+   - 大きな PR（30 ファイルか 1000 行を超える）は、全体を一度に出さない。`git show --dirstat=files <コミット>` で置き場所をつかみ、`git show --stat=200 --stat-count=50 <コミット> -- <置き場所>` で置き場所ごとにファイルを見る。設定・定数・認証・スキーマなど、タイトル・本文・コメントが言う判断に当たるファイルから 1 つずつ読む（1 つが大きければ `git show -U0 <コミット> -- <パス>`）。生成物・lockfile・vendor・スナップショット・テストのデータは読まない。
 5. いまの姿：`git show <基準のコミット>:<パス>` か `git grep -n <識別子> <基準のコミット>`。
+6. 途中で止めない：読み切れないときも、そこまでで分かったことで返す形を全部埋めて返し、読まなかったものを「読み残し」に書く。
 
 コマンドは上のもの（`gh pr view`、`gh api repos/…` の GET、`git show`・`git log`・`git grep`）だけ。1 回に 1 つ、`;`・`&&`・`|`・`cd`・`git -C` を使わず、引数の記号は一重引用符で囲む。
 
@@ -25,5 +27,6 @@ tools: Read, Grep, Glob, Bash
 - 決定の言葉：決めた人と「〜にする」が書かれていれば、引用とリンク。なければ「なし」。
 - 分かっていないこと：知っていそうな人への問い。
 - 元の場所：開いた issue と、開けなかったリンク。
+- 読み残し：読まなかったファイル・置き場所・コメント（判断に当たりそうなものを先に）。なければ「なし」。
 
 推測で補わない。日付は JST（API の時刻は UTC なので 9 時間足す）。人はアカウント名で書く。

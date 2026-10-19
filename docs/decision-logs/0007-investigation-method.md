@@ -51,3 +51,8 @@ Active：調べ役 `decision-log-planner` が手元の git で、言葉（`-i` �
 
 - 2026-10-19 読む候補を大事なものから 20 件で切るのをやめ、大事な順に 20 件ずつの回に分けて、全部の回を終えるまで読むことにした。読み手 1 つに渡すのは 5 件までにし（DL-13 では分類ごとに 1 つだった）、Decision log は 1 つずつ、形の節を全部埋めて書く（ブランチ decision-log-one-by-one。作成 @MichinaoShimizu）。理由：「数が多くてもデシジョンログは一つずつ丁寧に記載してほしい」（@MichinaoShimizu、会話 2026-10-19）。20 件を超えたときの扱いは、20 件ずつ全部・20 件のまま・頼むときに決める、の 3 案から @MichinaoShimizu が 20 件ずつ全部を選んだ。20 件に固定した理由（「分かっていないこと」の問い）は分からないまま
 Superseded：調べ役 `decision-log-planner` は候補を全部、大事な順に 20 件ずつの回に分け、回ごとに分類に分ける（`agents/claude/decision-log-planner.md` の手順 5）。SKILL.md の手順 3〜5 が、回を順に、読み手 1 つに 5 件まで渡して読み、Decision log を 1 つずつ書く
+
+## 追記 2026-10-19（大きな PR）
+
+- 2026-10-19 調べ役が、変えたファイルが 30 を超える PR に大きな PR の印を付け、スキルはそれを読み手 1 つに 1 件だけ渡すことにした。読み手は `git show --shortstat` で大きさを見て、30 ファイルか 1000 行を超えれば差分を一度に出さず、`--dirstat` と置き場所ごとの `--stat` から判断に当たるファイルを 1 つずつ読み、読まなかったものを「読み残し」として返す。読み切れないときも形を埋めて返す（ブランチ decision-log-large-pr。作成 @MichinaoShimizu）。理由：「巨大なPRとかだと途中で停止しちゃう」（@MichinaoShimizu、会話 2026-10-19）。30 ファイル・1000 行という線は Claude の案で、@MichinaoShimizu が決めた値ではない（線をどこに引くかは @MichinaoShimizu に聞く）
+Superseded：調べ役 `decision-log-planner` は大きな PR に `（大：<N> ファイル、…）` の印を付け（`agents/claude/decision-log-planner.md` の手順 5）、SKILL.md の手順 3 がそれを読み手 1 つに 1 件だけ渡す。読み手の手順 4・6 と「読み残し」が、大きな PR の読み方を決める
