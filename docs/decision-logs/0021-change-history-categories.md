@@ -20,3 +20,8 @@ Active：change-history の SKILL.md は、月の主な変更と年の要点を 
 ## 分かっていないこと
 
 - 行の数を決めないと、変更の多い月で主な変更が長くなりすぎないか。実際のリポジトリで確かめる。
+
+## 追記 2026-10-19（年表の分類）
+
+- 2026-10-19 年表（`README.md` の年の要点）の分類を、decision-log と同じ 11 種から、機能改善・運用改善・バグ対応の 3 つに変えた。見出しの直下には、それぞれの説明（`YEAR_DESCRIPTIONS`）をスクリプトが入れる。月の主な変更は 11 種のまま（ブランチ change-history-table。作成 @MichinaoShimizu）。理由：「年表のカテゴライズは、機能改善、運用改善、バグ対応にしようか」（@MichinaoShimizu、会話 2026-10-19）。3 つの説明の文は Claude の案で、@MichinaoShimizu が決めた文ではない
+Superseded：`build_history.py` は年の要点の分類を `YEAR_DESCRIPTIONS` の 3 つで確かめ、月の主な変更は `CATEGORIES` の 11 種で確かめる（`skills/change-history/scripts/build_history.py` の `problems`）
