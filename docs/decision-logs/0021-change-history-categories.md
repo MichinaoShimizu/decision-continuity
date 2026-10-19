@@ -32,7 +32,7 @@ Superseded：`build_history.py` は年の要点の分類を `YEAR_DESCRIPTIONS` 
 
 機能改善・運用改善・バグ対応の説明の文は、@MichinaoShimizu が「適切に対応」と Claude に任せ、Claude の案のまま採用した（会話 2026-10-19）
 
-## 追記 2026-10-19（月と年の分類を Keep a Changelog に）
+## 追記 2026-10-19（月の分類）
 
-- 2026-10-19 月の主な変更の分類を decision-log と同じ 11 種から、年表の分類を機能改善・運用改善・バグ対応から、どちらも Keep a Changelog と同じ `Added`・`Changed`・`Deprecated`・`Removed`・`Fixed`・`Security` の 6 つに変えた。目立った不具合の修正は `Fixed` に書く。decision-log の分類は 11 種のまま（ブランチ month-categories。作成 @MichinaoShimizu）。理由：@MichinaoShimizu がまず「年表の各月毎のファイルも、機能改善、運用改善、バグ解消に分類したい」と言い、続けて「やっぱりカテゴリは一般的なCHANGELOやリリースノートに登場する分類が良いかな」と言った（会話 2026-10-19）。一般的な分類のうち Keep a Changelog を選んだのは Claude の判断で、このリポジトリの CHANGELOG と `changes/` の節も同じ 6 つ。最初に月を 11 種にした理由（「なぜ」まで要るテーマを同じ分類のまま decision-log に回せる）は、この変更で失われる
-Superseded：`build_history.py` は月と年の両方を `DESCRIPTIONS` の 6 つで確かめる（`skills/change-history/scripts/build_history.py`）。SKILL.md の手順 2 は、分類を Keep a Changelog と同じ 6 つとする
+- 2026-10-19 月の主な変更の分類も、decision-log と同じ 11 種から、年表と同じ機能改善・運用改善・バグ対応の 3 つに変えた。目立った不具合の修正は `バグ対応` に書く。decision-log の分類は 11 種のまま（ブランチ month-categories。作成 @MichinaoShimizu）。理由：「年表の各月毎のファイルも、機能改善、運用改善、バグ解消に分類したい」（@MichinaoShimizu、会話 2026-10-19）。名前は年表で使っていた「バグ対応」に揃えた（Claude の判断。「バグ解消」にするかは @MichinaoShimizu に聞く）。最初に 11 種を選んだ理由（「なぜ」まで要るテーマを同じ分類のまま decision-log に回せる）は、この変更で失われる
+Superseded：`build_history.py` は月と年の両方を `DESCRIPTIONS` の 3 つで確かめる（`skills/change-history/scripts/build_history.py`）。SKILL.md の手順 2 は、分類を機能改善・運用改善・バグ対応の 3 つとする
