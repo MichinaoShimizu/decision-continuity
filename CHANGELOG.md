@@ -2,6 +2,15 @@
 
 decision-continuity の主な変更。[Keep a Changelog](https://keepachangelog.com/) の形で書く。変更は `changes/` の断片に書き（[changes/README.md](changes/README.md)）、リリースのときに版の節にまとめる。版は中身から決まり（[Semantic Versioning](https://semver.org/)、`sh tools/next-version.sh`）、各版の節がそのまま GitHub のリリースノートになる。手順は [docs/release.md](docs/release.md)。
 
+## v0.10.3 - 2026-10-19
+
+### Fixed
+
+- decision-log: 大きな PR の扱いを直した
+  - 調べ役は大きさを範囲で絞らずに、ファイルの数と行の数で測る。少ないファイルで何千行も変える PR や、範囲の外で大きい PR にも印が付く
+  - 読み手は行のコメントと issue のコメントを `--paginate` で全部読む（30 件で切れていた）。Kiro の読み手の許可に `gh api repos/… --paginate` を足した
+  - 読み手は `gh pr view` で変えたファイルの一覧を取らず、`git show` で見る。コメントが多いときは、決める言葉のあるものから読む
+
 ## v0.10.2 - 2026-10-19
 
 ### Fixed
