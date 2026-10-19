@@ -197,7 +197,7 @@ def map_range(changes, lo, hi):
     return move(lo, False), max(move(lo, False), move(hi, True))
 
 
-def changed_lines(folder, base, path, first, last):
+def changed_lines(folder, base, path, first):
     """base から HEAD までに path が変わったか。行の範囲があれば、その範囲に当たる変更だけを数える。
     確かめられなければ None。"""
     changes = hunks(folder, base, "HEAD", path)
@@ -236,7 +236,7 @@ def stale_links(folder, logs):
                 if lines is None:
                     found.append(f"{log['file']}: 確かめられない：{where}（{sha[:7]} か {base[:7]} がない。浅いクローンなら git fetch --unshallow）")
                     continue
-            changed = changed_lines(folder, base, path, lines, None)
+            changed = changed_lines(folder, base, path, lines)
             if changed is None:
                 found.append(f"{log['file']}: 確かめられない：{where}（{base[:7]} がない。浅いクローンなら git fetch --unshallow）")
             elif changed:
