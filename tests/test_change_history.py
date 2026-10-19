@@ -67,6 +67,8 @@ class BuildHistoryTests(unittest.TestCase):
         self.assertIn("- 02-04 Raise payment retries（[#3](https://github.com/o/r/pull/3) alice、docs/ ほか 1）", feb)
         self.assertNotIn("Raise retries（", feb)
         index = self.page("README.md")
+        # 索引の列は書いたかどうかだけ。年表の「主な変更」（中身の文）と取り違えない
+        self.assertIn("| 月 | 件数 | 主な変更を書いたか |", index)
         self.assertIn("| [2025-02](2025-02.md) | 2 | まだ |", index)
         self.assertLess(index.index("2025-02"), index.index("2025-01"))
 

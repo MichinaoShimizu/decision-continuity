@@ -118,7 +118,7 @@ def month_page(month, items, depth, url, summary):
 def index_page(months, url, folder):
     total = sum(len(v) for v in months.values())
     out = ["# 変更の履歴", "", f"マージされた変更 {total} 件を月ごとに並べた。build_history.py が作り直す。年ごとの流れは[年表](timeline.md)。", "",
-           "| 月 | 件数 | 主な変更 |", "|---|---|---|"]
+           "| 月 | 件数 | 主な変更を書いたか |", "|---|---|---|"]
     for month in sorted(months, reverse=True):
         written = summary_of(folder / f"{month}.md") not in (None, "", EMPTY)
         out.append(f"| [{month}]({month}.md) | {len(months[month])} | {'あり' if written else 'まだ'} |")
