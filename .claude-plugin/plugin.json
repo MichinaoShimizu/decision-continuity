@@ -1,6 +1,6 @@
 {
   "name": "decision-continuity",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "意思決定の経緯を途切れさせないためのスキルとサブエージェント。decision-log はコードのリポジトリの履歴から Decision log を起こし、変える前に照合し、新しい判断を記録する。change-history はマージされた変更を月ごとにまとめる。",
   "author": {
     "name": "MichinaoShimizu"

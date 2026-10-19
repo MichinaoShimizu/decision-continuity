@@ -2,6 +2,14 @@
 
 decision-continuity の主な変更。[Keep a Changelog](https://keepachangelog.com/) の形で書く。変更は `changes/` の断片に書き（[changes/README.md](changes/README.md)）、リリースのときに版の節にまとめる。版は中身から決まり（[Semantic Versioning](https://semver.org/)、`sh tools/next-version.sh`）、各版の節がそのまま GitHub のリリースノートになる。手順は [docs/release.md](docs/release.md)。
 
+## v0.8.1 - 2026-10-19
+
+### Changed
+
+- change-history: 索引（`README.md`）の表の列名を「主な変更」から「主な変更を書いたか」にした。中身は「あり／まだ」だけで、年表の「主な変更」（各月の 1 行目）と取り違えやすかったため。いまの索引は、次に `build_history.py` を回したときに作り直される
+- change-history: 版を上げるだけの定型のリリース（`Release v1.2.0`・`Bump version to 1.2.0`・`chore(release): 1.2.0`・`v1.2.0`）に一覧で「（リリース）」の印を付け、月の主な変更に書かないようにした
+- change-history: 一覧に作成者の名前を書き出さないようにした。主な変更と年の要点にも人の名前を書かない。いまの一覧は、次に `build_history.py` を回したときに作り直される
+
 ## v0.8.0 - 2026-10-18
 
 ### Added
