@@ -18,7 +18,7 @@ origin/ にあればそちらを読む。
 どのブランチにも入ったコミットは 1 つにまとめ、ブランチ間のマージ（develop から main へのリリースなど）には印を付ける。
 PR の番号はマージコミットの件名（Merge pull request #12）か、squash の件名の末尾（(#12)）から取る。
 各月の「## 主な変更」と、README.md の各年の要点・各月の要約は、作り直しても残す（人か AI が書く）。月の主な変更と年の要点の分類は
-機能改善・運用改善・バグ対応の 3 つ。分類の見出しの直下には
+Keep a Changelog と同じ Added・Changed・Deprecated・Removed・Fixed・Security の 6 つ。分類の見出しの直下には
 分類の説明を入れる。主な変更の表の日付と Author は、PR の列の変更から埋め直す（前の形の「- 概要（#12）」の行は表に移す）。
 決まった形でなければ、どこが崩れているかを出し、終了コード 1 を返す。標準ライブラリだけを使う。
 人はアカウント名（@login）で、Author の列にだけ書く。gh が使えれば、PR の作成者を GitHub から取る（gh api の GET だけ）。
@@ -47,11 +47,15 @@ LONG_LIVED = ("main", "master", "develop", "development", "dev", "production")
 MONTH_RE = re.compile(r"^\d{4}-\d{2}$")
 SUMMARY = "## 主な変更"
 EMPTY = "（まだ書いていない）"
-# 月の主な変更と年表（README.md の年の要点）の分類。変更の性質で 3 つに分け、見出しの直下に説明を入れる
+# 月の主な変更と年表（README.md の年の要点）の分類。Keep a Changelog（一般的な CHANGELOG・リリースノート）と同じ 6 つで、
+# 見出しの直下に説明を入れる
 DESCRIPTIONS = {
-    "機能改善": "使う人に見える機能の追加と変更",
-    "運用改善": "開発・リリース・運用の進め方の改善（CI、デプロイ、監視、手順、文書など）",
-    "バグ対応": "不具合の修正と、その再発を防ぐ変更",
+    "Added": "新しく足した機能",
+    "Changed": "今ある機能の変更",
+    "Deprecated": "近く消すことにした機能",
+    "Removed": "消した機能",
+    "Fixed": "不具合の修正",
+    "Security": "脆弱性への対応",
 }
 CATEGORIES = tuple(DESCRIPTIONS)
 HEADER, RULE = "| 日付 | 概要 | PR | Author |", "|---|---|---|---|"

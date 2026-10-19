@@ -1,4 +1,4 @@
-- BREAKING: change-history の月の主な変更の分類を、年表と同じ機能改善・運用改善・バグ対応の 3 つにした
-  - 以前の 11 種（`security`・`reliability` など）で書いた月の主な変更は、形の崩れとして出るので書き直す
-  - 目立った不具合の修正は `バグ対応` に書く（依存の更新や小さな修正は今までどおり書かない）
+- BREAKING: change-history の月の主な変更と年表（`README.md` の年の要点）の分類を、Keep a Changelog と同じ `Added`・`Changed`・`Deprecated`・`Removed`・`Fixed`・`Security` の 6 つにした
+  - 以前の分類（月の `security`・`reliability` など、年の機能改善・運用改善・バグ対応）で書いたものは、形の崩れとして出るので書き直す
+  - 目立った不具合の修正は `Fixed` に書く（依存の更新や小さな修正は今までどおり書かない）
   - decision-log の分類は 11 種のまま
