@@ -2,6 +2,14 @@
 
 decision-continuity の主な変更。[Keep a Changelog](https://keepachangelog.com/) の形で書く。変更は `changes/` の断片に書き（[changes/README.md](changes/README.md)）、リリースのときに版の節にまとめる。版は中身から決まり（[Semantic Versioning](https://semver.org/)、`sh tools/next-version.sh`）、各版の節がそのまま GitHub のリリースノートになる。手順は [docs/release.md](docs/release.md)。
 
+## v0.10.2 - 2026-10-19
+
+### Fixed
+
+- decision-log: 大きな PR（30 ファイルか 1000 行を超えるもの）で読み手が途中で止まらないようにした
+  - 調べ役が大きな PR に印を付け、読み手 1 つに 1 件だけ渡す
+  - 読み手は差分を一度に出さず、置き場所ごとに判断に当たるファイルから読み、読まなかったものを「読み残し」として返す
+
 ## v0.10.1 - 2026-10-19
 
 ### Changed
