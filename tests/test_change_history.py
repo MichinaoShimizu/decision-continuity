@@ -80,7 +80,9 @@ class BuildHistoryTests(unittest.TestCase):
         # 人の名前は書き出さない（マージした人も出ない）
         for name in ("main-user", "Alice Example", "merger"):
             self.assertNotIn(name, feb)
-        self.assertNotIn("Raise retries（", feb)
+        # マージコミットの下に、PR の中のコミット（実際の改修）を字下げして並べる
+        self.assertRegex(feb, r"、@alice）\n  - Raise retries（\[[0-9a-f]{7}\]\(https://github.com/o/r/commit/[0-9a-f]{40}\)、@alice）\n"
+                              r"  - Document retries（\[[0-9a-f]{7}\]")
         index = self.page("README.md")
         # 索引が年表を兼ねる。h1 の直下に文を置かない。主な変更をまだ書いていない月は「まだ」
         self.assertTrue(index.startswith("# 変更の履歴\n\n## 2025\n\n（まだ書いていない）\n\n| 月 | 件数 | 主な変更 |"))
@@ -266,9 +268,18 @@ class BuildHistoryTests(unittest.TestCase):
         self.assertIn("Extend session（[#2](https://github.com/o/r/pull/2)、src/auth/、—、main・develop へ）", feb)
         self.assertIn("読んだブランチ：main（origin/main）、develop（origin/develop）", feb)
         # 1 つに絞れば、ブランチは書かない
+        # 読んだブランチどうしのマージの下には、中身を並べない（元のブランチの行に出ている）
+        self.assertRegex(self.listing("2025-05"), r"Release 2025-05（[^\n]*main へ）\n- 2025-05-04 ")
+        # develop を読まなければ、main に入ったマージの下に、develop で入った PR が見える
         may = self.listing("2025-05", "--branch", "main")
-        self.assertNotIn("Raise search limit（", may)
+        self.assertIn("- 2025-05-03 Release 2025-05（[#11](https://github.com/o/r/pull/11)、src/search/、@alice）\n"
+                      "  - Raise search limit（[#10](https://github.com/o/r/pull/10)、@alice）", may)
         self.assertNotIn(" へ）", may)
+        # 表は、マージの中の PR を指してよい。日付は main に入った日
+        self.assertEqual(self.run_script("--branch", "main").returncode, 0)
+        self.fill("2025-05", "### product\n\n| | 検索の上限を上げた | #10 | |")
+        self.run_script("--branch", "main")
+        self.assertIn("| 2025-05-03 | 検索の上限を上げた | [#10](https://github.com/o/r/pull/10) | @alice |", self.page("2025-05.md"))
         self.assertEqual(self.run_script("--branch", "nope").returncode, 2)
 
     def test_since_and_depth(self):

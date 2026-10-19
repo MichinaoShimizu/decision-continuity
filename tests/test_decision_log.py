@@ -45,6 +45,7 @@ class PlannerAgentTests(unittest.TestCase):
                 "git log --first-parent -G '^[A-Z][A-Z0-9_]{2,} *[:=]' --format='%h' -- .",
                 "git log --first-parent --format='%h' -- '*.yml' '*.yaml' ':(exclude)*lock*'",
                 "git log --first-parent --shortstat --format='@@ %h' origin/main",
+                "git log --first-parent --format='@@ %h %s%n%b' abc1234^1..abc1234",
                 "git show --stat abc1234")
 
     def test_skill_calls_the_planner_by_name(self):
