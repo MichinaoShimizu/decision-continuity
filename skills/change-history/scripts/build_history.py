@@ -592,4 +592,8 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except BrokenPipeError:  # 読む側が途中でやめた（head など）。黙って終える
+        sys.stderr.close()
+        sys.exit(0)
