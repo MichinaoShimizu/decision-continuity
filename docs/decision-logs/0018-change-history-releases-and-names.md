@@ -28,3 +28,8 @@ Active：`build_history.py` は一覧に作成者を書き出さず、版を上�
 ## 追記 2026-10-19
 
 - 2026-10-19 decision-log でも、版を上げるだけの定型のリリース（`Release v1.2.0`・`Bump version to 1.2.0`・`chore(release): 1.2.0`・`v1.2.0` の形の件名）を書かず、`decision-log-planner` の候補からも落とすことにした。版の番号の書き換えは設定ファイルの洗い出しに当たるが、それでも落とす。4 つの形が change-history の `build_history.py` と 2 つの SKILL.md・planner で揃うことは `tests/test_docs.py` が確かめる（ブランチ change-history-categories。作成 @MichinaoShimizu）。理由：「定型的なリリース、バージョンアップは年表に書かない点はデシジョンログと同じにしたい」（@MichinaoShimizu、会話 2026-10-19）
+
+## 追記 2026-10-19（Author の列）
+
+- 2026-10-19 change-history の主な変更を表にし、Author の列にだけ GitHub のアカウント名（noreply のメールから取る `@alice`。取れなければ `—`）を出すことにした。名前（git の author 名）は今までどおり出さない（DL-23）（ブランチ change-history-table。作成 @MichinaoShimizu）。理由：表に Author を入れたいという求めに、この判断と食い違うことを示し、@MichinaoShimizu がアカウント名で出す案を選んだ（会話 2026-10-19）
+Superseded：`build_history.py` は主な変更の表の Author の列にアカウント名を書く（`skills/change-history/scripts/build_history.py` の `account`）。SKILL.md の決まり 5 は、人をアカウント名で Author の列にだけ書くとする

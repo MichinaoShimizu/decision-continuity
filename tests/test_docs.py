@@ -169,6 +169,10 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(got, want)
         script = (ROOT / "skills/change-history/scripts/build_history.py").read_text(encoding="utf-8")
         self.assertEqual(re.findall(r'"([a-z]+)"', re.search(r"CATEGORIES = \((.*?)\)", script, re.S).group(1)), want)
+        # 分類の見出しの直下に入れる説明は、format.md の表の「見出し：中身」と同じ
+        rows = dict((c, f"{h}：{d}") for c, h, d in re.findall(r"^\| `([a-z]+)` \| (.*?) \| (.*?) \|$", table, re.M) if c != "category")
+        got = dict(re.findall(r'^    "([a-z]+)": "(.*?)",$', re.search(r"DESCRIPTIONS = \{(.*?)\n\}", script, re.S).group(1), re.M))
+        self.assertEqual(got, rows)
 
     def test_both_skills_skip_the_same_routine_releases(self):
         # 版を上げるだけのリリースは、change-history の主な変更にも decision-log の候補にも入れない

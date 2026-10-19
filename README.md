@@ -35,7 +35,7 @@ rm -rf .kiro/skills/decision-log .kiro/skills/change-history .kiro/agents/decisi
 
 ### 年表を作る（change-history）
 
-`docs/change-history/` に、月ごとの全変更の一覧と主な変更（`YYYY-MM.md`）と、年表を兼ねた索引（`README.md`）を作る。タグやリリースがなくてもよい。
+`docs/change-history/` に、月ごとの主な変更の表（`YYYY-MM.md`。日付・概要・PR・Author）と、年表を兼ねた索引（`README.md`）を作る。タグやリリースがなくてもよい。
 
 ```text
 change-history で、いつどんな変更をしてきたかを月ごとにまとめて、年表まで作って。
