@@ -168,5 +168,14 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(len(want), 11)
         self.assertEqual(got, want)
 
+    def test_both_skills_skip_the_same_routine_releases(self):
+        # 版を上げるだけのリリースは、change-history の主な変更にも decision-log の候補にも入れない
+        script = (ROOT / "skills/change-history/scripts/build_history.py").read_text(encoding="utf-8")
+        forms = re.search(r"# 版を上げるだけの定型のリリース（(.*?)）", script).group(1).split("、")
+        for path in ("skills/change-history/SKILL.md", "skills/decision-log/SKILL.md", "agents/claude/decision-log-planner.md"):
+            text = (ROOT / path).read_text(encoding="utf-8")
+            line = next(l for l in text.splitlines() if "定型のリリース" in l and "`Release v1.2.0`" in l)
+            self.assertEqual(re.findall(r"`([^`]+)`", line.split("定型のリリース", 1)[1])[:4], forms, path)
+
 if __name__ == "__main__":
     unittest.main()
