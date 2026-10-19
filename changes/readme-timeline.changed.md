@@ -1,2 +1,0 @@
-- BREAKING: change-history: 年表の `timeline.md` をやめ、索引の `README.md` が年表を兼ねるようにした。年ごとの要点と、月ごとの件数・主な変更の 1 行目（まだなら「まだ」）を並べる。以前の `timeline.md` は、次に `build_history.py` を回したとき、年の要点を `README.md` に移して消す。`timeline.md` へのリンクは `README.md` に直す
-- change-history: 日付を `YYYY-MM-DD`、月を `YYYY-MM` にそろえた。一覧の行は `- 2024-05-02 …`、表の月は `[2024-05](2024-05.md)`、年の要点の期間は `（2024-03〜2024-06）` と書く
