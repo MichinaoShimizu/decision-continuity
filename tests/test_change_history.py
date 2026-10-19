@@ -220,9 +220,18 @@ class BuildHistoryTests(unittest.TestCase):
         self.run_script()
         self.fill("2025-02", "### バグ対応\n\n- 旧（#99）")
         result = self.run_script()
-        self.assertIn("|  | 旧 | #99 |  |", self.page("2025-02.md"))
+        self.assertIn("|  | 旧 | [#99](https://github.com/o/r/pull/99) | — |", self.page("2025-02.md"))
         self.assertIn("PR の列の参照が、この月の変更にない", result.stdout)
         self.assertNotIn("下に行がない", result.stdout)
+
+    def test_rows_are_filled_even_when_they_break_the_rules(self):
+        # 別の月の PR を書いても、決まりにない見出しの下に書いても、リンク・日付・Author は入れ、崩れとして知らせる
+        self.run_script()
+        self.fill("2025-01", "### security\n\n| | セッションを延ばした | #2 | |")
+        result = self.run_script()
+        self.assertIn("| 2025-02-01 | セッションを延ばした | [#2](https://github.com/o/r/pull/2) | — |", self.page("2025-01.md"))
+        self.assertIn("分類 security は", result.stdout)
+        self.assertIn("PR の列の参照が、この月の変更にない", result.stdout)
 
     def test_empty_repository(self):
         with tempfile.TemporaryDirectory() as empty:

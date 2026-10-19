@@ -308,16 +308,30 @@ def lookup(text, index):
     return found
 
 
+def resolve(text, index, everything):
+    """PR の列の参照を、その月の変更、なければ全部の月の変更から探す。どこにもなければ、番号かハッシュだけの変更にする
+    （リンクと、GitHub から取れた Author は入れる）。その月にない参照は、problems が崩れとして知らせる。"""
+    found = []
+    for i, m in zip(lookup(text, index), KEY_RE.finditer(re.sub(r"\]\([^)]*\)", "]", text))):
+        pr, sha = m.groups()
+        item = i or lookup(m.group(0), everything)[0] or {
+            "pr": pr, "sha": sha or "", "date": "", "author": PR_AUTHORS.get(pr, UNKNOWN) if pr else UNKNOWN}
+        if item not in found:
+            found.append(item)
+    return found
+
+
 def row(summary, items, url, written=""):
     """日付は最初の変更の日、Author は変更ごとのアカウント名（重なりは 1 つ）。GitHub から取れなかった変更があれば、
     書いてある Author を残す（gh が使えるかどうかで --check の結果が変わらないように）。"""
     authors = "、".join(dict.fromkeys(i["author"] for i in items))
     if written and not all(i["pr"] in PR_AUTHORS for i in items):
         authors = written
-    return f"| {items[0]['date']} | {summary} | {'、'.join(link(i, url) for i in items)} | {authors} |"
+    date = next((i["date"] for i in items if i["date"]), "")
+    return f"| {date} | {summary} | {'、'.join(link(i, url) for i in items)} | {authors} |"
 
 
-def tidy(text, kind, index=None, url=None):
+def tidy(text, kind, index=None, url=None, everything=None):
     """分類の見出しの直下に説明を入れ、月の表の日付・Author・PR の列を、その月の変更から埋め直す。
     前の形の「- 概要（#12）」の行は表の行に移す。中身の言葉（概要・年の要点）は変えない。"""
     if text in (None, "", EMPTY) or NOTHING_RE.match(text):
@@ -336,19 +350,18 @@ def tidy(text, kind, index=None, url=None):
         desc = DESCRIPTIONS.get(heading)
         if lines and lines[0] == desc:
             lines = lines[1:]
-        if kind == "month" and heading in DESCRIPTIONS:
+        if kind == "month":  # 分類が決まりと違っても、表の行は埋める（分類の崩れは problems が知らせる）
             rows = []
             for line in lines:
                 m = OLD_LINE_RE.match(line)
                 parts = cells(line) if line.startswith("|") else None
                 if parts and is_row(parts):
-                    found = lookup(parts[2], index)
-                    rows.append(row(parts[1], found, url, parts[3]) if found and None not in found else line)
+                    found = resolve(parts[2], index, everything or {})
+                    rows.append(row(parts[1], found, url, parts[3]) if found else line)
                 elif m:
-                    found = lookup(m.group(2), index)
+                    found = resolve(m.group(2), index, everything or {})
                     summary = m.group(1).replace("|", "\\|")
-                    # 読めない参照も表の行にして、「この月の変更にない」と知らせる
-                    rows.append(row(summary, found, url) if found and None not in found else f"|  | {summary} | {m.group(2)} |  |")
+                    rows.append(row(summary, found, url) if found else f"|  | {summary} | {m.group(2)} |  |")
                 elif not parts or len(parts) != 4:
                     rows.append(line)
             lines = [HEADER, RULE] + rows if rows else []
@@ -488,6 +501,7 @@ def main():
         print(f"{args.list}：{len(months.get(args.list, []))} 件。読んだブランチ：{read_from(branches)}")
         return 0
     indexes, summaries = {}, {}
+    everything = {key(i): i for items in months.values() for i in items}
     for m, items in months.items():
         index = {key(i): i for i in items}
         summary = summary_of(args.folder / f"{m}.md")
@@ -497,7 +511,7 @@ def main():
                 for j in inside(i):
                     index.setdefault(key(j), j)
         indexes[m] = index
-        summaries[m] = tidy(summary, "month", index, url)
+        summaries[m] = tidy(summary, "month", index, url, everything)
     pages = {f"{m}.md": month_page(m, summaries[m]) for m in shown}
     pages["README.md"] = readme_page(months, args.folder, summaries)
     old = args.folder / "timeline.md"
