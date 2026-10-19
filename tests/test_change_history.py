@@ -56,15 +56,18 @@ class BuildHistoryTests(unittest.TestCase):
     def page(self, name):
         return (self.repo / "docs/change-history" / name).read_text(encoding="utf-8")
 
-    def test_months_prs_authors_and_places(self):
+    def test_months_prs_and_places(self):
         self.assertEqual(self.run_script().returncode, 0)
         jan, feb = self.page("2025-01.md"), self.page("2025-02.md")
         self.assertIn("マージされた変更 1 件", jan)
         self.assertIn("- 01-10 Initial import（[", jan)
         # JST で月をまたぐ。squash の (#2) は PR の番号になり、件名から外れる
-        self.assertIn("- 02-01 Extend session（[#2](https://github.com/o/r/pull/2) main-user、src/auth/）", feb)
-        # マージコミットは、本文の 1 行目をタイトルに、取り込んだ側の author を作成者に、両方の置き場所を数える
-        self.assertIn("- 02-04 Raise payment retries（[#3](https://github.com/o/r/pull/3) alice、docs/ ほか 1）", feb)
+        self.assertIn("- 02-01 Extend session（[#2](https://github.com/o/r/pull/2)、src/auth/）", feb)
+        # マージコミットは、本文の 1 行目をタイトルに、両方の置き場所を数える
+        self.assertIn("- 02-04 Raise payment retries（[#3](https://github.com/o/r/pull/3)、docs/ ほか 1）", feb)
+        # 人の名前は書き出さない
+        for name in ("main-user", "alice", "merger"):
+            self.assertNotIn(name, feb)
         self.assertNotIn("Raise retries（", feb)
         index = self.page("README.md")
         # 索引の列は書いたかどうかだけ。年表の「主な変更」（中身の文）と取り違えない
@@ -108,10 +111,21 @@ class BuildHistoryTests(unittest.TestCase):
         self.run_script()
         self.assertIn("- 03-02 （ブランチの取り込み）Merge branch 'stable'（[", self.page("2025-03.md"))
 
+    def test_releases_are_marked(self):
+        for i, subject in enumerate(["Release v0.8.0 (#90)", "Bump version to 1.2.0", "chore(release): 1.3.0", "v1.4.0",
+                                     "Release automation for the docs site (#91)", "Bump requests from 2.31 to 2.32"]):
+            self.commit("CHANGELOG.md", str(i), subject, f"2025-04-0{i + 1}T00:00:00Z")
+        self.run_script()
+        april = self.page("2025-04.md")
+        for line in ["- 04-01 （リリース）Release v0.8.0（[#90]", "- 04-02 （リリース）Bump version to 1.2.0（",
+                     "- 04-03 （リリース）chore(release): 1.3.0（", "- 04-04 （リリース）v1.4.0（",
+                     "- 04-05 Release automation for the docs site（[#91]", "- 04-06 Bump requests from 2.31 to 2.32（"]:
+            self.assertIn(line, april)
+
     def test_since_and_depth(self):
         self.run_script("--since", "2025-02", "--depth", "1")
         self.assertFalse((self.repo / "docs/change-history/2025-01.md").exists())
-        self.assertIn("main-user、src/）", self.page("2025-02.md"))
+        self.assertIn("pull/2)、src/）", self.page("2025-02.md"))
         self.assertEqual(self.run_script("--since", "2025-2").returncode, 2)
 
 

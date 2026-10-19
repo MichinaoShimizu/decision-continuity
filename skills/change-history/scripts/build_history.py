@@ -9,6 +9,7 @@
 リポジトリのルートで動かす。手元の git の --first-parent の履歴だけを読み、ネットワークは使わない。
 PR の番号はマージコミットの件名（Merge pull request #12）か、squash の件名の末尾（(#12)）から取る。
 各月の「## 主な変更」と、年表の各年の要点は、作り直しても残す（人か AI が書く）。標準ライブラリだけを使う。
+人の名前（git の author）は書き出さない。
 """
 import argparse
 import collections
@@ -23,6 +24,10 @@ SQUASH_RE = re.compile(r"^(.*?)\s*\(#(\d+)\)\s*$")
 # PR を通さないブランチの同期（Merge branch '3.0.x'、Merge remote-tracking branch 'origin/stable'）
 SYNC_RE = re.compile(r"^Merge (?:remote-tracking )?branch ")
 SYNC = "（ブランチの取り込み）"
+# 版を上げるだけの定型のリリース（Release v1.2.0、Bump version to 1.2.0、chore(release): 1.2.0、v1.2.0）
+RELEASE_RE = re.compile(r"^(?:chore\(release\)|(?:chore:\s*)?(?:release|prepare release|bump version|version)\b).*?\bv?\d+\.\d+"
+                        r"|^v?\d+\.\d+(?:\.\d+)*$", re.I)
+RELEASE = "（リリース）"
 MONTH_RE = re.compile(r"^\d{4}-\d{2}$")
 SUMMARY = "## 主な変更"
 EMPTY = "（まだ書いていない）"
@@ -52,17 +57,17 @@ def area(path, depth):
 
 def changes(tz):
     """--first-parent の各変更を、古い順に返す。マージコミットは 1 つ目の親との差分でファイルを数える。"""
-    fmt = FIELD.join(["%H", "%P", "%aN", "%ad", "%s", "%b"])
+    fmt = FIELD.join(["%H", "%P", "%ad", "%s", "%b"])
     out = git("log", "--first-parent", "--reverse", "--diff-merges=first-parent", "--name-only",
               "--date=format-local:%Y-%m-%d", f"--format={COMMIT}{fmt}{FIELD}", tz=tz)
     items = []
     for chunk in out.split(COMMIT)[1:]:
-        sha, parents, author, date, subject, body, files = chunk.split(FIELD)
+        sha, parents, date, subject, body, files = chunk.split(FIELD)
         parents = parents.split()
         m = MERGE_RE.match(subject)
         if m and len(parents) > 1:
             title = next((l.strip() for l in body.splitlines() if l.strip()), subject)
-            item = dict(pr=m.group(1), title=title, second=parents[1])
+            item = dict(pr=m.group(1), title=title)
         elif SQUASH_RE.match(subject):
             title, pr = SQUASH_RE.match(subject).groups()
             item = dict(pr=pr, title=title)
@@ -70,18 +75,10 @@ def changes(tz):
             item = dict(pr=None, title=f"{SYNC}{subject}")
         else:
             item = dict(pr=None, title=subject)
-        item.update(sha=sha, date=date, author=author, files=[f for f in files.splitlines() if f.strip()])
+        if RELEASE_RE.match(item["title"]):
+            item["title"] = RELEASE + item["title"]
+        item.update(sha=sha, date=date, files=[f for f in files.splitlines() if f.strip()])
         items.append(item)
-    # マージコミットの author はマージした人なので、取り込んだ側の先頭のコミットの author を作成者にする
-    seconds = [i["second"] for i in items if "second" in i]
-    names = {}
-    for start in range(0, len(seconds), 500):
-        for line in git("log", "--no-walk", "--format=%H" + FIELD + "%aN", *seconds[start:start + 500]).splitlines():
-            sha, name = line.split(FIELD)
-            names[sha] = name
-    for i in items:
-        if "second" in i:
-            i["author"] = names.get(i.pop("second"), i["author"])
     return items
 
 
@@ -108,7 +105,7 @@ def month_page(month, items, depth, url, summary):
         places = sorted(counts, key=lambda a: (-counts[a], a))
         totals.update(places[:1])
         where = f"、{places[0]}" + (f" ほか {len(places) - 1}" if len(places) > 1 else "") if places else ""
-        lines.append(f"- {item['date'][5:]} {item['title']}（{link(item, url)} {item['author']}{where}）")
+        lines.append(f"- {item['date'][5:]} {item['title']}（{link(item, url)}{where}）")
     top = "、".join(f"{a} {n}" for a, n in sorted(totals.items(), key=lambda x: (-x[1], x[0]))[:5])
     out = [f"# {month}", "", f"マージされた変更 {len(items)} 件" + (f"（多い置き場所：{top}）" if top else "") + "。",
            "「## 一覧」は build_history.py が作り直す。", "", SUMMARY, "", summary or EMPTY, "", "## 一覧", ""]
