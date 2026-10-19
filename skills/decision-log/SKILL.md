@@ -32,10 +32,10 @@ allowed-tools: Bash(git log:*) Bash(git show:*) Bash(git diff:*) Bash(git grep:*
 
 1. 既存の Decision log の `category:` の行だけを読む（読む・探す道具で）。重なりそうなものだけ全文を読む。
 2. サブエージェント `decision-log-planner` に範囲を渡し、候補を洗わせる。
-3. 返ってきた分類ごとに `decision-log-reader` を 1 つずつ、1 回の応答でまとめて呼ぶ（Kiro は 1 回に 4 つまで）。件数が少なくても自分で読まない。結果は呼び出しの戻りで受け取り、`sleep` で待たない。
-4. 一つの流れの変更を 1 つの Decision log にまとめる。形は [references/format.md](references/format.md)。
-5. `write` なら書き、索引を作り直して確かめる（`python3 .claude/skills/decision-log/scripts/build_index.py <置き場所>`、続けて `--check`。Kiro は `.kiro/skills/…`、プラグインは `${CLAUDE_SKILL_DIR}/scripts/…`）。ブランチを切り、PR を出す。
-6. 報告する：食い違い（PR の本文と差分など）、範囲と基準のコミット、Decision log（`audit` なら下書き）、決定の候補（決定の言葉と決めた人が記録にあるもの）、見た変更の数と全体の数、読み残し。
+3. 分担の 1 回目から順に、回の中の分類ごとに `decision-log-reader` を呼ぶ。1 つの読み手に渡すのは 5 件まで（多い分類は分ける）。回の中の読み手は 1 回の応答でまとめて呼ぶ（Kiro は 1 回に 4 つまで）。件数が少なくても自分で読まない。結果は呼び出しの戻りで受け取り、`sleep` で待たない。
+4. Decision log は 1 つずつ書く。一つの流れの変更を 1 つにまとめ、形（[references/format.md](references/format.md)）の節を全部埋めてから次へ進む。数が多くても短くしない、「ほか N 件」で省かない。足りないもの（ステータスの行、理由の出典）があれば、その PR だけ読み手に読み直させる。
+5. 1 回分を書き終えたら次の回へ進み、全部の回を終える。`write` なら回ごとに書き、索引を作り直して確かめる（`python3 .claude/skills/decision-log/scripts/build_index.py <置き場所>`、続けて `--check`。Kiro は `.kiro/skills/…`、プラグインは `${CLAUDE_SKILL_DIR}/scripts/…`）。ブランチを切り、PR を出す。
+6. 報告する：食い違い（PR の本文と差分など）、範囲と基準のコミット、Decision log（`audit` なら下書き）、決定の候補（決定の言葉と決めた人が記録にあるもの）、回ごとの件数、見た変更の数と全体の数、読み残し（途中で止まったら、次の回）。
 
 サブエージェントは `.claude/agents/`・`.kiro/agents/` にあるとき名前で呼ぶ（プラグインは `decision-continuity:decision-log-planner`）。ないときは自分で同じことをする：長く続くブランチ（`main`・`develop` など。開発の本流と本番の適用先が分かれていれば両方）ごとに `TZ=Asia/Tokyo git log --first-parent --date=short-local --format='@@ %h %ad %s' --name-only <ブランチ>` で一覧を取り（同じコミットは 1 つに数える）、`git log --first-parent -i -G 'timeout|retr(y|ies)|limit|auth|token|secret|schema|migrat' --format='%h'` と `git log --first-parent -G '^[A-Z][A-Z0-9_]{2,} *[:=]' --format='%h'` でタイトルに出ない変更も拾い、`gh pr view <番号> --json title,body,author,mergedAt,mergedBy,url,reviews,comments` と `git show <コミット>` で読む。
 
