@@ -144,51 +144,71 @@ class BuildHistoryTests(unittest.TestCase):
         self.assertEqual(self.run_script("--check").returncode, 1)
 
     def test_github_gives_pr_authors(self):
-        # gh があれば、言われなくても PR の作成者を GitHub から取る。PR のないコミットはメールから取る
-        env = self.fake_gh('echo "$@" > gh-args.txt; printf "2 bob\\n3 carol\\n"')
+        # gh があれば、言われなくても PR の作成者を GitHub から取り、.git の中に覚えておく。PR のないコミットはメールから取る
+        env = self.fake_gh('echo "$@" >> gh-args.txt; printf "2\\tbob\\t\\tExtend\\n3\\tcarol\\t\\tRetries\\n"')
+        self.assertEqual(self.run_script(env=env).returncode, 0)
+        self.assertIn("api repos/o/r/pulls?state=closed&sort=updated&direction=desc&per_page=100&page=1 --jq",
+                      (self.repo / "gh-args.txt").read_text())
+        self.assertTrue((self.repo / ".git/decision-continuity-prs.json").exists())
+        # --list（書き手が月ごとに呼ぶ）は問い合わせず、覚えておいた分を使う
+        (self.repo / "gh-args.txt").unlink()
         result = self.run_script("--list", "2025-02", env=env)
-        self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("Extend session（[#2](https://github.com/o/r/pull/2)、src/auth/、@bob）", result.stdout)
         self.assertIn("Raise payment retries（[#3](https://github.com/o/r/pull/3)、docs/ ほか 1、@carol）", result.stdout)
-        self.assertIn("  - Raise retries（[", result.stdout)
         self.assertRegex(result.stdout, r"  - Raise retries（\[[0-9a-f]{7}\]\([^)]*\)、@alice）")
-        self.assertIn("api repos/o/r/pulls?state=closed&per_page=100&page=1 --jq", (self.repo / "gh-args.txt").read_text())
+        self.assertFalse((self.repo / "gh-args.txt").exists())
         # 表の Author にも入る
-        self.run_script(env=env)
         self.fill("2025-02", "### 機能改善\n\n| | セッションを延ばした | #2 | |")
         self.run_script(env=env)
         self.assertIn("| 2025-02-01 | セッションを延ばした | [#2](https://github.com/o/r/pull/2) | @bob |", self.page("2025-02.md"))
-        # gh が失敗したら、理由を出してメールから取る
-        result = self.run_script("--list", "2025-02", env=self.fake_gh("echo 'HTTP 401' >&2; exit 1"))
-        self.assertEqual(result.returncode, 0)
-        self.assertIn("gh api が失敗したので、PR の作成者はメールから取る（HTTP 401。止めるなら --no-github）", result.stderr)
-        self.assertIn("src/auth/、—）", result.stdout)
-        # --no-github なら問い合わせない
-        (self.repo / "gh-args.txt").unlink()
-        result = self.run_script("--list", "2025-02", "--no-github", env=env)
-        self.assertIn("src/auth/、—）", result.stdout)
-        self.assertFalse((self.repo / "gh-args.txt").exists())
-        # gh がなければ黙ってメールから取る。--github と言われたときだけ理由を出す
+        # gh が失敗しても、覚えておいた分を使う
+        failing = self.fake_gh("echo 'HTTP 401' >&2; exit 1")
+        self.assertIn("src/auth/、@bob）", self.run_script("--list", "2025-02", "--github", env=failing).stdout)
+        result = self.run_script(env=failing)
+        self.assertIn("gh api が失敗したので、PR の作成者は覚えておいた分とメールから取る（HTTP 401。止めるなら --no-github）", result.stderr)
+        # --no-github なら問い合わせず、覚えておいた分も使わない
+        self.assertIn("src/auth/、—）", self.run_script("--list", "2025-02", "--no-github", env=env).stdout)
+        # gh がなければ黙って取らない。--github と言われたときだけ理由を出す
         only_git = self.repo / ".only-git"
         only_git.mkdir()
         (only_git / "git").symlink_to(shutil.which("git"))
-        result = self.run_script("--list", "2025-02", env=dict(os.environ, PATH=str(only_git)))
-        self.assertEqual((result.returncode, result.stderr), (0, ""))
-        self.assertIn("src/auth/、—）", result.stdout)
-        result = self.run_script("--list", "2025-02", "--github", env=dict(os.environ, PATH=str(only_git)))
+        self.assertEqual(self.run_script(env=dict(os.environ, PATH=str(only_git))).stderr, "")
+        result = self.run_script("--github", env=dict(os.environ, PATH=str(only_git)))
         self.assertIn("--github：gh がないので、PR の作成者は取らない", result.stderr)
 
-    def test_github_pages_until_short_and_keeps_partial_results(self):
+    def test_github_pages_only_until_known_and_keeps_partial_results(self):
         # 100 件ちょうどなら次のページを取る。2 ページ目で失敗しても、1 ページ目の分は使う
-        env = self.fake_gh('case "$2" in *page=1) i=1; while [ $i -le 100 ]; do echo "$i user$i"; i=$((i+1)); done;; '
-                           '*) echo "HTTP 403" >&2; exit 1;; esac')
-        result = self.run_script("--list", "2025-02", env=env)
-        self.assertIn("Extend session（[#2](https://github.com/o/r/pull/2)、src/auth/、@user2）", result.stdout)
-        self.assertIn("gh api が失敗したので、以降の PR の作成者はメールから取る（HTTP 403", result.stderr)
+        page1 = 'i=1; while [ $i -le 100 ]; do printf "%s\\tuser%s\\t\\tT\\n" $i $i; i=$((i+1)); done'
+        env = self.fake_gh('echo "$@" >> gh-args.txt; case "$2" in *page=1) ' + page1 + ';; *) echo "HTTP 403" >&2; exit 1;; esac')
+        result = self.run_script(env=env)
+        self.assertIn("gh api が失敗したので、以降の PR の作成者は覚えておいた分とメールから取る（HTTP 403", result.stderr)
+        self.assertIn("src/auth/、@user2）", self.run_script("--list", "2025-02", env=env).stdout)
+        # 2 回目は、1 ページ目が全部覚えている PR なので、そこで止める
+        (self.repo / "gh-args.txt").unlink()
+        self.assertEqual(self.run_script(env=env).stderr, "")
+        self.assertEqual(len((self.repo / "gh-args.txt").read_text().splitlines()), 1)
+
+    def test_github_links_commits_without_numbers_to_their_pr(self):
+        # Rebase and merge などで件名に番号がないコミットも、PR を入れたコミット（merge_commit_sha）から PR に結びつける
+        self.commit("src/search.py", "x", "Add search", "2025-02-20T00:00:00Z")
+        sha = self.git("rev-parse", "HEAD").strip()
+        env = self.fake_gh(f'printf "9\\tdave\\t{sha}\\tAdd full-text search\\n"')
+        self.run_script(env=env)
+        self.assertIn("- 2025-02-20 Add full-text search（[#9](https://github.com/o/r/pull/9)、src/、@dave）",
+                      self.run_script("--list", "2025-02", env=env).stdout)
+
+    def test_until_limits_the_months(self):
+        self.commit("src/late.py", "x", "Later (#7)", "2025-04-02T00:00:00Z")
+        self.run_script("--since", "2025-02", "--until", "2025-02")
+        folder = self.repo / "docs/change-history"
+        self.assertEqual(sorted(p.name for p in folder.glob("*.md")), ["2025-02.md", "README.md"])
+        self.assertNotIn("2025-04", self.page("README.md"))
+        self.assertNotIn("2025-01", self.page("README.md"))
+        self.assertEqual(self.run_script("--until", "2025-4").returncode, 2)
 
     def test_check_does_not_depend_on_gh(self):
         # gh で作った表は、gh のない環境（CI など）の --check でも最新のまま
-        env = self.fake_gh('printf "2 bob\\n"')
+        env = self.fake_gh('printf "2\\tbob\\t\\tExtend\\n"')
         self.run_script(env=env)
         self.fill("2025-02", "### 機能改善\n\n| | セッションを延ばした | #2 | |")
         self.run_script(env=env)
@@ -220,9 +240,62 @@ class BuildHistoryTests(unittest.TestCase):
         self.run_script()
         self.fill("2025-02", "### バグ対応\n\n- 旧（#99）")
         result = self.run_script()
-        self.assertIn("|  | 旧 | #99 |  |", self.page("2025-02.md"))
+        self.assertIn("|  | 旧 | [#99](https://github.com/o/r/pull/99) | — |", self.page("2025-02.md"))
         self.assertIn("PR の列の参照が、この月の変更にない", result.stdout)
         self.assertNotIn("下に行がない", result.stdout)
+
+    def test_rows_are_filled_even_when_they_break_the_rules(self):
+        # 別の月の PR を書いても、決まりにない見出しの下に書いても、リンク・日付・Author は入れ、崩れとして知らせる
+        self.run_script()
+        self.fill("2025-01", "### security\n\n| | セッションを延ばした | #2 | |")
+        result = self.run_script()
+        self.assertIn("| 2025-02-01 | セッションを延ばした | [#2](https://github.com/o/r/pull/2) | — |", self.page("2025-01.md"))
+        self.assertIn("分類 security は", result.stdout)
+        self.assertIn("PR の列の参照が、この月の変更にない", result.stdout)
+
+    def test_duplicate_and_unknown_references_are_kept(self):
+        # 同じ PR を 2 度書いても、後ろの読めない参照を落とさない。どこにもないハッシュは書かれたまま
+        self.run_script()
+        self.fill("2025-02", "### 機能改善\n\n| | 重なり | #2、#2、#99 | |\n| | ハッシュ | deadbeef1 | |")
+        self.run_script()
+        feb = self.page("2025-02.md")
+        self.assertIn("| 2025-02-01 | 重なり | [#2](https://github.com/o/r/pull/2)、[#99](https://github.com/o/r/pull/99) | — |", feb)
+        self.assertIn("|  | ハッシュ | [deadbeef1](https://github.com/o/r/commit/deadbeef1) | — |", feb)
+
+    def test_rebuilding_twice_changes_nothing(self):
+        # 決まりから外れた行（別の月の PR、決まりにない見出し、前の形、読めない参照）が混じっても、2 回目は何も変えない
+        self.run_script()
+        sha = self.git("log", "-1", "--format=%H", "--grep", "Initial").strip()
+        self.fill("2025-02", "\n".join(["### security", "| | 別の月のコミット | " + sha[:9] + " | |", "### バグ対応",
+                                         "- 前の形（#3）", "- 読めない（#99）", "| | まとめ | [#2](x)、#3 | @someone |"]))
+        self.run_script()
+        first = {p.name: p.read_text(encoding="utf-8") for p in (self.repo / "docs/change-history").glob("*.md")}
+        self.run_script()
+        second = {p.name: p.read_text(encoding="utf-8") for p in (self.repo / "docs/change-history").glob("*.md")}
+        self.assertEqual(first, second)
+        self.assertIn(f"| 2025-01-10 | 別の月のコミット | [{sha[:7]}](https://github.com/o/r/commit/{sha}) | — |", second["2025-02.md"])
+        self.assertNotIn("が古い", self.run_script("--check").stdout)
+
+    def test_rows_are_sorted_by_date_and_any_quiet_month_is_allowed(self):
+        self.run_script()
+        self.fill("2025-02", "### 機能改善\n\n| | 後 | #3 | |\n| | 読めない | #99 | |\n| | 先 | #2 | |")
+        self.fill("2025-01", "- 目立った変更なし（依存の更新のみ）")
+        self.run_script()
+        feb = self.page("2025-02.md")
+        self.assertLess(feb.index("| 先 |"), feb.index("| 後 |"))
+        self.assertLess(feb.index("| 後 |"), feb.index("| 読めない |"))
+        self.assertIn("| [2025-01](2025-01.md) | 1 | 目立った変更なし（依存の更新のみ） |", self.page("README.md"))
+
+    def test_too_many_references_in_a_row_are_reported(self):
+        self.run_script()
+        self.fill("2025-02", "### 運用改善\n\n| | 翻訳 | #2、#3、#91、#92、#93、#94 | |")
+        self.assertIn("PR は 1 行に 5 件まで", self.run_script().stdout)
+
+    def test_unwritten_months_are_listed(self):
+        # 書き手が書けなかった月に気づけるよう、まだの月を出す
+        self.assertIn("主な変更をまだ書いていない月（2）：2025-01、2025-02", self.run_script().stdout)
+        self.fill("2025-01", "- 目立った変更なし（リリースのみ）")
+        self.assertIn("主な変更をまだ書いていない月（1）：2025-02", self.run_script().stdout)
 
     def test_empty_repository(self):
         with tempfile.TemporaryDirectory() as empty:
@@ -342,6 +415,39 @@ class BuildHistoryTests(unittest.TestCase):
     def merge(self, branch, message, date):
         self.git("merge", "-q", "--no-ff", branch, "-m", message, env={"GIT_AUTHOR_DATE": date, "GIT_COMMITTER_DATE": date})
 
+    def test_fork_merges_give_authors_without_github(self):
+        # フォークからのマージは、件名のフォークの持ち主が PR の作成者。noreply でないメールでも Author が出る
+        self.git("config", "user.name", "Bob")
+        self.git("config", "user.email", "bob@example.com")
+        self.git("switch", "-q", "-c", "fix")
+        self.commit("src/cache.py", "TTL = 1", "Fix cache", "2025-06-01T00:00:00Z")
+        self.git("switch", "-q", "main")
+        self.merge("fix", "Merge pull request #20 from bob-gh/fix\n\nFix cache", "2025-06-02T00:00:00Z")
+        # 同じメールの、PR を通さない変更にも使う
+        self.commit("src/cache.py", "TTL = 2", "Tune cache", "2025-06-03T00:00:00Z")
+        # メンテナーが同じリポジトリのブランチでも使うメールは、フォークのマージに出ても使わない
+        self.git("config", "user.email", "lead@example.com")
+        for n, (owner, day) in enumerate([("carol-gh", "05"), ("o", "07")]):
+            self.git("switch", "-q", "-c", f"b{n}")
+            self.commit("src/db.py", str(n), f"Change db {n}", f"2025-06-{day}T00:00:00Z")
+            self.git("switch", "-q", "main")
+            self.merge(f"b{n}", f"Merge pull request #{21 + n} from {owner}/b{n}\n\nChange db {n}", f"2025-06-{day}T01:00:00Z")
+        self.commit("src/db.py", "x", "Tidy db", "2025-06-08T00:00:00Z")
+        self.assertEqual(self.run_script().returncode, 0)
+        june = self.listing("2025-06")
+        for line in ["Fix cache（[#20](https://github.com/o/r/pull/20)、src/、@bob-gh）", "Tune cache（[",
+                     "Change db 0（[#21](https://github.com/o/r/pull/21)、src/、@carol-gh）",
+                     "Change db 1（[#22](https://github.com/o/r/pull/22)、src/、—）"]:
+            self.assertIn(line, june)
+        self.assertRegex(june, r"Tune cache（\[[0-9a-f]{7}\][^\n]*、@bob-gh）")
+        self.assertRegex(june, r"Tidy db（\[[0-9a-f]{7}\][^\n]*、—）")
+        # 前に — と書いた行は、取れるようになった名前に替わる。取れない側は、書いてある名前を残す
+        self.fill("2025-06", "### バグ対応\n\n| | キャッシュを直した | #20 | — |\n| | DB を変えた | #22 | @lead |")
+        self.run_script()
+        page = self.page("2025-06.md")
+        self.assertIn("| キャッシュを直した | [#20](https://github.com/o/r/pull/20) | @bob-gh |", page)
+        self.assertIn("| DB を変えた | [#22](https://github.com/o/r/pull/22) | @lead |", page)
+
     def test_development_and_production_branches(self):
         # 機能の修正は develop へ、リリースは develop から main へ、緊急の修正は main へ直接
         self.git("switch", "-q", "-c", "develop")
@@ -394,6 +500,33 @@ class BuildHistoryTests(unittest.TestCase):
         self.assertFalse((self.repo / "docs/change-history/2025-01.md").exists())
         self.assertIn("pull/2)、src/、—）", self.listing("2025-02", "--since", "2025-02", "--depth", "1"))
         self.assertEqual(self.run_script("--since", "2025-2").returncode, 2)
+
+
+class WriterAgentTests(unittest.TestCase):
+    """change-history-writer が、使うコマンドを Kiro で確認なしに通せるか。"""
+
+    def test_kiro_writer_auto_approves_the_commands_it_needs(self):
+        import json, re
+        kiro = json.loads((ROOT / "agents/kiro/change-history-writer.json").read_text(encoding="utf-8"))
+        allowed = [re.compile(p) for p in kiro["toolsSettings"]["shell"]["allowedCommands"]]
+        for cmd in ("python3 .kiro/skills/change-history/scripts/build_history.py docs/change-history --list 2025-02",
+                    "python3 .kiro/skills/change-history/scripts/build_history.py docs/change-history --list 2025-02 --branch main",
+                    "git show --stat abc1234"):
+            self.assertTrue(any(p.fullmatch(cmd) for p in allowed), cmd)
+        for cmd in ("python3 .kiro/skills/change-history/scripts/build_history.py x; rm -rf ~", "python3 -c 'import os'", "git push"):
+            self.assertFalse(any(p.fullmatch(cmd) for p in allowed), cmd)
+        self.assertEqual(kiro["toolsSettings"]["write"]["allowedPaths"], ["docs/change-history/*.md"])
+
+    def test_writer_names_the_scripts_categories(self):
+        import re, sys
+        sys.path.insert(0, str(SCRIPT.parent))
+        import build_history
+        body = (ROOT / "agents/claude/change-history-writer.md").read_text(encoding="utf-8")
+        line = next(l for l in body.splitlines() if "分類は" in l)
+        self.assertEqual(re.findall(r"`(.+?)`（", line), list(build_history.DESCRIPTIONS))
+
+    def test_skill_calls_the_writer_by_name(self):
+        self.assertIn("change-history-writer", (ROOT / "skills/change-history/SKILL.md").read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

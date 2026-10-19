@@ -1,6 +1,6 @@
 ---
 category: product
-checked: 5101b9e
+checked: cfb2cf6
 ---
 
 # change-history の月のファイルを主な変更の表だけにし、Author をアカウント名で出すことにした
@@ -45,3 +45,13 @@ Superseded：`build_history.py` は `--github` のとき `pr_authors` で PR の
 
 - 2026-10-19 `gh` が使えれば、`--github` を付けなくても PR の作成者を取ることにし、問い合わせを止める `--no-github` を足した。noreply のメール（`.mailmap` を通す）は、取れない変更の予備として残す。PR の作成者は `--paginate` をやめ、`&page=N` でページを数えて取り、途中で失敗しても取れた分を使う（ブランチ github-default。作成 @MichinaoShimizu）。理由：「No replay mail形式で取得する意味何」という問いに、noreply は予備にすぎず会社のリポジトリではほぼ当たらないと答え、GitHub を既定にする案に @MichinaoShimizu が「そうして」と答えた（会話 2026-10-19）。`--paginate` は、このセッションの中継が次のページの `repositories/<ID>/…` を 403 で止めたため、ページを数える形にした（Claude の判断。本物の `gh` で、このリポジトリの 112 件を 2 ページで取れた）
 Superseded：`build_history.py` は `--no-github` でなければ `pr_authors` で PR の作成者を取る（`skills/change-history/scripts/build_history.py`）。SKILL.md は、`gh` があれば GitHub から取り、止めるなら `--no-github` とする
+
+## 追記 2026-10-19（覚えておく・番号のないコミット・期間の終わり）
+
+- 2026-10-19 GitHub から取った PR を `.git/decision-continuity-prs.json` に覚えておき、更新の新しい順に取って、全部を覚えている PR のページが来たら止めることにした。`--list` は問い合わせず、覚えておいた分を使う。件名に番号のないコミットは、PR を入れたコミット（`merge_commit_sha`）から PR の番号とタイトルを付ける。`--until` を足し、年表には期間の月と前から載っている月だけを載せる（ブランチ change-history-writer。作成 @MichinaoShimizu）。理由：「高精度でフォーマットに沿った可読性の高い変更履歴年表を高速で作成可能（リポジトリ問わず）」という目標（@MichinaoShimizu、2026-10-19）に向けて、Claude が flask（本流 2,280 件）で試した。本物のエージェントは「2023-01 から 2023-12」の終わりを指定できずに止まり、PR が多いリポジトリでは書き手が月ごとに全部の PR を取り直す作りだった（Claude の判断）
+Superseded：`build_history.py` は `github_prs` で PR を覚えておいた分に足し、`by_pr` で番号のないコミットを PR に結びつける（`skills/change-history/scripts/build_history.py`）
+
+## 追記 2026-10-19（フォークからのマージ）
+
+- 2026-10-19 `gh` で取れない変更の Author に、フォークからのマージの件名（`Merge pull request #12 from alice/fix` の `alice`。origin の持ち主と違うときだけ）を使うことにした。そのマージの先頭のコミットのメールも覚え、同じメールで PR を通さない変更にも使う。同じリポジトリのブランチからのマージにも出るメール（メンテナーが別の人の PR に足したコミットなど）と、2 人以上に当たるメールは使わない。前に `—` と書いた行は、取れるようになった名前に替える（ブランチ change-history-writer。作成 @MichinaoShimizu）。理由：「高精度でフォーマットに沿った可読性の高い変更履歴年表を高速で作成可能（リポジトリ問わず）」という目標（@MichinaoShimizu、2026-10-19）に向けて、Claude が `gh` を使えない flask の 2023 年で試すと、41 行中 38 行の Author が `—` だった。フォークの持ち主を使うと 31 行に減った（Claude の判断）
+Superseded：`build_history.py` は `credit` でフォークの持ち主を Author にし、`by_pr` で覚えたメールを使う（`skills/change-history/scripts/build_history.py`）

@@ -45,6 +45,18 @@ class InstallTests(unittest.TestCase):
             self.assertFalse(stale.exists())
             self.assertTrue(mine.exists(), "ほかのエージェントは消さない")
 
+    def test_reinstall_drops_this_kits_removed_agents(self):
+        # 前の版にあって、いまの版で消したサブエージェントは残さない。書き手も入る
+        for tool, ext in (("claude", ".md"), ("kiro", ".json")):
+            with self.subTest(tool=tool), tempfile.TemporaryDirectory() as d:
+                install(tool, d)
+                agents = pathlib.Path(d) / f".{tool}/agents"
+                self.assertTrue((agents / f"change-history-writer{ext}").exists())
+                for gone in ("decision-log-old", "change-history-old"):
+                    (agents / f"{gone}{ext}").write_text("{}", encoding="utf-8")
+                self.assertEqual(install(tool, d).returncode, 0)
+                self.assertEqual(sorted(p.name for p in agents.glob("*-old*")), [])
+
     def test_cdpath_does_not_break_the_paths(self):
         import os
         with tempfile.TemporaryDirectory() as d:

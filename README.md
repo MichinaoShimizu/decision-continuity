@@ -26,7 +26,7 @@ claude plugin uninstall decision-continuity@decision-continuity
 d=$(mktemp -d) && git clone --depth 1 https://github.com/MichinaoShimizu/decision-continuity "$d" && sh "$d/tools/install.sh" kiro
 
 # 削除
-rm -rf .kiro/skills/decision-log .kiro/skills/change-history .kiro/agents/decision-log-planner.* .kiro/agents/decision-log-reader.*
+rm -rf .kiro/skills/decision-log .kiro/skills/change-history .kiro/agents/decision-log-planner.* .kiro/agents/decision-log-reader.* .kiro/agents/change-history-writer.*
 ```
 
 スキルの前書きの `allowed-tools`（確認なしで通すコマンド）は Claude Code 向けで、Kiro は読まない（Kiro の文書にない項目）。Kiro で確認なしに通るのは、サブエージェントの定義（`.kiro/agents/`）に書いた読むだけのコマンドだけ。メインの会話で回すコマンド（索引のスクリプトなど）は、確認が出たら内容を見て許す。
@@ -37,7 +37,7 @@ rm -rf .kiro/skills/decision-log .kiro/skills/change-history .kiro/agents/decisi
 
 ### 年表を作る（change-history）
 
-`docs/change-history/` に、月ごとの主な変更の表（`YYYY-MM.md`。日付・概要・PR・Author）と、年表を兼ねた索引（`README.md`）を作る。タグやリリースがなくてもよい。
+`docs/change-history/` に、月ごとの主な変更の表（`YYYY-MM.md`。日付・概要・PR・Author）と、年表を兼ねた索引（`README.md`）を作る。タグやリリースがなくてもよい。月ごとの表は change-history-writer が受け持ち、12 か月ずつの回に分けて並べて書く。
 
 ```text
 change-history で、いつどんな変更をしてきたかを月ごとにまとめて、年表まで作って。
