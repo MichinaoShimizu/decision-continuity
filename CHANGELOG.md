@@ -2,6 +2,13 @@
 
 decision-continuity の主な変更。[Keep a Changelog](https://keepachangelog.com/) の形で書く。変更は `changes/` の断片に書き（[changes/README.md](changes/README.md)）、リリースのときに版の節にまとめる。版は中身から決まり（[Semantic Versioning](https://semver.org/)、`sh tools/next-version.sh`）、各版の節がそのまま GitHub のリリースノートになる。手順は [docs/release.md](docs/release.md)。
 
+## v0.11.3 - 2026-10-19
+
+### Changed
+
+- change-history: `gh` が使えれば、`--github` を付けなくても Author を GitHub の PR の作成者にする。問い合わせを止めるなら `--no-github`。`gh` がないときは黙ってメールから取り、`gh` が失敗したときは理由を出す
+- change-history: PR の作成者はページを数えて 100 件ずつ取る（`--paginate` が次のページに使う `repositories/<ID>/…` の形を通さない中継があったため）。途中で失敗しても、取れた分は使う
+
 ## v0.11.2 - 2026-10-19
 
 ### Changed
