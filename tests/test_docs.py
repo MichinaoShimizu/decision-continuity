@@ -158,21 +158,14 @@ class AgentTests(unittest.TestCase):
                     self.assertFalse(allowed(cmd, rules), cmd)
 
 
-    def test_change_history_uses_the_decision_log_categories(self):
-        # change-history の主な変更は decision-log と同じ分類で書く。表を変えたら両方を直す
-        table = (ROOT / "skills/decision-log/references/format.md").read_text(encoding="utf-8")
-        want = [c for c in re.findall(r"^\| `([a-z]+)` \|", table, re.M) if c != "category"]
-        skill = (ROOT / "skills/change-history/SKILL.md").read_text(encoding="utf-8")
-        line = next(l for l in skill.splitlines() if "分類は decision-log と同じ" in l)
-        got = re.findall(r"`([a-z]+)`", line.split("分類は decision-log と同じ", 1)[1].split("で、", 1)[0])
-        self.assertEqual(len(want), 11)
-        self.assertEqual(got, want)
+    def test_change_history_categories(self):
+        # change-history の主な変更と年の要点は、機能改善・運用改善・バグ対応の 3 つで分ける。SKILL.md とスクリプトを揃える
         script = (ROOT / "skills/change-history/scripts/build_history.py").read_text(encoding="utf-8")
-        self.assertEqual(re.findall(r'"([a-z]+)"', re.search(r"CATEGORIES = \((.*?)\)", script, re.S).group(1)), want)
-        # 分類の見出しの直下に入れる説明は、format.md の表の「見出し：中身」と同じ
-        rows = dict((c, f"{h}：{d}") for c, h, d in re.findall(r"^\| `([a-z]+)` \| (.*?) \| (.*?) \|$", table, re.M) if c != "category")
-        got = dict(re.findall(r'^    "([a-z]+)": "(.*?)",$', re.search(r"DESCRIPTIONS = \{(.*?)\n\}", script, re.S).group(1), re.M))
-        self.assertEqual(got, rows)
+        got = re.findall(r'^    "(.+?)": ".+?",$', re.search(r"DESCRIPTIONS = \{(.*?)\n\}", script, re.S).group(1), re.M)
+        self.assertEqual(got, ["機能改善", "運用改善", "バグ対応"])
+        skill = (ROOT / "skills/change-history/SKILL.md").read_text(encoding="utf-8")
+        line = next(l for l in skill.splitlines() if "分類は `機能改善`" in l)
+        self.assertEqual(re.findall(r"`(.+?)`", line.split("分類は ", 1)[1].split(" の 3 つ", 1)[0]), got)
 
     def test_both_skills_skip_the_same_routine_releases(self):
         # 版を上げるだけのリリースは、change-history の主な変更にも decision-log の候補にも入れない

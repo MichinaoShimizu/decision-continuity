@@ -17,8 +17,8 @@
 origin/ にあればそちらを読む。
 どのブランチにも入ったコミットは 1 つにまとめ、ブランチ間のマージ（develop から main へのリリースなど）には印を付ける。
 PR の番号はマージコミットの件名（Merge pull request #12）か、squash の件名の末尾（(#12)）から取る。
-各月の「## 主な変更」と、README.md の各年の要点・各月の要約は、作り直しても残す（人か AI が書く）。年の要点の分類は
-機能改善・運用改善・バグ対応、月の主な変更の分類は decision-log と同じ 11 種。分類の見出しの直下には
+各月の「## 主な変更」と、README.md の各年の要点・各月の要約は、作り直しても残す（人か AI が書く）。月の主な変更と年の要点の分類は
+機能改善・運用改善・バグ対応の 3 つ。分類の見出しの直下には
 分類の説明を入れる。主な変更の表の日付と Author は、PR の列の変更から埋め直す（前の形の「- 概要（#12）」の行は表に移す）。
 決まった形でなければ、どこが崩れているかを出し、終了コード 1 を返す。標準ライブラリだけを使う。
 人はアカウント名（@login）で、Author の列にだけ書く。gh が使えれば、PR の作成者を GitHub から取る（gh api の GET だけ）。
@@ -47,29 +47,13 @@ LONG_LIVED = ("main", "master", "develop", "development", "dev", "production")
 MONTH_RE = re.compile(r"^\d{4}-\d{2}$")
 SUMMARY = "## 主な変更"
 EMPTY = "（まだ書いていない）"
-# decision-log の format.md と同じ分類（tests/test_docs.py が揃いを確かめる）
-CATEGORIES = ("architecture", "data", "security", "privacy", "compatibility", "reliability", "release",
-              "engineering", "cost", "product", "other")
-# 分類の見出しの直下に入れる説明。format.md の表の「見出し：中身」と同じ（tests/test_docs.py が揃いを確かめる）
+# 月の主な変更と年表（README.md の年の要点）の分類。変更の性質で 3 つに分け、見出しの直下に説明を入れる
 DESCRIPTIONS = {
-    "architecture": "設計・構成：分割と統合、依存の向き、採用する技術、基盤の移行",
-    "data": "データの意味・持ち方：スキーマ、値の意味と単位、保存先、保持期間（個人情報は privacy）",
-    "security": "認証・権限・セキュリティ：認証方式、権限の境界、秘密情報、署名と検証、暗号化",
-    "privacy": "個人情報：個人情報を集めるか、どこに出す・送る・残すか（ログ・送信先・保持期間）、マスキング",
-    "compatibility": "互換性・外部との約束：公開 API、形式、バージョン、廃止",
-    "reliability": "性能・信頼性：負荷や障害のときの振る舞い。タイムアウト、リトライ、上限、キャッシュ、縮退",
-    "release": "リリース・運用：デプロイの手順、フラグ、環境、監視・アラートと通知先、ログ・トレースの出し方",
-    "engineering": "開発の決まり：CI の必須チェック、テストの方針、lint・コードの規約、ブランチの運用",
-    "cost": "コスト：インスタンスやプランの大きさ、サンプリングの割合、コストのための削減や上限",
-    "product": "プロダクトの方針：仕様の線引き、やらないと決めたこと",
-    "other": "その他：どれにも当たらないもの。多ければ分類を見直す",
-}
-# 年表（README.md の年の要点）の分類。月の主な変更とは別に、変更の性質で 3 つに分ける
-YEAR_DESCRIPTIONS = {
     "機能改善": "使う人に見える機能の追加と変更",
     "運用改善": "開発・リリース・運用の進め方の改善（CI、デプロイ、監視、手順、文書など）",
     "バグ対応": "不具合の修正と、その再発を防ぐ変更",
 }
+CATEGORIES = tuple(DESCRIPTIONS)
 HEADER, RULE = "| 日付 | 概要 | PR | Author |", "|---|---|---|---|"
 NO_POINT = "まだ"
 ROW_RE = re.compile(r"^\| \[(\d{4}-\d{2})\]\(\1\.md\) \| \d+ \| (.*) \|$")
@@ -337,7 +321,7 @@ def tidy(text, kind, index=None, url=None):
     out = [l for l in head if l]
     for heading, lines in blocks:
         lines = [l for l in lines if l]
-        desc = (YEAR_DESCRIPTIONS if kind == "year" else DESCRIPTIONS).get(heading)
+        desc = DESCRIPTIONS.get(heading)
         if lines and lines[0] == desc:
             lines = lines[1:]
         if kind == "month" and heading in DESCRIPTIONS:
@@ -368,7 +352,7 @@ def problems(text, kind, index=None):
     if text in (None, "", EMPTY) or (NOTHING_RE.match(text) and "\n" not in text):
         return []
     found, seen, heading, at, items = [], set(), None, 0, 0
-    names = DESCRIPTIONS if kind == "month" else YEAR_DESCRIPTIONS
+    names = DESCRIPTIONS
     for number, line in enumerate(text.splitlines(), 1):
         line = line.strip()
         if not line or (heading and line in (names.get(heading), HEADER, RULE)):
