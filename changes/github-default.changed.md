@@ -1,2 +1,0 @@
-- change-history: `gh` が使えれば、`--github` を付けなくても Author を GitHub の PR の作成者にする。問い合わせを止めるなら `--no-github`。`gh` がないときは黙ってメールから取り、`gh` が失敗したときは理由を出す
-- change-history: PR の作成者はページを数えて 100 件ずつ取る（`--paginate` が次のページに使う `repositories/<ID>/…` の形を通さない中継があったため）。途中で失敗しても、取れた分は使う
