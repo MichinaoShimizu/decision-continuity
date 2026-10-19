@@ -1,1 +1,0 @@
-- change-history: Author のメールを git の `.mailmap` に通すようにした。社内のメールを noreply のメール（`1+alice@users.noreply.github.com`）に対応させれば、アカウント名が出る
