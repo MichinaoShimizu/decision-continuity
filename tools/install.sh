@@ -32,5 +32,7 @@ for s in "$src"/skills/*/; do
   rm -rf "$skill/scripts/__pycache__"
   echo "  skills/$name/"
 done
+# 前の版で消えたサブエージェントが残らないよう、このキットのもの（decision-log-*）は入れ替える
+rm -f "$dest/$dir/agents"/decision-log-*
 cp "$@" "$dest/$dir/agents/"
 for f in "$@"; do echo "  agents/${f##*/}"; done

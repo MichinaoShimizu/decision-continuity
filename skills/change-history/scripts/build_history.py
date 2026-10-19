@@ -53,7 +53,6 @@ DESCRIPTIONS = {
     "運用改善": "開発・リリース・運用の進め方の改善（CI、デプロイ、監視、手順、文書など）",
     "バグ対応": "不具合の修正と、その再発を防ぐ変更",
 }
-CATEGORIES = tuple(DESCRIPTIONS)
 HEADER, RULE = "| 日付 | 概要 | PR | Author |", "|---|---|---|---|"
 NO_POINT = "まだ"
 ROW_RE = re.compile(r"^\| \[(\d{4}-\d{2})\]\(\1\.md\) \| \d+ \| (.*) \|$")
@@ -64,7 +63,6 @@ CELL_RE = re.compile(r"(?<!\\)\|")
 OLD_LINE_RE = re.compile(r"^- (.*)（([^（）]*)）$")
 NOTHING_RE = re.compile(r"^- 目立った変更なし（(?:ブランチの取り込み|リリース|ブランチの取り込みとリリース)のみ）$")
 # 月の行の末尾は PR かコミット（リンクでも、なくても）、年の行の末尾は月か期間
-REF_RE = re.compile(r"(?:\[#\d+\]\([^)]*\)|#\d+|\[[0-9a-f]{7,40}\]\([^)]*\)|\b[0-9a-f]{7,40}\b)")
 KEY_RE = re.compile(r"#(\d+)|\b([0-9a-f]{7,40})\b")
 PERIOD_RE = re.compile(r"（\d{4}-\d{2}(?:〜\d{4}-\d{2})?）$")
 # 略した日付（5 月、05-02）。YYYY-MM と YYYY-MM-DD には当たらない
@@ -112,7 +110,8 @@ def long_lived():
 
 def first_parent(ref, tz):
     """ref の --first-parent の各コミットを、古い順に返す。"""
-    fmt = FIELD.join(["%H", "%P", "%aE", "%ad", "%s", "%b"])  # %aE は .mailmap を通したメール
+    # %aE は .mailmap を通したメール、%cd はブランチに入った日（rebase や cherry-pick でも、書いた日ではなく入った日）
+    fmt = FIELD.join(["%H", "%P", "%aE", "%cd", "%s", "%b"])
     out = git("log", "--first-parent", "--reverse", "--diff-merges=first-parent", "--name-only",
               "--date=format-local:%Y-%m-%d", f"--format={COMMIT}{fmt}{FIELD}", ref, "--", tz=tz)
     return [chunk.split(FIELD) for chunk in out.split(COMMIT)[1:]]
@@ -175,11 +174,11 @@ def changes(tz, branches):
             item = parse(subject, body, parents, name, shas)
             item.update(sha=sha, date=date, author=account(email), branches=[name],
                         files=[f for f in files.splitlines() if f.strip()])
+            between = item.pop("between")
             if len(parents) > 1:
                 tips[sha] = parents[1]
-                if not item.pop("between"):
+                if not between:
                     item["range"] = f"{parents[0]}..{parents[1]}"
-            item.pop("between", None)
             seen[sha] = item
             items.append(item)
     for sha, who in tip_authors(tips).items():
@@ -283,6 +282,16 @@ def cells(line):
     return [c.strip() for c in CELL_RE.split(line.strip())[1:-1]]
 
 
+def pr_cells(summary):
+    """主な変更の表の PR の列と、前の形の行の括弧の中だけ（概要の言葉の #12 や英数字を参照と取り違えない）。"""
+    found = []
+    for line in summary.splitlines():
+        parts = cells(line) if line.strip().startswith("|") else []
+        m = OLD_LINE_RE.match(line.strip())
+        found += [parts[2]] if len(parts) == 4 and is_row(parts) else [m.group(2)] if m else []
+    return "\n".join(found)
+
+
 def is_row(parts):
     """表の中身の行か（見出しの行と区切りの行は除く）。"""
     return len(parts) == 4 and parts[0] != "日付" and not all(c and set(c) <= set("-:") for c in parts)
@@ -299,10 +308,13 @@ def lookup(text, index):
     return found
 
 
-def row(summary, items, url):
-    """日付は最初の変更の日、Author は変更ごとのアカウント名（重なりは 1 つ）。"""
-    authors = list(dict.fromkeys(i["author"] for i in items))
-    return f"| {items[0]['date']} | {summary} | {'、'.join(link(i, url) for i in items)} | {'、'.join(authors)} |"
+def row(summary, items, url, written=""):
+    """日付は最初の変更の日、Author は変更ごとのアカウント名（重なりは 1 つ）。GitHub から取れなかった変更があれば、
+    書いてある Author を残す（gh が使えるかどうかで --check の結果が変わらないように）。"""
+    authors = "、".join(dict.fromkeys(i["author"] for i in items))
+    if written and not all(i["pr"] in PR_AUTHORS for i in items):
+        authors = written
+    return f"| {items[0]['date']} | {summary} | {'、'.join(link(i, url) for i in items)} | {authors} |"
 
 
 def tidy(text, kind, index=None, url=None):
@@ -331,9 +343,12 @@ def tidy(text, kind, index=None, url=None):
                 parts = cells(line) if line.startswith("|") else None
                 if parts and is_row(parts):
                     found = lookup(parts[2], index)
-                    rows.append(row(parts[1], found, url) if found and None not in found else line)
-                elif m and lookup(m.group(2), index) and None not in lookup(m.group(2), index):
-                    rows.append(row(m.group(1).replace("|", "\\|"), lookup(m.group(2), index), url))
+                    rows.append(row(parts[1], found, url, parts[3]) if found and None not in found else line)
+                elif m:
+                    found = lookup(m.group(2), index)
+                    summary = m.group(1).replace("|", "\\|")
+                    # 読めない参照も表の行にして、「この月の変更にない」と知らせる
+                    rows.append(row(summary, found, url) if found and None not in found else f"|  | {summary} | {m.group(2)} |  |")
                 elif not parts or len(parts) != 4:
                     rows.append(line)
             lines = [HEADER, RULE] + rows if rows else []
@@ -349,7 +364,7 @@ def read_from(branches):
 
 def problems(text, kind, index=None):
     """主な変更（kind="month"）か年の要点（kind="year"）の形の崩れを、(行, 中身) で返す。tidy を通したあとの文に使う。"""
-    if text in (None, "", EMPTY) or (NOTHING_RE.match(text) and "\n" not in text):
+    if text in (None, "", EMPTY) or NOTHING_RE.match(text):
         return []
     found, seen, heading, at, items = [], set(), None, 0, 0
     names = DESCRIPTIONS
@@ -456,41 +471,45 @@ def main():
         if not has_ref(name):
             p.error(f"ブランチ {name} が見つからない")
     branches = [(name, name) for name in args.branch] if args.branch else long_lived()
+    if branches == [("HEAD", "HEAD")] and not has_ref("HEAD"):
+        print("コミットがまだないので、書くものはない")
+        return 0
     url = repo_url()
     if not args.no_github:
         PR_AUTHORS.update(pr_authors(url, args.github))
     months = collections.defaultdict(list)
     for item in changes(args.tz, branches):
-        if not args.since or item["date"][:7] >= args.since:
-            months[item["date"][:7]].append(item)
+        months[item["date"][:7]].append(item)
+    # --since は書き直す月だけを絞る。年表は全部の月から作る（前の月の行と要約を消さない）
+    shown = sorted(m for m in months if not args.since or m >= args.since)
     if args.list:
         for line in list_lines(months.get(args.list, []), args.depth, url, len(branches) > 1):
             print(line)
         print(f"{args.list}：{len(months.get(args.list, []))} 件。読んだブランチ：{read_from(branches)}")
         return 0
-    indexes = {}
+    indexes, summaries = {}, {}
     for m, items in months.items():
         index = {key(i): i for i in items}
         summary = summary_of(args.folder / f"{m}.md")
-        # 表がマージの中の PR やコミットを指していれば、そこまで探す（マージごとに git を 1 回回すので、要るときだけ）
-        if summary and None in lookup(summary, index):
+        # 表の PR の列がマージの中の PR やコミットを指していれば、そこまで探す（マージごとに git を 1 回回すので、要るときだけ）
+        if summary and None in lookup(pr_cells(summary), index):
             for i in items:
                 for j in inside(i):
                     index.setdefault(key(j), j)
         indexes[m] = index
-    summaries = {m: tidy(summary_of(args.folder / f"{m}.md"), "month", indexes[m], url) for m in months}
-    pages = {f"{m}.md": month_page(m, summaries[m]) for m in months}
+        summaries[m] = tidy(summary, "month", index, url)
+    pages = {f"{m}.md": month_page(m, summaries[m]) for m in shown}
     pages["README.md"] = readme_page(months, args.folder, summaries)
     old = args.folder / "timeline.md"
     stale = [name for name, text in sorted(pages.items())
              if not (args.folder / name).exists() or (args.folder / name).read_text(encoding="utf-8") != text]
     broken = [f"{args.folder / f'{m}.md'} の「{SUMMARY}」{n} 行目：{what}"
-              for m in sorted(months) for n, what in problems(summaries[m], "month", indexes[m])]
+              for m in shown for n, what in problems(summaries[m], "month", indexes[m])]
     broken += [f"{args.folder / 'README.md'} の「## {y}」{n} 行目：{what}"
                for y, text in sorted(years_in(pages["README.md"]).items()) for n, what in problems(text, "year")]
     points = points_in(pages["README.md"])
     broken += [f"{args.folder / 'README.md'} の {m}：主な変更の要約（表の「主な変更」の列）がない"
-               for m in sorted(months) if needs_point(summaries[m]) and m not in points]
+               for m in shown if needs_point(summaries[m]) and m not in points]
     for line in broken:
         print(line)
     if args.check:
@@ -508,8 +527,8 @@ def main():
         (args.folder / name).write_text(pages[name], encoding="utf-8")
     if old.exists():
         old.unlink()  # 年ごとの要点は README.md に移した
-    total = sum(len(v) for v in months.values())
-    print(f"{args.folder}：{len(months)} か月、{total} 件（書き換え {len(stale)} ファイル、形の崩れ {len(broken)} 件）。"
+    total = sum(len(months[m]) for m in shown)
+    print(f"{args.folder}：{len(shown)} か月、{total} 件（書き換え {len(stale)} ファイル、形の崩れ {len(broken)} 件）。"
           f"読んだブランチ：{read_from(branches)}")
     return 1 if broken else 0
 

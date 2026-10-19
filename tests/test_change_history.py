@@ -124,13 +124,17 @@ class BuildHistoryTests(unittest.TestCase):
         # 要約は作り直しても残る
         self.assertIn("| [2025-02](2025-02.md) | 2 | 決済の再試行とセッションを見直した |", self.page("README.md"))
         self.assertEqual(self.run_script("--check").returncode, 0)
-        # 間違えた日付と Author は直す。いくつかの PR をまとめた行は、最初の日付と Author を重ねずに
+        # 間違えた日付は直す。Author は GitHub から取れたときだけ直し、取れなければ書いてあるものを残す
+        # （gh が使えるかどうかで --check の結果が変わらないように）。いくつかの PR をまとめた行の日付は最初の PR の日
         path = self.repo / "docs/change-history/2025-02.md"
         path.write_text(path.read_text(encoding="utf-8").replace("| 2025-02-04 | 決済の再試行を増やした | [#3](https://github.com/o/r/pull/3) | @alice |",
                                                                  "| 2025-02-09 | 決済とセッション | #2、#3 | @bob |"), encoding="utf-8")
         self.assertEqual(self.run_script().returncode, 0)
-        self.assertIn("| 2025-02-01 | 決済とセッション | [#2](https://github.com/o/r/pull/2)、[#3](https://github.com/o/r/pull/3) | —、@alice |",
+        self.assertIn("| 2025-02-01 | 決済とセッション | [#2](https://github.com/o/r/pull/2)、[#3](https://github.com/o/r/pull/3) | @bob |",
                       self.page("2025-02.md"))
+        path.write_text(path.read_text(encoding="utf-8").replace(" @bob |", "  |"), encoding="utf-8")
+        self.assertEqual(self.run_script().returncode, 0)
+        self.assertIn("| [#2](https://github.com/o/r/pull/2)、[#3](https://github.com/o/r/pull/3) | —、@alice |", self.page("2025-02.md"))
         # PR のないコミットは、ハッシュかそのリンクで書ける。リンク先の URL の中は数えない
         sha = self.git("log", "-1", "--format=%H", "--grep", "Initial import").strip()
         self.fill("2025-01", f"### 運用改善\n\n| | 始めた | [{sha[:7]}](https://github.com/o/r/commit/{sha}) | |")
@@ -181,6 +185,51 @@ class BuildHistoryTests(unittest.TestCase):
         result = self.run_script("--list", "2025-02", env=env)
         self.assertIn("Extend session（[#2](https://github.com/o/r/pull/2)、src/auth/、@user2）", result.stdout)
         self.assertIn("gh api が失敗したので、以降の PR の作成者はメールから取る（HTTP 403", result.stderr)
+
+    def test_check_does_not_depend_on_gh(self):
+        # gh で作った表は、gh のない環境（CI など）の --check でも最新のまま
+        env = self.fake_gh('printf "2 bob\\n"')
+        self.run_script(env=env)
+        self.fill("2025-02", "### 機能改善\n\n| | セッションを延ばした | #2 | |")
+        self.run_script(env=env)
+        self.fill("2025-01", "- 目立った変更なし（リリースのみ）")
+        path = self.repo / "docs/change-history/README.md"
+        path.write_text(path.read_text(encoding="utf-8").replace("| 2 | まだ |", "| 2 | セッションを延ばした |"), encoding="utf-8")
+        self.assertEqual(self.run_script(env=env).returncode, 0)
+        self.assertIn("| @bob |", self.page("2025-02.md"))
+        self.assertEqual(self.run_script("--check").returncode, 0)
+
+    def test_since_keeps_earlier_months_in_the_readme(self):
+        self.run_script()
+        path = self.repo / "docs/change-history/README.md"
+        path.write_text(path.read_text(encoding="utf-8").replace("| [2025-01](2025-01.md) | 1 | まだ |", "| [2025-01](2025-01.md) | 1 | 始めた |"), encoding="utf-8")
+        self.fill("2025-01", "### 機能改善\n\n| | 始めた | " + self.git("log", "-1", "--format=%h", "--grep", "Initial").strip() + " | |")
+        self.run_script("--since", "2025-02")
+        self.assertIn("| [2025-01](2025-01.md) | 1 | 始めた |", self.page("README.md"))
+        # --list は --since に関わらず、その月を出す
+        self.assertIn("Initial import", self.listing("2025-01", "--since", "2025-02"))
+
+    def test_date_is_when_it_reached_the_branch(self):
+        # rebase や cherry-pick で入ったコミットは、書いた日ではなく入った日の月に出る
+        self.write("src/late.py", "x")
+        self.git("add", "-A")
+        self.git("commit", "-q", "-m", "Late (#9)", env={"GIT_AUTHOR_DATE": "2025-02-20T00:00:00Z", "GIT_COMMITTER_DATE": "2025-03-05T00:00:00Z"})
+        self.assertIn("- 2025-03-05 Late（[#9]", self.listing("2025-03"))
+
+    def test_unresolved_old_lines_are_reported_as_rows(self):
+        self.run_script()
+        self.fill("2025-02", "### バグ対応\n\n- 旧（#99）")
+        result = self.run_script()
+        self.assertIn("|  | 旧 | #99 |  |", self.page("2025-02.md"))
+        self.assertIn("PR の列の参照が、この月の変更にない", result.stdout)
+        self.assertNotIn("下に行がない", result.stdout)
+
+    def test_empty_repository(self):
+        with tempfile.TemporaryDirectory() as empty:
+            subprocess.run(["git", "init", "-q", empty], check=True)
+            result = subprocess.run([sys.executable, str(SCRIPT), "docs/change-history", "--no-github"], cwd=empty,
+                                    capture_output=True, text=True)
+            self.assertEqual((result.returncode, result.stdout.strip()), (0, "コミットがまだないので、書くものはない"))
 
     def test_mailmap_maps_work_emails_to_accounts(self):
         # noreply でないメールも、.mailmap で noreply に対応させればアカウント名になる
