@@ -53,7 +53,7 @@ decision-log で audit して。期間は 2024 年。
 decision-log で write して。範囲は指定しない。
 ```
 
-洗い出しは decision-log-planner、読むのは decision-log-reader が、分類ごとに並列で受け持つ。全体を見るときも大事なものから 20 件に絞るので、残りは報告の「読み残し」を見て範囲を決め、もう一度頼む。
+洗い出しは decision-log-planner、読むのは decision-log-reader が受け持つ。候補は大事な順に 20 件ずつの回に分け、全部の回を終えるまで続ける。読み手 1 つに渡すのは 5 件までで、Decision log は 1 つずつ、節を全部埋めて書く。途中で止まったら、報告の「読み残し」にある次の回から頼み直す。
 
 作ったあとは、変える前の照合（`check`）と、新しい判断の記録（`record`）に使う。
 
