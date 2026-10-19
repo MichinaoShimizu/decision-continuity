@@ -2,6 +2,15 @@
 
 decision-continuity の主な変更。[Keep a Changelog](https://keepachangelog.com/) の形で書く。変更は `changes/` の断片に書き（[changes/README.md](changes/README.md)）、リリースのときに版の節にまとめる。版は中身から決まり（[Semantic Versioning](https://semver.org/)、`sh tools/next-version.sh`）、各版の節がそのまま GitHub のリリースノートになる。手順は [docs/release.md](docs/release.md)。
 
+## v0.9.0 - 2026-10-19
+
+### Changed
+
+- change-history: 既定で、長く続くブランチ（`main`・`master`・`develop`・`development`・`dev`・`production`。`origin/` にあればそちら、なければ手元のもの）を全部読むようにした。開発の本流（develop）への機能の修正と、本番の適用先（main）へのリリースや緊急の修正の両方が一覧に入る。どちらにも入ったコミットは 1 件にし、行の末尾に入ったブランチを書く。ブランチ間のマージには「（develop から取り込み）」の印を付け、主な変更に書かない。`--branch` で読むブランチを指定でき、読んだブランチは索引に出る
+- decision-log: 調べ役（`decision-log-planner`）が、長く続くブランチをそれぞれ読み、ブランチ間のマージではなく中身の PR を候補にするようにした
+- BREAKING: change-history: 年表の `timeline.md` をやめ、索引の `README.md` が年表を兼ねるようにした。年ごとの要点と、月ごとの件数・主な変更の 1 行目（まだなら「まだ」）を並べる。以前の `timeline.md` は、次に `build_history.py` を回したとき、年の要点を `README.md` に移して消す。`timeline.md` へのリンクは `README.md` に直す
+- change-history: 日付を `YYYY-MM-DD`、月を `YYYY-MM` にそろえた。一覧の行は `- 2024-05-02 …`、表の月は `[2024-05](2024-05.md)`、年の要点の期間は `（2024-03〜2024-06）` と書く
+
 ## v0.8.1 - 2026-10-19
 
 ### Changed
