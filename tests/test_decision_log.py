@@ -18,7 +18,8 @@ class ReaderAgentTests(unittest.TestCase):
         import re
         kiro = json.loads((self.ROOT / "agents/kiro/decision-log-reader.json").read_text(encoding="utf-8"))
         allowed = [re.compile(p) for p in kiro["toolsSettings"]["shell"]["allowedCommands"]]
-        for cmd in ("gh pr view 101 --json number,title,body,author,createdAt,mergedAt,mergedBy,url,reviews,comments,files",
+        for cmd in ("gh pr view 101 --json number,title,body,author,createdAt,mergedAt,mergedBy,url,reviews,comments",
+                    "gh api repos/o/r/pulls/45/comments --paginate", "gh api repos/o/r/issues/42/comments --paginate",
                     "git show --stat abc1234", "git show abc1234 -- src/payment/http/client.py",
                     "git show --shortstat abc1234", "git show --dirstat=files abc1234",
                     "git show --stat=200 --stat-count=50 abc1234 -- src/payment/", "git show -U0 abc1234 -- src/payment/http/client.py",
@@ -28,6 +29,8 @@ class ReaderAgentTests(unittest.TestCase):
                     "gh api repos/o/r/pulls/45/comments", "gh api repos/o/r/issues/42", "gh api repos/o/r/issues/42/comments",
                     "git log --format='%h %s%n%b' abc1234^1..abc1234", "git show -s --format=%B abc1234"):
             self.assertTrue(any(p.fullmatch(cmd) for p in allowed), cmd)
+        for cmd in ("gh api repos/o/r/pulls/45 -X PUT", "gh api repos/o/r/pulls/45 --paginate -f a=b", "gh api graphql"):
+            self.assertFalse(any(p.fullmatch(cmd) for p in allowed), cmd)
         for glob in kiro["permissions"]["rules"][0]["match"]:
             self.assertRegex(glob, r"^(TZ=Asia/Tokyo )?(git (show|log|grep|rev-parse)|gh pr view) \*$")
 
@@ -41,6 +44,7 @@ class PlannerAgentTests(unittest.TestCase):
                 "git log --first-parent -i -G 'timeout|retr(y|ies)|limit' --format='%h' -- . ':(exclude)*lock*' ':(exclude)*.snap'",
                 "git log --first-parent -G '^[A-Z][A-Z0-9_]{2,} *[:=]' --format='%h' -- .",
                 "git log --first-parent --format='%h' -- '*.yml' '*.yaml' ':(exclude)*lock*'",
+                "git log --first-parent --shortstat --format='@@ %h' origin/main",
                 "git show --stat abc1234")
 
     def test_skill_calls_the_planner_by_name(self):
