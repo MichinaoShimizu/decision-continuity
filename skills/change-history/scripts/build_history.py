@@ -574,6 +574,9 @@ def main():
                for m in shown if needs_point(summaries[m]) and m not in points]
     for line in broken:
         print(line)
+    waiting = [m for m in shown if summaries[m] in (None, "", EMPTY)]
+    if waiting:
+        print(f"主な変更をまだ書いていない月（{len(waiting)}）：{'、'.join(waiting)}")
     if args.check:
         for name in stale:
             print(f"{args.folder / name} が古い")

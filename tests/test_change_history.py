@@ -291,6 +291,12 @@ class BuildHistoryTests(unittest.TestCase):
         self.fill("2025-02", "### 運用改善\n\n| | 翻訳 | #2、#3、#91、#92、#93、#94 | |")
         self.assertIn("PR は 1 行に 5 件まで", self.run_script().stdout)
 
+    def test_unwritten_months_are_listed(self):
+        # 書き手が書けなかった月に気づけるよう、まだの月を出す
+        self.assertIn("主な変更をまだ書いていない月（2）：2025-01、2025-02", self.run_script().stdout)
+        self.fill("2025-01", "- 目立った変更なし（リリースのみ）")
+        self.assertIn("主な変更をまだ書いていない月（1）：2025-02", self.run_script().stdout)
+
     def test_empty_repository(self):
         with tempfile.TemporaryDirectory() as empty:
             subprocess.run(["git", "init", "-q", empty], check=True)
