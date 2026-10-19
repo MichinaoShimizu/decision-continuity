@@ -41,6 +41,7 @@
 CI の必須チェック、テストの方針、lint・コードの規約、ブランチの運用
 
 - 2026-10-15 [DL-10](0010-evals-ci.md) 評価と CI が、旧キット向けのものから decision-log 向けに作り直された
+- 2026-10-19 [DL-22](0022-change-history-format-check.md) change-history の主な変更と年の要点の形を、スクリプトで確かめることにした
 
 ## プロダクトの方針（product）
 

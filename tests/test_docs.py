@@ -167,6 +167,8 @@ class AgentTests(unittest.TestCase):
         got = re.findall(r"`([a-z]+)`", line.split("分類は decision-log と同じ", 1)[1].split("で、", 1)[0])
         self.assertEqual(len(want), 11)
         self.assertEqual(got, want)
+        script = (ROOT / "skills/change-history/scripts/build_history.py").read_text(encoding="utf-8")
+        self.assertEqual(re.findall(r'"([a-z]+)"', re.search(r"CATEGORIES = \((.*?)\)", script, re.S).group(1)), want)
 
     def test_both_skills_skip_the_same_routine_releases(self):
         # 版を上げるだけのリリースは、change-history の主な変更にも decision-log の候補にも入れない

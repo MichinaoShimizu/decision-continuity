@@ -79,7 +79,7 @@ class BuildHistoryTests(unittest.TestCase):
     def test_summary_survives_rebuilds_and_check(self):
         self.run_script()
         path = self.repo / "docs/change-history/2025-02.md"
-        path.write_text(path.read_text(encoding="utf-8").replace("（まだ書いていない）", "- 決済の再試行を増やした（#3）"), encoding="utf-8")
+        path.write_text(path.read_text(encoding="utf-8").replace("（まだ書いていない）", "### reliability\n\n- 決済の再試行を増やした（#3）"), encoding="utf-8")
         self.assertEqual(self.run_script("--check").returncode, 1)  # 索引の「まだ」が古い
         self.assertEqual(self.run_script().returncode, 0)
         self.assertIn("- 決済の再試行を増やした（#3）", self.page("2025-02.md"))
@@ -94,13 +94,13 @@ class BuildHistoryTests(unittest.TestCase):
         self.assertLess(timeline.index("## 2025"), timeline.index("| [2025-02](2025-02.md) | 2 | まだ |"))
         self.assertLess(timeline.index("| [2025-02](2025-02.md)"), timeline.index("| [2025-01](2025-01.md) | 1 | まだ |"))
         path = self.repo / "docs/change-history/2025-02.md"
-        path.write_text(path.read_text(encoding="utf-8").replace("（まだ書いていない）", "- 決済の再試行を a|b に（#3）\n- 小さなこと"), encoding="utf-8")
+        path.write_text(path.read_text(encoding="utf-8").replace("（まだ書いていない）", "### reliability\n\n- 決済の再試行を a|b に（#3）\n- 小さなこと（#3）"), encoding="utf-8")
         self.run_script()
         self.assertIn("| [2025-02](2025-02.md) | 2 | 決済の再試行を a\\|b に（#3） |", self.page("README.md"))
         path = self.repo / "docs/change-history/README.md"
-        path.write_text(path.read_text(encoding="utf-8").replace("（まだ書いていない）", "- 決済の再試行を見直した（2025-02）"), encoding="utf-8")
+        path.write_text(path.read_text(encoding="utf-8").replace("（まだ書いていない）", "### reliability\n\n- 決済の再試行を見直した（2025-02）"), encoding="utf-8")
         self.assertEqual(self.run_script().returncode, 0)
-        self.assertIn("## 2025\n\n- 決済の再試行を見直した（2025-02）\n\n| 月 |", self.page("README.md"))
+        self.assertIn("## 2025\n\n### reliability\n\n- 決済の再試行を見直した（2025-02）\n\n| 月 |", self.page("README.md"))
         self.assertEqual(self.run_script("--check").returncode, 0)
 
     def test_summaries_by_category(self):
@@ -121,15 +121,55 @@ class BuildHistoryTests(unittest.TestCase):
         self.assertIn("| [2025-02](2025-02.md) | 2 | 決済の再試行を 5 回に（#3） |", readme)
         self.assertEqual(self.run_script("--check").returncode, 0)
 
+    def test_broken_summaries_are_reported(self):
+        self.run_script()
+        folder = self.repo / "docs/change-history"
+        path = folder / "2025-02.md"
+        path.write_text(path.read_text(encoding="utf-8").replace("（まだ書いていない）", "\n".join([
+            "認証を変えた", "### セキュリティ", "- 5 月にトークンを変えた", "### security", "- 05-02 に延ばした（#2）",
+            "### security", "- もう 1 つ（#2）", "### reliability", "* 記号が違う"])), encoding="utf-8")
+        path = folder / "README.md"
+        path.write_text(path.read_text(encoding="utf-8").replace("（まだ書いていない）", "### product\n\n- 期間がない\n- 3 月に始めた（2025-03）"), encoding="utf-8")
+        result = self.run_script("--check")
+        self.assertEqual(result.returncode, 1)
+        for want in ["2025-02.md の「## 主な変更」1 行目：### <分類> か「- 」で始まる行だけを書く",
+                     "2 行目：分類 セキュリティ は architecture・",
+                     "3 行目：行の末尾に PR かコミット",
+                     "3 行目：日付は YYYY-MM-DD、月は YYYY-MM で書く",
+                     "5 行目：日付は YYYY-MM-DD",
+                     "6 行目：分類 security が 2 度ある",
+                     "8 行目：### reliability の下に行がない",
+                     "9 行目：### <分類> か「- 」で始まる行だけを書く",
+                     "README.md の「## 2025」3 行目：行の末尾に（YYYY-MM）か（YYYY-MM〜YYYY-MM）がない",
+                     "README.md の「## 2025」4 行目：日付は YYYY-MM-DD",
+                     "形の崩れ 10 件"]:
+            self.assertIn(want, result.stdout)
+        # 作り直しても書き出しはするが、崩れが残れば終了コード 1
+        self.assertEqual(self.run_script().returncode, 1)
+        # まだ書いていない・目立った変更なしは通す
+        path = folder / "2025-02.md"
+        text = path.read_text(encoding="utf-8")
+        start, end = text.index("## 主な変更\n") + len("## 主な変更\n"), text.index("\n## 一覧")
+        path.write_text(text[:start] + "\n- 目立った変更なし（リリースのみ）\n" + text[end:], encoding="utf-8")
+        path = folder / "README.md"
+        path.write_text(path.read_text(encoding="utf-8").replace("- 期間がない\n- 3 月に始めた（2025-03）", "- 始めた（2025-01〜2025-02）"), encoding="utf-8")
+        self.assertEqual(self.run_script().returncode, 0)
+        self.assertEqual(self.run_script("--check").returncode, 0)
+
     def test_old_timeline_moves_into_readme(self):
         self.run_script()
         folder = self.repo / "docs/change-history"
         (folder / "README.md").write_text("# 変更の履歴\n\n| 月 | 件数 | 主な変更を書いたか |\n", encoding="utf-8")
         (folder / "timeline.md").write_text("# 年表\n\n## 2025\n\n- 前に書いた要点（2025-02）\n\n| 月 | 件数 | 主な変更 |\n", encoding="utf-8")
         self.assertEqual(self.run_script("--check").returncode, 1)
-        self.assertEqual(self.run_script().returncode, 0)
+        # 以前の要点は分類の見出しがないので、移したうえで形の崩れとして知らせる
+        result = self.run_script()
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("README.md の「## 2025」1 行目：行の前に ### <分類> がない", result.stdout)
         self.assertIn("## 2025\n\n- 前に書いた要点（2025-02）\n\n| 月 |", self.page("README.md"))
         self.assertFalse((folder / "timeline.md").exists())
+        path = folder / "README.md"
+        path.write_text(path.read_text(encoding="utf-8").replace("- 前に書いた要点", "### product\n\n- 前に書いた要点"), encoding="utf-8")
         self.assertEqual(self.run_script("--check").returncode, 0)
 
     def test_branch_syncs_are_marked(self):
