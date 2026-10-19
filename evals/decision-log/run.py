@@ -214,6 +214,9 @@ def build_repo(repo):
     git(repo, "init", "-q", "-b", "main")
     git(repo, "config", "user.name", "eval")
     git(repo, "config", "user.email", "eval@example.com")
+    # 裏で動く自動の gc・maintenance が、片付けの最中に .git へ書き込まないように止める
+    git(repo, "config", "gc.auto", "0")
+    git(repo, "config", "maintenance.auto", "false")
     git(repo, "remote", "add", "origin", "https://github.com/example/payment-api.git")
     for i, (subject, body, files, *inner) in enumerate(HISTORY):
         date = f"2025-0{1 + i // 4}-{10 + i:02d}T12:00:00+09:00"
