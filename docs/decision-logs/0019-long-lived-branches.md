@@ -23,3 +23,8 @@ Active：change-history の `build_history.py` は、`--branch` を言わなけ�
 
 - 名前の一覧に入らないブランチ（`staging`・`release/2.x`・`hotfix/*` を長く残す運用など）は、`--branch` で言わないと読まれない。ほかに足すべき名前があるか（@MichinaoShimizu に聞く）。
 - リリースの PR を squash で main に入れる運用では、2 つ目の親がなく、ブランチ間のマージと見分けられない（件名が版の形なら「（リリース）」になる）。実際のリポジトリで外れが出ないか。
+
+## 追記 2026-10-19（マージの中身）
+
+- 2026-10-19 `--first-parent` だけでは、マージコミットの件名と変えたファイルしか見えず、PR の中のコミットや、読んでいないブランチ（`release/1.2` など）でマージされた PR が見えなかった。change-history の `--list` は、マージコミットの下に、取り込んだ側の `--first-parent` のコミットを字下げで出すようにし、主な変更の表はその中の PR やコミットを指せるようにした。読んだブランチどうしのマージの下には出さない（中身は元のブランチの行に出る）。decision-log の調べ役も、読んでいないブランチからのマージの中の PR を候補にする（ブランチ follow-merges。作成 @MichinaoShimizu）。理由：「マージコミットの件名からPRを追うようにしないと実際の改修内容は見えないよ」（@MichinaoShimizu、会話 2026-10-19）
+Superseded：`build_history.py` の `inside` がマージコミットの `<1 つ目の親>..<2 つ目の親>` を `--first-parent` で読み、`--list` と表の参照に使う（`skills/change-history/scripts/build_history.py`）。`agents/claude/decision-log-planner.md` の手順 3 が、読んでいないブランチからのマージの中の PR を候補にする

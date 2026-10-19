@@ -6,7 +6,8 @@
   build_history.py <フォルダー> --list YYYY-MM                                                                  その月の全変更を出す（書かない）
 
 月ごとの YYYY-MM.md（主な変更の表）と、年表を兼ねた索引の README.md を書く。日付は YYYY-MM-DD、月は YYYY-MM で書く。
-全変更の一覧はファイルに書かず、--list で出す（主な変更を選ぶ材料）。
+全変更の一覧はファイルに書かず、--list で出す（主な変更を選ぶ材料）。マージコミットの下には、取り込んだ側の
+コミット（PR の中のコミットや、release/1.2 などの読んでいないブランチでマージされた PR）を並べる。
 以前の timeline.md があれば、年ごとの要点を README.md に移して消す。
 
 リポジトリのルートで動かす。手元の git の --first-parent の履歴だけを読み、ネットワークは使わない。
@@ -153,15 +154,51 @@ def changes(tz, branches):
                         files=[f for f in files.splitlines() if f.strip()])
             if len(parents) > 1:
                 tips[sha] = parents[1]
+                if not item.pop("between"):
+                    item["range"] = f"{parents[0]}..{parents[1]}"
+            item.pop("between", None)
             seen[sha] = item
             items.append(item)
-    if tips:
-        out = git("log", "--no-walk=unsorted", "--stdin", f"--format=%H{FIELD}%aE", stdin="\n".join(set(tips.values())) + "\n")
-        emails = dict(line.split(FIELD, 1) for line in out.splitlines() if FIELD in line)
-        for sha, tip in tips.items():
-            if tip in emails:
-                seen[sha]["author"] = account(emails[tip])
+    for sha, who in tip_authors(tips).items():
+        seen[sha]["author"] = who
     return sorted(items, key=lambda i: i["date"])
+
+
+def tip_authors(tips):
+    """マージコミットごとの、取り込んだ側の先頭（2 つ目の親）のコミットの Author。"""
+    if not tips:
+        return {}
+    out = git("log", "--no-walk=unsorted", "--stdin", f"--format=%H{FIELD}%aE", stdin="\n".join(set(tips.values())) + "\n")
+    emails = dict(line.split(FIELD, 1) for line in out.splitlines() if FIELD in line)
+    return {sha: account(emails[tip]) for sha, tip in tips.items() if tip in emails}
+
+
+def inside(item):
+    """マージコミットが取り込んだ側の --first-parent のコミットを、古い順に返す。PR の中のコミットや、
+    読んでいないブランチ（release/1.2 など）でマージされた PR が、実際の改修の中身として見える。
+    読んだブランチどうしのマージは、中身が元のブランチに 1 件ずつ出るので返さない。日付はマージの日。"""
+    if "inside" not in item:
+        found, tips = [], {}
+        if item.get("range"):
+            fmt = FIELD.join(["%H", "%P", "%aE", "%s", "%b"])
+            out = git("log", "--first-parent", "--reverse", f"--format={COMMIT}{fmt}", item["range"])
+            for sha, parents, email, subject, body in (c.split(FIELD) for c in out.split(COMMIT)[1:]):
+                parents = parents.split()
+                inner = parse(subject, body, parents, None, {})
+                inner.pop("between")
+                inner.update(sha=sha, date=item["date"], author=account(email), branches=item["branches"], files=[])
+                if len(parents) > 1:
+                    tips[sha] = parents[1]
+                found.append(inner)
+            by_sha = {i["sha"]: i for i in found}
+            for sha, who in tip_authors(tips).items():
+                by_sha[sha]["author"] = who
+        item["inside"] = found
+    return item["inside"]
+
+
+def key(item):
+    return f"#{item['pr']}" if item["pr"] else item["sha"]
 
 
 def parse(subject, body, parents, branch, shas):
@@ -178,6 +215,7 @@ def parse(subject, body, parents, branch, shas):
         item = dict(pr=None, title=subject)
     # 2 つ目の親がほかに読んだブランチの本流にあれば、ブランチ間のマージ
     source = next((n for n in shas if n != branch and len(parents) > 1 and parents[1] in shas[n]), None)
+    item["between"] = bool(source)
     if source:
         item["title"] = BETWEEN.format(source) + item["title"].removeprefix(SYNC)
     elif RELEASE_RE.match(item["title"]):
@@ -201,7 +239,8 @@ def summary_of(path):
 
 
 def list_lines(items, depth, url, many):
-    """その月の全変更を日付の順に。各行に、いちばん多く変えた置き場所と Author を添える（--list が出す）。"""
+    """その月の全変更を日付の順に。各行に、いちばん多く変えた置き場所と Author を添え、マージコミットの下には
+    取り込んだ側のコミット（inside）を字下げして並べる（--list が出す）。"""
     lines = []
     for item in items:
         counts = collections.Counter(area(f, depth) for f in item["files"])
@@ -209,6 +248,7 @@ def list_lines(items, depth, url, many):
         where = f"、{places[0]}" + (f" ほか {len(places) - 1}" if len(places) > 1 else "") if places else ""
         into = f"、{'・'.join(item['branches'])} へ" if many else ""
         lines.append(f"- {item['date']} {item['title']}（{link(item, url)}{where}、{item['author']}{into}）")
+        lines += [f"  - {i['title']}（{link(i, url)}、{i['author']}）" for i in inside(item)]
     return lines
 
 
@@ -401,7 +441,16 @@ def main():
             print(line)
         print(f"{args.list}：{len(months.get(args.list, []))} 件。読んだブランチ：{read_from(branches)}")
         return 0
-    indexes = {m: {(f"#{i['pr']}" if i["pr"] else i["sha"]): i for i in items} for m, items in months.items()}
+    indexes = {}
+    for m, items in months.items():
+        index = {key(i): i for i in items}
+        summary = summary_of(args.folder / f"{m}.md")
+        # 表がマージの中の PR やコミットを指していれば、そこまで探す（マージごとに git を 1 回回すので、要るときだけ）
+        if summary and None in lookup(summary, index):
+            for i in items:
+                for j in inside(i):
+                    index.setdefault(key(j), j)
+        indexes[m] = index
     summaries = {m: tidy(summary_of(args.folder / f"{m}.md"), "month", indexes[m], url) for m in months}
     pages = {f"{m}.md": month_page(m, summaries[m]) for m in months}
     pages["README.md"] = readme_page(months, args.folder, summaries)
