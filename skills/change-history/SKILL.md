@@ -47,4 +47,4 @@ allowed-tools: Bash(git log:*) Bash(git show:*) Bash(git rev-parse:*) Bash(git r
 | 2024-05-02 | 認証をセッション Cookie から JWT に移した | [#1188](…)、[#1210](…) | @alice、@bob |
 ```
 
-日付は行の最初の PR のマージの日。Author は PR の作成者。`gh` があれば GitHub から取り（止めるなら `--no-github`）、取れなければ noreply のメール（`.mailmap` を通す）から、それもなければ `—`。`--list` の置き場所は、変えたファイルが最も多いフォルダー（`--depth` で段数を変える）。
+日付は行の最初の PR のマージの日。Author は PR の作成者。`gh` があれば GitHub から取り（止めるなら `--no-github`）、取れなければフォークからのマージの件名（`from alice/fix`）か noreply のメール（`.mailmap` を通す）から、それもなければ `—`。`--list` の置き場所は、変えたファイルが最も多いフォルダー（`--depth` で段数を変える）。

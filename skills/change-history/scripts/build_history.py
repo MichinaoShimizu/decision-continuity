@@ -22,7 +22,8 @@ PR の番号はマージコミットの件名（Merge pull request #12）か、s
 分類の説明を入れる。主な変更の表の日付と Author は、PR の列の変更から埋め直す（前の形の「- 概要（#12）」の行は表に移す）。
 決まった形でなければ、どこが崩れているかを出し、終了コード 1 を返す。標準ライブラリだけを使う。
 人はアカウント名（@login）で、Author の列にだけ書く。gh が使えれば、PR の作成者を GitHub から取る（gh api の GET だけ）。
-取れない変更は、noreply のメール（.mailmap を通す）から取る。名前（git の author 名）は書き出さない。
+取れない変更は、フォークからのマージの件名（Merge pull request #12 from alice/fix）か、noreply のメール（.mailmap を
+通す）から取る。名前（git の author 名）は書き出さない。
 """
 import argparse
 import collections
@@ -34,7 +35,8 @@ import subprocess
 import sys
 
 # 番号のないもの（Merge pull request from GHSA-…：セキュリティ修正のマージ）も、本文の 1 行目をタイトルにする
-MERGE_RE = re.compile(r"^Merge pull request (?:#(\d+) )?from \S+")
+# 2 つ目のグループは、取り込んだブランチのリポジトリの持ち主（フォークなら PR の作成者）
+MERGE_RE = re.compile(r"^Merge pull request (?:#(\d+) )?from (?:([A-Za-z0-9-]+)/)?\S+")
 SQUASH_RE = re.compile(r"^(.*?)\s*\(#(\d+)\)\s*$")
 # PR を通さないブランチの同期（Merge branch '3.0.x'、Merge remote-tracking branch 'origin/stable'）
 SYNC_RE = re.compile(r"^Merge (?:remote-tracking )?branch ")
@@ -78,6 +80,12 @@ PR_AUTHORS = {}
 # GitHub から取った、PR を入れたコミット（merge_commit_sha）から (番号, タイトル)。件名に番号のない変更
 # （Rebase and merge など）を PR に結びつける
 PR_SHAS = {}
+# origin の持ち主（https://github.com/<owner>/...）。フォークからのマージを見分ける
+OWNER = None
+# フォークからのマージでわかった、メールから @login。同じメールで noreply でない変更の Author に使う。
+# 1 つのメールに 2 人以上が当たるか、同じリポジトリのブランチからのマージ（メンテナーが別の人の PR に足したコミットなど）
+# にも出るメールは使わない（None を入れて印にする）
+LEARNED = {}
 
 
 def git(*args, tz=None, stdin=None):
@@ -188,6 +196,9 @@ def by_pr(item):
         item["title"] = title or item["title"]
     if item["pr"] in PR_AUTHORS:
         item["author"] = PR_AUTHORS[item["pr"]]
+    elif item["author"] == UNKNOWN and len(found := LEARNED.get(item.get("email", "").lower(), {None})) == 1 \
+            and None not in found:
+        item["author"], = found
     return item
 
 
@@ -210,7 +221,7 @@ def changes(tz, branches):
                 continue
             parents = parents.split()
             item = parse(subject, body, parents, name, shas)
-            item.update(sha=sha, date=date, author=account(email), branches=[name],
+            item.update(sha=sha, date=date, email=email, author=account(email), branches=[name],
                         files=[f for f in files.splitlines() if f.strip()])
             between = item.pop("between")
             if len(parents) > 1:
@@ -219,18 +230,31 @@ def changes(tz, branches):
                     item["range"] = f"{parents[0]}..{parents[1]}"
             seen[sha] = item
             items.append(item)
-    for sha, who in tip_authors(tips).items():
-        seen[sha]["author"] = who
+    credit(seen, tips)
     return sorted((by_pr(i) for i in items), key=lambda i: i["date"])
 
 
-def tip_authors(tips):
-    """マージコミットごとの、取り込んだ側の先頭（2 つ目の親）のコミットの Author。"""
+def credit(items, tips, learn=True):
+    """マージコミットの Author を決める。フォークからのマージは件名のフォークの持ち主（PR の作成者）、
+    ほかは取り込んだ側の先頭（2 つ目の親）のコミットのメールから。learn なら、フォークの持ち主を先頭のコミットのメールと
+    結びつけて覚える（本流のマージだけから覚え、読む順で Author が変わらないようにする）。"""
     if not tips:
-        return {}
+        return
     out = git("log", "--no-walk=unsorted", "--stdin", f"--format=%H{FIELD}%aE", stdin="\n".join(set(tips.values())) + "\n")
     emails = dict(line.split(FIELD, 1) for line in out.splitlines() if FIELD in line)
-    return {sha: account(emails[tip]) for sha, tip in tips.items() if tip in emails}
+    for sha, tip in tips.items():
+        item, email = items[sha], emails.get(tip, "")
+        item["email"] = email
+        known = email and learn and not NOREPLY_RE.match(email)
+        head = item.get("head")
+        if head and OWNER and head.lower() != OWNER.lower():
+            item["author"] = f"@{head}"
+            if known:
+                LEARNED.setdefault(email.lower(), set()).add(item["author"])
+        else:
+            item["author"] = account(email)
+            if known:
+                LEARNED.setdefault(email.lower(), set()).add(None)
 
 
 def inside(item):
@@ -246,13 +270,11 @@ def inside(item):
                 parents = parents.split()
                 inner = parse(subject, body, parents, None, {})
                 inner.pop("between")
-                inner.update(sha=sha, date=item["date"], author=account(email), branches=item["branches"], files=[])
+                inner.update(sha=sha, date=item["date"], email=email, author=account(email), branches=item["branches"], files=[])
                 if len(parents) > 1:
                     tips[sha] = parents[1]
                 found.append(inner)
-            by_sha = {i["sha"]: i for i in found}
-            for sha, who in tip_authors(tips).items():
-                by_sha[sha]["author"] = who
+            credit({i["sha"]: i for i in found}, tips, learn=False)
         item["inside"] = [by_pr(i) for i in found]
     return item["inside"]
 
@@ -265,7 +287,7 @@ def parse(subject, body, parents, branch, shas):
     """件名と本文から PR の番号とタイトルを取り、印を付ける。"""
     m = MERGE_RE.match(subject)
     if m and len(parents) > 1:
-        item = dict(pr=m.group(1), title=next((l.strip() for l in body.splitlines() if l.strip()), subject))
+        item = dict(pr=m.group(1), head=m.group(2), title=next((l.strip() for l in body.splitlines() if l.strip()), subject))
     elif SQUASH_RE.match(subject):
         title, pr = SQUASH_RE.match(subject).groups()
         item = dict(pr=pr, title=title)
@@ -360,10 +382,12 @@ def resolve(text, index, everything):
 
 
 def row(summary, items, url, written=""):
-    """日付は最初の変更の日、Author は変更ごとのアカウント名（重なりは 1 つ）。GitHub から取れなかった変更があれば、
-    書いてある Author を残す（gh が使えるかどうかで --check の結果が変わらないように）。"""
+    """日付は最初の変更の日、Author は変更ごとのアカウント名（重なりは 1 つ）。GitHub から取れなかった変更があり、
+    書いてある Author のほうが取れていない（—）が少なければ、書いてある方を残す（gh が使えるかどうかで --check の
+    結果が変わらないように。取れるようになった名前は、— の代わりに入る）。"""
     authors = "、".join(dict.fromkeys(i["author"] for i in items))
-    if written and not all(i["pr"] in PR_AUTHORS for i in items):
+    if written and not all(i["pr"] in PR_AUTHORS for i in items) \
+            and written.split("、").count(UNKNOWN) < authors.split("、").count(UNKNOWN):
         authors = written
     date = next((i["date"] for i in items if i["date"]), "")
     return f"| {date} | {summary} | {'、'.join(link(i, url) for i in items)} | {authors} |"
@@ -534,7 +558,9 @@ def main():
     if branches == [("HEAD", "HEAD")] and not has_ref("HEAD"):
         print("コミットがまだないので、書くものはない")
         return 0
+    global OWNER
     url = repo_url()
+    OWNER = url.split("/")[3] if url else None
     if not args.no_github:
         # --list（書き手が月ごとに呼ぶ）は問い合わせず、覚えておいた分だけを使う
         use_prs(github_prs(url, args.github, online=not args.list))

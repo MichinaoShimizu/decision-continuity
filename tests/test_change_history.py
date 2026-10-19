@@ -415,6 +415,39 @@ class BuildHistoryTests(unittest.TestCase):
     def merge(self, branch, message, date):
         self.git("merge", "-q", "--no-ff", branch, "-m", message, env={"GIT_AUTHOR_DATE": date, "GIT_COMMITTER_DATE": date})
 
+    def test_fork_merges_give_authors_without_github(self):
+        # フォークからのマージは、件名のフォークの持ち主が PR の作成者。noreply でないメールでも Author が出る
+        self.git("config", "user.name", "Bob")
+        self.git("config", "user.email", "bob@example.com")
+        self.git("switch", "-q", "-c", "fix")
+        self.commit("src/cache.py", "TTL = 1", "Fix cache", "2025-06-01T00:00:00Z")
+        self.git("switch", "-q", "main")
+        self.merge("fix", "Merge pull request #20 from bob-gh/fix\n\nFix cache", "2025-06-02T00:00:00Z")
+        # 同じメールの、PR を通さない変更にも使う
+        self.commit("src/cache.py", "TTL = 2", "Tune cache", "2025-06-03T00:00:00Z")
+        # メンテナーが同じリポジトリのブランチでも使うメールは、フォークのマージに出ても使わない
+        self.git("config", "user.email", "lead@example.com")
+        for n, (owner, day) in enumerate([("carol-gh", "05"), ("o", "07")]):
+            self.git("switch", "-q", "-c", f"b{n}")
+            self.commit("src/db.py", str(n), f"Change db {n}", f"2025-06-{day}T00:00:00Z")
+            self.git("switch", "-q", "main")
+            self.merge(f"b{n}", f"Merge pull request #{21 + n} from {owner}/b{n}\n\nChange db {n}", f"2025-06-{day}T01:00:00Z")
+        self.commit("src/db.py", "x", "Tidy db", "2025-06-08T00:00:00Z")
+        self.assertEqual(self.run_script().returncode, 0)
+        june = self.listing("2025-06")
+        for line in ["Fix cache（[#20](https://github.com/o/r/pull/20)、src/、@bob-gh）", "Tune cache（[",
+                     "Change db 0（[#21](https://github.com/o/r/pull/21)、src/、@carol-gh）",
+                     "Change db 1（[#22](https://github.com/o/r/pull/22)、src/、—）"]:
+            self.assertIn(line, june)
+        self.assertRegex(june, r"Tune cache（\[[0-9a-f]{7}\][^\n]*、@bob-gh）")
+        self.assertRegex(june, r"Tidy db（\[[0-9a-f]{7}\][^\n]*、—）")
+        # 前に — と書いた行は、取れるようになった名前に替わる。取れない側は、書いてある名前を残す
+        self.fill("2025-06", "### バグ対応\n\n| | キャッシュを直した | #20 | — |\n| | DB を変えた | #22 | @lead |")
+        self.run_script()
+        page = self.page("2025-06.md")
+        self.assertIn("| キャッシュを直した | [#20](https://github.com/o/r/pull/20) | @bob-gh |", page)
+        self.assertIn("| DB を変えた | [#22](https://github.com/o/r/pull/22) | @lead |", page)
+
     def test_development_and_production_branches(self):
         # 機能の修正は develop へ、リリースは develop から main へ、緊急の修正は main へ直接
         self.git("switch", "-q", "-c", "develop")

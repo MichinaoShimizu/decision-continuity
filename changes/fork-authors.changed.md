@@ -1,0 +1,1 @@
+- change-history: `gh` で PR の作成者を取れないとき、フォークからのマージの件名（`Merge pull request #12 from alice/fix`）から Author を取るようにした。同じメールの PR を通さない変更にも使う。前に `—` と書いた Author は、取れるようになった名前に替わる
