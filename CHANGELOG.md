@@ -2,6 +2,25 @@
 
 decision-continuity の主な変更。[Keep a Changelog](https://keepachangelog.com/) の形で書く。変更は `changes/` の断片に書き（[changes/README.md](changes/README.md)）、リリースのときに版の節にまとめる。版は中身から決まり（[Semantic Versioning](https://semver.org/)、`sh tools/next-version.sh`）、各版の節がそのまま GitHub のリリースノートになる。手順は [docs/release.md](docs/release.md)。
 
+## v0.12.0 - 2026-10-19
+
+### Changed
+
+- BREAKING: change-history の月の主な変更の分類を、年表と同じ機能改善・運用改善・バグ対応の 3 つにした
+  - 以前の 11 種（`security`・`reliability` など）で書いた月の主な変更は、形の崩れとして出るので書き直す
+  - 目立った不具合の修正は `バグ対応` に書く（依存の更新や小さな修正は今までどおり書かない）
+  - decision-log の分類は 11 種のまま
+
+### Fixed
+
+- change-history: `--since` を付けると、それより前の月の年表の行と要約が消えていた。`--since` は書き直す月だけを絞り、年表は全部の月から作る。`--list` は `--since` に関わらずその月を出す
+- change-history: 月はブランチに入った日（コミットの日）で分ける。rebase や cherry-pick で入った変更が、書いた日の月に出ていた
+- change-history: `gh` が使えるかどうかで `--check` の結果が変わっていた。GitHub から Author が取れないときは、表に書いてある Author を残す
+- change-history: 読めない前の形の行（`- 概要（#99）`）が表を崩していた。表の行にして「この月の変更にない」と知らせる
+- change-history: コミットのないリポジトリで git のエラーを出して止まっていた
+- decision-log: 調べ役が読んでいないブランチからのマージの中の PR を拾うコマンドの範囲が誤っていて、何も拾えていなかった（`<コミット>^1..<コミット>^2` に直した）
+- インストール：前の版で消えたサブエージェントが、入れ先に残らないようにした
+
 ## v0.11.3 - 2026-10-19
 
 ### Changed
