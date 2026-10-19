@@ -2,6 +2,12 @@
 
 decision-continuity の主な変更。[Keep a Changelog](https://keepachangelog.com/) の形で書く。変更は `changes/` の断片に書き（[changes/README.md](changes/README.md)）、リリースのときに版の節にまとめる。版は中身から決まり（[Semantic Versioning](https://semver.org/)、`sh tools/next-version.sh`）、各版の節がそのまま GitHub のリリースノートになる。手順は [docs/release.md](docs/release.md)。
 
+## v0.10.1 - 2026-10-19
+
+### Changed
+
+- decision-log: 候補を大事なものから 20 件で切らず、大事な順に 20 件ずつの回に分けて、全部の回を終えるまで読んで書くようにした。読み手（`decision-log-reader`）1 つに渡すのは 5 件までで、多い分類は分ける。Decision log は 1 つずつ、形の節を全部埋めてから次へ進み、数が多くても短くしたり「ほか N 件」で省いたりしない。途中で止まったら、報告に次の回を書く
+
 ## v0.10.0 - 2026-10-19
 
 ### Added
