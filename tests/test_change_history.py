@@ -396,5 +396,24 @@ class BuildHistoryTests(unittest.TestCase):
         self.assertEqual(self.run_script("--since", "2025-2").returncode, 2)
 
 
+class WriterAgentTests(unittest.TestCase):
+    """change-history-writer が、使うコマンドを Kiro で確認なしに通せるか。"""
+
+    def test_kiro_writer_auto_approves_the_commands_it_needs(self):
+        import json, re
+        kiro = json.loads((ROOT / "agents/kiro/change-history-writer.json").read_text(encoding="utf-8"))
+        allowed = [re.compile(p) for p in kiro["toolsSettings"]["shell"]["allowedCommands"]]
+        for cmd in ("python3 .kiro/skills/change-history/scripts/build_history.py docs/change-history --list 2025-02",
+                    "python3 .kiro/skills/change-history/scripts/build_history.py docs/change-history --list 2025-02 --branch main",
+                    "git show --stat abc1234"):
+            self.assertTrue(any(p.fullmatch(cmd) for p in allowed), cmd)
+        for cmd in ("python3 .kiro/skills/change-history/scripts/build_history.py x; rm -rf ~", "python3 -c 'import os'", "git push"):
+            self.assertFalse(any(p.fullmatch(cmd) for p in allowed), cmd)
+        self.assertEqual(kiro["toolsSettings"]["write"]["allowedPaths"], ["docs/change-history/*.md"])
+
+    def test_skill_calls_the_writer_by_name(self):
+        self.assertIn("change-history-writer", (ROOT / "skills/change-history/SKILL.md").read_text(encoding="utf-8"))
+
+
 if __name__ == "__main__":
     unittest.main()

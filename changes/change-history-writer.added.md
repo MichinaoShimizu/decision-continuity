@@ -1,0 +1,1 @@
+- change-history: 月ごとの主な変更の表を書くサブエージェント `change-history-writer` を足した。12 か月ずつの回に分けて並べて呼び、書き手は月のファイルだけを書いて要約の 1 文を返す（年表にはメインの会話が入れる）。Kiro では、`--list` と `git show` を確認なしで通し、書き込みを `docs/change-history/*.md` に限る

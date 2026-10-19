@@ -9,6 +9,7 @@
 - 2026-10-03 [DL-1](0001-record-storage.md) 記録の置き場所が Discussions から records/ を経て、置き場所を持たない汎用ツールになった
 - 2026-10-16 [DL-3](0003-kiro-reader.md) Kiro の対応が、薄い入口の方式から、reader を JSON と Markdown の両方で置く形になった
 - 2026-10-18 [DL-13](0013-delegation.md) 洗い出しと読むことをサブエージェントに任せ、メインの会話はコマンドをほとんど回さない形になった
+- 2026-10-19 [DL-24](0024-change-history-writer.md) change-history の月ごとの表を、専用のサブエージェントに任せることにした
 
 ## 認証・権限・セキュリティ（security）
 

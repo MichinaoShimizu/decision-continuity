@@ -136,7 +136,9 @@ class AgentTests(unittest.TestCase):
                         continue
                     for glob in rule.get("match", []):
                         # 「git *」「gh *」のようにコマンド全体を許す形にしない。サブコマンドまで書く
-                        self.assertRegex(glob, r"^(\S+=\S+ )?\S+ [a-z-]+( [a-z-]+)? \*$")
+                        # このキットのスクリプトだけは、パスまで書いて許す
+                        self.assertRegex(glob, r"^(\S+=\S+ )?\S+ [a-z-]+( [a-z-]+)? \*$"
+                                               r"|^python3 \.kiro/skills/[a-z-]+/scripts/[a-z_]+\.py \*$")
 
 
     def test_kiro_v3_rules_allow_rest_reads_but_deny_writes(self):
@@ -171,7 +173,8 @@ class AgentTests(unittest.TestCase):
         # 版を上げるだけのリリースは、change-history の主な変更にも decision-log の候補にも入れない
         script = (ROOT / "skills/change-history/scripts/build_history.py").read_text(encoding="utf-8")
         forms = re.search(r"# 版を上げるだけの定型のリリース（(.*?)）", script).group(1).split("、")
-        for path in ("skills/change-history/SKILL.md", "skills/decision-log/SKILL.md", "agents/claude/decision-log-planner.md"):
+        for path in ("skills/change-history/SKILL.md", "agents/claude/change-history-writer.md", "skills/decision-log/SKILL.md",
+                     "agents/claude/decision-log-planner.md"):
             text = (ROOT / path).read_text(encoding="utf-8")
             line = next(l for l in text.splitlines() if "定型のリリース" in l and "`Release v1.2.0`" in l)
             self.assertEqual(re.findall(r"`([^`]+)`", line.split("定型のリリース", 1)[1])[:4], forms, path)
