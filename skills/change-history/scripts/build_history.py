@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """マージされた変更の一覧を、月ごとの Markdown に書き出す（change-history の 1 段目）。
 
-  build_history.py <フォルダー> [--branch develop --branch main] [--depth 2] [--since YYYY-MM] [--tz Asia/Tokyo]   書き出す
+  build_history.py <フォルダー> [--branch develop --branch main] [--depth 2] [--since YYYY-MM] [--until YYYY-MM]   書き出す
   build_history.py <フォルダー> --check                                                                         最新か確かめる（古ければ終了コード 1）
   build_history.py <フォルダー> --list YYYY-MM                                                                  その月の全変更を出す（書かない）
 
@@ -26,13 +26,15 @@ PR の番号はマージコミットの件名（Merge pull request #12）か、s
 """
 import argparse
 import collections
+import json
 import os
 import pathlib
 import re
 import subprocess
 import sys
 
-MERGE_RE = re.compile(r"^Merge pull request #(\d+) from \S+")
+# 番号のないもの（Merge pull request from GHSA-…：セキュリティ修正のマージ）も、本文の 1 行目をタイトルにする
+MERGE_RE = re.compile(r"^Merge pull request (?:#(\d+) )?from \S+")
 SQUASH_RE = re.compile(r"^(.*?)\s*\(#(\d+)\)\s*$")
 # PR を通さないブランチの同期（Merge branch '3.0.x'、Merge remote-tracking branch 'origin/stable'）
 SYNC_RE = re.compile(r"^Merge (?:remote-tracking )?branch ")
@@ -70,6 +72,9 @@ SHORT_DATE_RE = re.compile(r"\d+\s*月|(?<![\d-])\d{1,2}-\d{1,2}(?![\d-])")
 COMMIT, FIELD = "\x1e", "\x1f"
 # GitHub から取った、PR の番号ごとの作成者（@login）。取れた PR は、メールより先にこれを使う
 PR_AUTHORS = {}
+# GitHub から取った、PR を入れたコミット（merge_commit_sha）から (番号, タイトル)。件名に番号のない変更
+# （Rebase and merge など）を PR に結びつける
+PR_SHAS = {}
 
 
 def git(*args, tz=None, stdin=None):
@@ -117,37 +122,67 @@ def first_parent(ref, tz):
     return [chunk.split(FIELD) for chunk in out.split(COMMIT)[1:]]
 
 
-def pr_authors(url, asked):
-    """GitHub の REST API（gh api）で、閉じた PR の番号と作成者を 100 件ずつ、ページを数えて取る（--paginate は
-    次のページを repositories/<ID>/… の形で引き、通さない中継があるので使わない）。途中で失敗しても、取れた分は使う。
-    gh がないか origin が GitHub でないときは、--github と言われたときだけ理由を出す。gh が失敗したときはいつも出す。"""
-    if not url:
-        if asked:
+def cache_file(url):
+    """GitHub から取った PR を覚えておく場所。.git の中なので、リポジトリには入らない。"""
+    out = subprocess.run(["git", "rev-parse", "--git-common-dir"], capture_output=True, text=True)
+    return pathlib.Path(out.stdout.strip()) / "decision-continuity-prs.json" if out.returncode == 0 and url else None
+
+
+def github_prs(url, asked, online):
+    """閉じた PR の 番号 → [作成者, PR を入れたコミット, タイトル]。覚えておいた分に、GitHub の REST API（gh api）で
+    更新の新しい順に 100 件ずつ足し、全部を覚えている PR のページが来たら止める（2 回目からは新しい分だけ取る）。
+    --paginate は次のページを repositories/<ID>/… の形で引き、通さない中継があるので使わず、ページを数える。
+    途中で失敗しても、取れた分は使う。online でなければ、覚えておいた分だけを返す。gh がないか origin が GitHub で
+    ないときは、--github と言われたときだけ理由を出す。gh が失敗したときはいつも出す。"""
+    path = cache_file(url)
+    try:
+        saved = json.loads(path.read_text(encoding="utf-8")) if path and path.exists() else {}
+    except ValueError:
+        saved = {}
+    known = saved.get("prs", {}) if saved.get("repo") == url else {}
+    if not online or not url:
+        if asked and not url:
             print("--github：origin が GitHub でないので、PR の作成者は取らない", file=sys.stderr)
-        return {}
-    found, page = {}, 1
+        return known
+    found, page = dict(known), 1
+    jq = '.[] | [(.number | tostring), .user.login, (if .merged_at then .merge_commit_sha else "" end), .title] | @tsv'
     while True:
-        path = f"repos/{url.removeprefix('https://github.com/')}/pulls?state=closed&per_page=100&page={page}"
+        api = f"repos/{url.removeprefix('https://github.com/')}/pulls?state=closed&sort=updated&direction=desc&per_page=100&page={page}"
         try:
-            out = subprocess.run(["gh", "api", path, "--jq", '.[] | "\\(.number) \\(.user.login)"'],
-                                 capture_output=True, text=True, encoding="utf-8", errors="replace")
+            out = subprocess.run(["gh", "api", api, "--jq", jq], capture_output=True, text=True, encoding="utf-8", errors="replace")
         except FileNotFoundError:
             if asked:
                 print("--github：gh がないので、PR の作成者は取らない", file=sys.stderr)
-            return found
+            break
         if out.returncode != 0:
-            print(f"gh api が失敗したので、{'以降の ' if found else ''}PR の作成者はメールから取る"
+            print(f"gh api が失敗したので、{'以降の ' if page > 1 else ''}PR の作成者は覚えておいた分とメールから取る"
                   f"（{out.stderr.strip()}。止めるなら --no-github）", file=sys.stderr)
-            return found
-        lines = [l.split() for l in out.stdout.splitlines()]
-        found.update((number, f"@{login}") for number, login in (l for l in lines if len(l) == 2))
-        if len(lines) < 100:
-            return found
+            break
+        rows = [l.split("\t", 3) for l in out.stdout.splitlines()]
+        rows = [r + [""] * (4 - len(r)) for r in rows if len(r) >= 2]
+        fresh = [r for r in rows if r[0] not in known]
+        found.update((r[0], r[1:]) for r in rows)
+        if len(rows) < 100 or not fresh:
+            break
         page += 1
+    if path and found != known:
+        try:
+            path.write_text(json.dumps({"repo": url, "prs": found}, ensure_ascii=False), encoding="utf-8")
+        except OSError:
+            pass
+    return found
+
+
+def use_prs(prs):
+    PR_AUTHORS.update((n, f"@{login}") for n, (login, _, _) in prs.items())
+    PR_SHAS.update((sha, (n, title)) for n, (_, sha, title) in prs.items() if sha)
 
 
 def by_pr(item):
-    """GitHub から取った PR の作成者があれば、それを Author にする。"""
+    """件名に番号のない変更は、PR を入れたコミットから PR に結びつける。GitHub から取った PR の作成者があれば、Author にする。"""
+    if not item["pr"] and item.get("sha") in PR_SHAS and not item["title"].startswith(("（", SYNC)):
+        item["pr"], title = PR_SHAS[item["sha"]]
+        item["title"] = title or item["title"]
     if item["pr"] in PR_AUTHORS:
         item["author"] = PR_AUTHORS[item["pr"]]
     return item
@@ -448,13 +483,17 @@ def needs_point(summary):
     return summary not in (None, "", EMPTY) and not NOTHING_RE.match(summary)
 
 
-def readme_page(months, folder, summaries):
-    """年表を兼ねた索引。年ごとに、要点と、月ごとの主な変更の要約（どちらも人か AI が書く）の表を並べる。新しい年が上。"""
+def readme_page(months, folder, summaries, shown):
+    """年表を兼ねた索引。年ごとに、要点と、月ごとの主な変更の要約（どちらも人か AI が書く）の表を並べる。新しい年が上。
+    載せるのは、書き直す月（shown）と、前から年表にある月（人が書いた要約を消さない）。"""
     # 以前の timeline.md に書いた要点も拾う。README.md に書いたものが先
     kept = {**year_summaries(folder / "timeline.md"),
             **{y: t for y, t in year_summaries(folder / "README.md").items() if t != EMPTY}}
     readme = folder / "README.md"
-    points = points_in(readme.read_text(encoding="utf-8")) if readme.exists() else {}
+    text = readme.read_text(encoding="utf-8") if readme.exists() else ""
+    points = points_in(text)
+    listed = {m.group(1) for m in (ROW_RE.match(l) for l in text.splitlines()) if m}
+    months = {m: months[m] for m in months if m in set(shown) | listed}
     out = ["# 変更の履歴"]
     for year in sorted({m[:4] for m in months}, reverse=True):
         out += ["", f"## {year}", "", tidy(kept.get(year), "year") or EMPTY, "", "| 月 | 件数 | 主な変更 |", "|---|---|---|"]
@@ -471,13 +510,14 @@ def main():
     p.add_argument("--branch", action="append", help="読むブランチ（何度でも。既定は長く続くブランチを全部）")
     p.add_argument("--depth", type=int, default=2, help="置き場所として数えるフォルダーの段数（既定 2）")
     p.add_argument("--since", help="この月（YYYY-MM）から書く")
+    p.add_argument("--until", help="この月（YYYY-MM）まで書く")
     p.add_argument("--tz", default="Asia/Tokyo", help="日付の時間帯（既定 Asia/Tokyo）")
     p.add_argument("--github", action="store_true", help="PR の作成者が取れないとき、理由を出す（既定でも gh があれば取る）")
     p.add_argument("--no-github", action="store_true", help="GitHub に問い合わせない（Author はメールから取る）")
     p.add_argument("--check", action="store_true", help="書かずに、最新かを確かめる")
     p.add_argument("--list", metavar="YYYY-MM", help="書かずに、その月の全変更を出す")
     args = p.parse_args()
-    for flag, value in (("--since", args.since), ("--list", args.list)):
+    for flag, value in (("--since", args.since), ("--until", args.until), ("--list", args.list)):
         if value and not MONTH_RE.match(value):
             p.error(f"{flag} は YYYY-MM で書く")
     for name in args.branch or []:
@@ -489,12 +529,13 @@ def main():
         return 0
     url = repo_url()
     if not args.no_github:
-        PR_AUTHORS.update(pr_authors(url, args.github))
+        # --list（書き手が月ごとに呼ぶ）は問い合わせず、覚えておいた分だけを使う
+        use_prs(github_prs(url, args.github, online=not args.list))
     months = collections.defaultdict(list)
     for item in changes(args.tz, branches):
         months[item["date"][:7]].append(item)
-    # --since は書き直す月だけを絞る。年表は全部の月から作る（前の月の行と要約を消さない）
-    shown = sorted(m for m in months if not args.since or m >= args.since)
+    # --since・--until は書き直す月を絞る。年表には、その月と前から載っている月を載せる（人が書いた行と要約を消さない）
+    shown = sorted(m for m in months if (not args.since or m >= args.since) and (not args.until or m <= args.until))
     if args.list:
         for line in list_lines(months.get(args.list, []), args.depth, url, len(branches) > 1):
             print(line)
@@ -513,7 +554,7 @@ def main():
         indexes[m] = index
         summaries[m] = tidy(summary, "month", index, url, everything)
     pages = {f"{m}.md": month_page(m, summaries[m]) for m in shown}
-    pages["README.md"] = readme_page(months, args.folder, summaries)
+    pages["README.md"] = readme_page(months, args.folder, summaries, shown)
     old = args.folder / "timeline.md"
     stale = [name for name, text in sorted(pages.items())
              if not (args.folder / name).exists() or (args.folder / name).read_text(encoding="utf-8") != text]

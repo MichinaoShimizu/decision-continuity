@@ -1,0 +1,4 @@
+- change-history: GitHub から取った PR（作成者・PR を入れたコミット・タイトル）を `.git/decision-continuity-prs.json` に覚えておき、2 回目からは更新の新しい PR だけを取る。`--list`（書き手が月ごとに呼ぶ）は問い合わせず、覚えておいた分を使う。PR が数万件のリポジトリで、作り直しや書き手のたびに全部の PR を取り直していた
+- change-history: 件名に PR の番号がないコミット（Rebase and merge など）も、GitHub の PR を入れたコミットから PR の番号とタイトルを付ける
+- change-history: `--until YYYY-MM` で、書く月の終わりを決められる。年表には、その期間の月と、前から年表にある月を載せる
+- change-history: `Merge pull request from GHSA-…` のような番号のないマージも、本文の 1 行目をタイトルにする

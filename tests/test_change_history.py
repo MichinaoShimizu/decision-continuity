@@ -144,51 +144,71 @@ class BuildHistoryTests(unittest.TestCase):
         self.assertEqual(self.run_script("--check").returncode, 1)
 
     def test_github_gives_pr_authors(self):
-        # gh があれば、言われなくても PR の作成者を GitHub から取る。PR のないコミットはメールから取る
-        env = self.fake_gh('echo "$@" > gh-args.txt; printf "2 bob\\n3 carol\\n"')
+        # gh があれば、言われなくても PR の作成者を GitHub から取り、.git の中に覚えておく。PR のないコミットはメールから取る
+        env = self.fake_gh('echo "$@" >> gh-args.txt; printf "2\\tbob\\t\\tExtend\\n3\\tcarol\\t\\tRetries\\n"')
+        self.assertEqual(self.run_script(env=env).returncode, 0)
+        self.assertIn("api repos/o/r/pulls?state=closed&sort=updated&direction=desc&per_page=100&page=1 --jq",
+                      (self.repo / "gh-args.txt").read_text())
+        self.assertTrue((self.repo / ".git/decision-continuity-prs.json").exists())
+        # --list（書き手が月ごとに呼ぶ）は問い合わせず、覚えておいた分を使う
+        (self.repo / "gh-args.txt").unlink()
         result = self.run_script("--list", "2025-02", env=env)
-        self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("Extend session（[#2](https://github.com/o/r/pull/2)、src/auth/、@bob）", result.stdout)
         self.assertIn("Raise payment retries（[#3](https://github.com/o/r/pull/3)、docs/ ほか 1、@carol）", result.stdout)
-        self.assertIn("  - Raise retries（[", result.stdout)
         self.assertRegex(result.stdout, r"  - Raise retries（\[[0-9a-f]{7}\]\([^)]*\)、@alice）")
-        self.assertIn("api repos/o/r/pulls?state=closed&per_page=100&page=1 --jq", (self.repo / "gh-args.txt").read_text())
+        self.assertFalse((self.repo / "gh-args.txt").exists())
         # 表の Author にも入る
-        self.run_script(env=env)
         self.fill("2025-02", "### 機能改善\n\n| | セッションを延ばした | #2 | |")
         self.run_script(env=env)
         self.assertIn("| 2025-02-01 | セッションを延ばした | [#2](https://github.com/o/r/pull/2) | @bob |", self.page("2025-02.md"))
-        # gh が失敗したら、理由を出してメールから取る
-        result = self.run_script("--list", "2025-02", env=self.fake_gh("echo 'HTTP 401' >&2; exit 1"))
-        self.assertEqual(result.returncode, 0)
-        self.assertIn("gh api が失敗したので、PR の作成者はメールから取る（HTTP 401。止めるなら --no-github）", result.stderr)
-        self.assertIn("src/auth/、—）", result.stdout)
-        # --no-github なら問い合わせない
-        (self.repo / "gh-args.txt").unlink()
-        result = self.run_script("--list", "2025-02", "--no-github", env=env)
-        self.assertIn("src/auth/、—）", result.stdout)
-        self.assertFalse((self.repo / "gh-args.txt").exists())
-        # gh がなければ黙ってメールから取る。--github と言われたときだけ理由を出す
+        # gh が失敗しても、覚えておいた分を使う
+        failing = self.fake_gh("echo 'HTTP 401' >&2; exit 1")
+        self.assertIn("src/auth/、@bob）", self.run_script("--list", "2025-02", "--github", env=failing).stdout)
+        result = self.run_script(env=failing)
+        self.assertIn("gh api が失敗したので、PR の作成者は覚えておいた分とメールから取る（HTTP 401。止めるなら --no-github）", result.stderr)
+        # --no-github なら問い合わせず、覚えておいた分も使わない
+        self.assertIn("src/auth/、—）", self.run_script("--list", "2025-02", "--no-github", env=env).stdout)
+        # gh がなければ黙って取らない。--github と言われたときだけ理由を出す
         only_git = self.repo / ".only-git"
         only_git.mkdir()
         (only_git / "git").symlink_to(shutil.which("git"))
-        result = self.run_script("--list", "2025-02", env=dict(os.environ, PATH=str(only_git)))
-        self.assertEqual((result.returncode, result.stderr), (0, ""))
-        self.assertIn("src/auth/、—）", result.stdout)
-        result = self.run_script("--list", "2025-02", "--github", env=dict(os.environ, PATH=str(only_git)))
+        self.assertEqual(self.run_script(env=dict(os.environ, PATH=str(only_git))).stderr, "")
+        result = self.run_script("--github", env=dict(os.environ, PATH=str(only_git)))
         self.assertIn("--github：gh がないので、PR の作成者は取らない", result.stderr)
 
-    def test_github_pages_until_short_and_keeps_partial_results(self):
+    def test_github_pages_only_until_known_and_keeps_partial_results(self):
         # 100 件ちょうどなら次のページを取る。2 ページ目で失敗しても、1 ページ目の分は使う
-        env = self.fake_gh('case "$2" in *page=1) i=1; while [ $i -le 100 ]; do echo "$i user$i"; i=$((i+1)); done;; '
-                           '*) echo "HTTP 403" >&2; exit 1;; esac')
-        result = self.run_script("--list", "2025-02", env=env)
-        self.assertIn("Extend session（[#2](https://github.com/o/r/pull/2)、src/auth/、@user2）", result.stdout)
-        self.assertIn("gh api が失敗したので、以降の PR の作成者はメールから取る（HTTP 403", result.stderr)
+        page1 = 'i=1; while [ $i -le 100 ]; do printf "%s\\tuser%s\\t\\tT\\n" $i $i; i=$((i+1)); done'
+        env = self.fake_gh('echo "$@" >> gh-args.txt; case "$2" in *page=1) ' + page1 + ';; *) echo "HTTP 403" >&2; exit 1;; esac')
+        result = self.run_script(env=env)
+        self.assertIn("gh api が失敗したので、以降の PR の作成者は覚えておいた分とメールから取る（HTTP 403", result.stderr)
+        self.assertIn("src/auth/、@user2）", self.run_script("--list", "2025-02", env=env).stdout)
+        # 2 回目は、1 ページ目が全部覚えている PR なので、そこで止める
+        (self.repo / "gh-args.txt").unlink()
+        self.assertEqual(self.run_script(env=env).stderr, "")
+        self.assertEqual(len((self.repo / "gh-args.txt").read_text().splitlines()), 1)
+
+    def test_github_links_commits_without_numbers_to_their_pr(self):
+        # Rebase and merge などで件名に番号がないコミットも、PR を入れたコミット（merge_commit_sha）から PR に結びつける
+        self.commit("src/search.py", "x", "Add search", "2025-02-20T00:00:00Z")
+        sha = self.git("rev-parse", "HEAD").strip()
+        env = self.fake_gh(f'printf "9\\tdave\\t{sha}\\tAdd full-text search\\n"')
+        self.run_script(env=env)
+        self.assertIn("- 2025-02-20 Add full-text search（[#9](https://github.com/o/r/pull/9)、src/、@dave）",
+                      self.run_script("--list", "2025-02", env=env).stdout)
+
+    def test_until_limits_the_months(self):
+        self.commit("src/late.py", "x", "Later (#7)", "2025-04-02T00:00:00Z")
+        self.run_script("--since", "2025-02", "--until", "2025-02")
+        folder = self.repo / "docs/change-history"
+        self.assertEqual(sorted(p.name for p in folder.glob("*.md")), ["2025-02.md", "README.md"])
+        self.assertNotIn("2025-04", self.page("README.md"))
+        self.assertNotIn("2025-01", self.page("README.md"))
+        self.assertEqual(self.run_script("--until", "2025-4").returncode, 2)
 
     def test_check_does_not_depend_on_gh(self):
         # gh で作った表は、gh のない環境（CI など）の --check でも最新のまま
-        env = self.fake_gh('printf "2 bob\\n"')
+        env = self.fake_gh('printf "2\\tbob\\t\\tExtend\\n"')
         self.run_script(env=env)
         self.fill("2025-02", "### 機能改善\n\n| | セッションを延ばした | #2 | |")
         self.run_script(env=env)
