@@ -35,3 +35,8 @@ Active：`build_history.py` は月のファイルに見出しと「## 主な変�
 
 `gh` は使わない。change-history は手元の git だけを読む作りのまま、Author のメールを git の `.mailmap` に通すようにした（`%ae` から `%aE` へ）。社内のメールを noreply のメールに対応させれば、アカウント名が出る（ブランチ open-items。作成 @MichinaoShimizu）。@MichinaoShimizu が「適切に対応」と Claude に任せ、ネットワークを使わない案を Claude が選んだ（会話 2026-10-19）
 Superseded：`build_history.py` は Author を `.mailmap` を通したメール（`%aE`）から取る（`skills/change-history/scripts/build_history.py` の `first_parent`・`changes`）
+
+## 追記 2026-10-19（PR の作成者）
+
+- 2026-10-19 `--github` を付けたときだけ、Author を GitHub の PR の作成者にすることにした。`gh api --paginate repos/<owner>/<repo>/pulls?state=closed&per_page=100` で番号と作成者を取り、PR の番号がある変更（マージの中の PR も）に使う。取れない変更や `gh` が使えないときは、noreply のメール（`.mailmap` を通す）から取る（ブランチ pr-authors。作成 @MichinaoShimizu）。理由：社内のメールで commit するリポジトリでは Author がほとんど `—` になり、「Prの作成者をとればよいかと」（@MichinaoShimizu、会話 2026-10-19）。change-history は手元の git だけを読む作りだったので、ネットワークに出るのは `--github` のときだけにした（Claude の案）
+Superseded：`build_history.py` は `--github` のとき `pr_authors` で PR の作成者を取り、`by_pr` で Author にする（`skills/change-history/scripts/build_history.py`）。SKILL.md は `gh` が使えれば毎回 `--github` を付けるとする

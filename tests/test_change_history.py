@@ -50,9 +50,18 @@ class BuildHistoryTests(unittest.TestCase):
         self.git("add", "-A")
         self.git("commit", "-q", "-m", message, env={"GIT_AUTHOR_DATE": date, "GIT_COMMITTER_DATE": date})
 
-    def run_script(self, *args):
+    def run_script(self, *args, env=None):
         return subprocess.run([sys.executable, str(SCRIPT), "docs/change-history", *args], cwd=self.repo,
-                              capture_output=True, text=True, check=False)
+                              capture_output=True, text=True, check=False, env=env)
+
+    def fake_gh(self, script):
+        """PATH の先頭に偽の gh を置いた環境を返す。"""
+        bin_dir = self.repo / ".bin"
+        bin_dir.mkdir(exist_ok=True)
+        gh = bin_dir / "gh"
+        gh.write_text("#!/bin/sh\n" + script + "\n", encoding="utf-8")
+        gh.chmod(0o755)
+        return dict(os.environ, PATH=f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
 
     def listing(self, month, *args):
         result = self.run_script("--list", month, *args)
@@ -126,6 +135,27 @@ class BuildHistoryTests(unittest.TestCase):
         self.assertIn(f"| 2025-01-10 | 始めた | [{sha[:7]}](https://github.com/o/r/commit/{sha}) | — |", self.page("2025-01.md"))
         self.commit("src/auth/session.py", "TTL = 48", "Longer session (#4)", "2025-02-10T00:00:00Z")
         self.assertEqual(self.run_script("--check").returncode, 1)
+
+    def test_github_gives_pr_authors(self):
+        # --github なら、PR の作成者を GitHub から取る。PR のないコミットはメールから取る
+        env = self.fake_gh('echo "$@" > gh-args.txt; printf "2 bob\\n3 carol\\n"')
+        result = self.run_script("--list", "2025-02", "--github", env=env)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Extend session（[#2](https://github.com/o/r/pull/2)、src/auth/、@bob）", result.stdout)
+        self.assertIn("Raise payment retries（[#3](https://github.com/o/r/pull/3)、docs/ ほか 1、@carol）", result.stdout)
+        self.assertIn("  - Raise retries（[", result.stdout)
+        self.assertRegex(result.stdout, r"  - Raise retries（\[[0-9a-f]{7}\]\([^)]*\)、@alice）")
+        self.assertIn("api --paginate repos/o/r/pulls?state=closed&per_page=100 --jq", (self.repo / "gh-args.txt").read_text())
+        # 表の Author にも入る
+        self.run_script("--github", env=env)
+        self.fill("2025-02", "### security\n\n| | セッションを延ばした | #2 | |")
+        self.run_script("--github", env=env)
+        self.assertIn("| 2025-02-01 | セッションを延ばした | [#2](https://github.com/o/r/pull/2) | @bob |", self.page("2025-02.md"))
+        # gh が失敗したら、理由を出してメールから取る
+        result = self.run_script("--list", "2025-02", "--github", env=self.fake_gh("echo 'HTTP 401' >&2; exit 1"))
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("gh api が失敗したので、PR の作成者は取らない（HTTP 401）", result.stderr)
+        self.assertIn("src/auth/、—）", result.stdout)
 
     def test_mailmap_maps_work_emails_to_accounts(self):
         # noreply でないメールも、.mailmap で noreply に対応させればアカウント名になる
