@@ -2,6 +2,12 @@
 
 decision-continuity の主な変更。[Keep a Changelog](https://keepachangelog.com/) の形で書く。変更は `changes/` の断片に書き（[changes/README.md](changes/README.md)）、リリースのときに版の節にまとめる。版は中身から決まり（[Semantic Versioning](https://semver.org/)、`sh tools/next-version.sh`）、各版の節がそのまま GitHub のリリースノートになる。手順は [docs/release.md](docs/release.md)。
 
+## v0.11.1 - 2026-10-19
+
+### Changed
+
+- change-history: Author のメールを git の `.mailmap` に通すようにした。社内のメールを noreply のメール（`1+alice@users.noreply.github.com`）に対応させれば、アカウント名が出る
+
 ## v0.11.0 - 2026-10-19
 
 ### Changed
