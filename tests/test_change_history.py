@@ -286,6 +286,11 @@ class BuildHistoryTests(unittest.TestCase):
         self.assertLess(feb.index("| 後 |"), feb.index("| 読めない |"))
         self.assertIn("| [2025-01](2025-01.md) | 1 | 目立った変更なし（依存の更新のみ） |", self.page("README.md"))
 
+    def test_too_many_references_in_a_row_are_reported(self):
+        self.run_script()
+        self.fill("2025-02", "### 運用改善\n\n| | 翻訳 | #2、#3、#91、#92、#93、#94 | |")
+        self.assertIn("PR は 1 行に 5 件まで", self.run_script().stdout)
+
     def test_empty_repository(self):
         with tempfile.TemporaryDirectory() as empty:
             subprocess.run(["git", "init", "-q", empty], check=True)

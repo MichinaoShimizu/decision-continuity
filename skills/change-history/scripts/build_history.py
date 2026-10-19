@@ -56,6 +56,8 @@ DESCRIPTIONS = {
     "バグ対応": "不具合の修正と、その再発を防ぐ変更",
 }
 HEADER, RULE = "| 日付 | 概要 | PR | Author |", "|---|---|---|---|"
+# 1 行の PR の列に書く参照の上限（多すぎる行は読めない）
+MAX_REFS = 5
 NO_POINT = "まだ"
 ROW_RE = re.compile(r"^\| \[(\d{4}-\d{2})\]\(\1\.md\) \| \d+ \| (.*) \|$")
 # GitHub の noreply のメール（12345+alice@users.noreply.github.com）からアカウント名を取る。取れなければ UNKNOWN
@@ -445,6 +447,8 @@ def problems(text, kind, index=None):
                 found.append((number, "PR の列に PR かコミット（[#123](…) など）がない"))
             elif None in refs:
                 found.append((number, "PR の列の参照が、この月の変更にない"))
+            if len(refs) > MAX_REFS:
+                found.append((number, f"PR は 1 行に {MAX_REFS} 件まで（多いときは代表を書き、件数は概要に書く）"))
             if not parts[1]:
                 found.append((number, "概要の列が空"))
             if SHORT_DATE_RE.search(parts[1]):
