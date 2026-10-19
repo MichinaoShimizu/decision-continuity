@@ -40,3 +40,8 @@ Superseded：`build_history.py` は Author を `.mailmap` を通したメール�
 
 - 2026-10-19 `--github` を付けたときだけ、Author を GitHub の PR の作成者にすることにした。`gh api --paginate repos/<owner>/<repo>/pulls?state=closed&per_page=100` で番号と作成者を取り、PR の番号がある変更（マージの中の PR も）に使う。取れない変更や `gh` が使えないときは、noreply のメール（`.mailmap` を通す）から取る（ブランチ pr-authors。作成 @MichinaoShimizu）。理由：社内のメールで commit するリポジトリでは Author がほとんど `—` になり、「Prの作成者をとればよいかと」（@MichinaoShimizu、会話 2026-10-19）。change-history は手元の git だけを読む作りだったので、ネットワークに出るのは `--github` のときだけにした（Claude の案）
 Superseded：`build_history.py` は `--github` のとき `pr_authors` で PR の作成者を取り、`by_pr` で Author にする（`skills/change-history/scripts/build_history.py`）。SKILL.md は `gh` が使えれば毎回 `--github` を付けるとする
+
+## 追記 2026-10-19（GitHub を既定に）
+
+- 2026-10-19 `gh` が使えれば、`--github` を付けなくても PR の作成者を取ることにし、問い合わせを止める `--no-github` を足した。noreply のメール（`.mailmap` を通す）は、取れない変更の予備として残す。PR の作成者は `--paginate` をやめ、`&page=N` でページを数えて取り、途中で失敗しても取れた分を使う（ブランチ github-default。作成 @MichinaoShimizu）。理由：「No replay mail形式で取得する意味何」という問いに、noreply は予備にすぎず会社のリポジトリではほぼ当たらないと答え、GitHub を既定にする案に @MichinaoShimizu が「そうして」と答えた（会話 2026-10-19）。`--paginate` は、このセッションの中継が次のページの `repositories/<ID>/…` を 403 で止めたため、ページを数える形にした（Claude の判断。本物の `gh` で、このリポジトリの 112 件を 2 ページで取れた）
+Superseded：`build_history.py` は `--no-github` でなければ `pr_authors` で PR の作成者を取る（`skills/change-history/scripts/build_history.py`）。SKILL.md は、`gh` があれば GitHub から取り、止めるなら `--no-github` とする

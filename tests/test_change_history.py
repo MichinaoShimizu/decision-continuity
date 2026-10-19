@@ -1,6 +1,7 @@
 """change-history の build_history.py を、合成のリポジトリで回す。"""
 import os
 import pathlib
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -51,7 +52,9 @@ class BuildHistoryTests(unittest.TestCase):
         self.git("commit", "-q", "-m", message, env={"GIT_AUTHOR_DATE": date, "GIT_COMMITTER_DATE": date})
 
     def run_script(self, *args, env=None):
-        return subprocess.run([sys.executable, str(SCRIPT), "docs/change-history", *args], cwd=self.repo,
+        # 既定では本物の gh に問い合わせないよう --no-github を付ける。偽の gh を置いたときだけ外す
+        extra = () if env else ("--no-github",)
+        return subprocess.run([sys.executable, str(SCRIPT), "docs/change-history", *args, *extra], cwd=self.repo,
                               capture_output=True, text=True, check=False, env=env)
 
     def fake_gh(self, script):
@@ -137,25 +140,47 @@ class BuildHistoryTests(unittest.TestCase):
         self.assertEqual(self.run_script("--check").returncode, 1)
 
     def test_github_gives_pr_authors(self):
-        # --github なら、PR の作成者を GitHub から取る。PR のないコミットはメールから取る
+        # gh があれば、言われなくても PR の作成者を GitHub から取る。PR のないコミットはメールから取る
         env = self.fake_gh('echo "$@" > gh-args.txt; printf "2 bob\\n3 carol\\n"')
-        result = self.run_script("--list", "2025-02", "--github", env=env)
+        result = self.run_script("--list", "2025-02", env=env)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("Extend session（[#2](https://github.com/o/r/pull/2)、src/auth/、@bob）", result.stdout)
         self.assertIn("Raise payment retries（[#3](https://github.com/o/r/pull/3)、docs/ ほか 1、@carol）", result.stdout)
         self.assertIn("  - Raise retries（[", result.stdout)
         self.assertRegex(result.stdout, r"  - Raise retries（\[[0-9a-f]{7}\]\([^)]*\)、@alice）")
-        self.assertIn("api --paginate repos/o/r/pulls?state=closed&per_page=100 --jq", (self.repo / "gh-args.txt").read_text())
+        self.assertIn("api repos/o/r/pulls?state=closed&per_page=100&page=1 --jq", (self.repo / "gh-args.txt").read_text())
         # 表の Author にも入る
-        self.run_script("--github", env=env)
+        self.run_script(env=env)
         self.fill("2025-02", "### security\n\n| | セッションを延ばした | #2 | |")
-        self.run_script("--github", env=env)
+        self.run_script(env=env)
         self.assertIn("| 2025-02-01 | セッションを延ばした | [#2](https://github.com/o/r/pull/2) | @bob |", self.page("2025-02.md"))
         # gh が失敗したら、理由を出してメールから取る
-        result = self.run_script("--list", "2025-02", "--github", env=self.fake_gh("echo 'HTTP 401' >&2; exit 1"))
+        result = self.run_script("--list", "2025-02", env=self.fake_gh("echo 'HTTP 401' >&2; exit 1"))
         self.assertEqual(result.returncode, 0)
-        self.assertIn("gh api が失敗したので、PR の作成者は取らない（HTTP 401）", result.stderr)
+        self.assertIn("gh api が失敗したので、PR の作成者はメールから取る（HTTP 401。止めるなら --no-github）", result.stderr)
         self.assertIn("src/auth/、—）", result.stdout)
+        # --no-github なら問い合わせない
+        (self.repo / "gh-args.txt").unlink()
+        result = self.run_script("--list", "2025-02", "--no-github", env=env)
+        self.assertIn("src/auth/、—）", result.stdout)
+        self.assertFalse((self.repo / "gh-args.txt").exists())
+        # gh がなければ黙ってメールから取る。--github と言われたときだけ理由を出す
+        only_git = self.repo / ".only-git"
+        only_git.mkdir()
+        (only_git / "git").symlink_to(shutil.which("git"))
+        result = self.run_script("--list", "2025-02", env=dict(os.environ, PATH=str(only_git)))
+        self.assertEqual((result.returncode, result.stderr), (0, ""))
+        self.assertIn("src/auth/、—）", result.stdout)
+        result = self.run_script("--list", "2025-02", "--github", env=dict(os.environ, PATH=str(only_git)))
+        self.assertIn("--github：gh がないので、PR の作成者は取らない", result.stderr)
+
+    def test_github_pages_until_short_and_keeps_partial_results(self):
+        # 100 件ちょうどなら次のページを取る。2 ページ目で失敗しても、1 ページ目の分は使う
+        env = self.fake_gh('case "$2" in *page=1) i=1; while [ $i -le 100 ]; do echo "$i user$i"; i=$((i+1)); done;; '
+                           '*) echo "HTTP 403" >&2; exit 1;; esac')
+        result = self.run_script("--list", "2025-02", env=env)
+        self.assertIn("Extend session（[#2](https://github.com/o/r/pull/2)、src/auth/、@user2）", result.stdout)
+        self.assertIn("gh api が失敗したので、以降の PR の作成者はメールから取る（HTTP 403", result.stderr)
 
     def test_mailmap_maps_work_emails_to_accounts(self):
         # noreply でないメールも、.mailmap で noreply に対応させればアカウント名になる
