@@ -10,7 +10,7 @@
 コミット（PR の中のコミットや、release/1.2 などの読んでいないブランチでマージされた PR）を並べる。
 以前の timeline.md があれば、年ごとの要点を README.md に移して消す。
 
-リポジトリのルートで動かす。手元の git の --first-parent の履歴だけを読み、ネットワークは使わない。
+リポジトリのルートで動かす。手元の git の --first-parent の履歴だけを読み、--github のときだけネットワークを使う。
 開発の本流と本番の適用先のようにブランチが分かれていても取りこぼさないよう、--branch を言わなければ
 長く続くブランチ（main・master・develop・development・dev・production）を全部読む。手元のものは古いことがあるので、
 origin/ にあればそちらを読む。
@@ -20,8 +20,8 @@ PR の番号はマージコミットの件名（Merge pull request #12）か、s
 機能改善・運用改善・バグ対応、月の主な変更の分類は decision-log と同じ 11 種。分類の見出しの直下には
 分類の説明を入れる。主な変更の表の日付と Author は、PR の列の変更から埋め直す（前の形の「- 概要（#12）」の行は表に移す）。
 決まった形でなければ、どこが崩れているかを出し、終了コード 1 を返す。標準ライブラリだけを使う。
-人はアカウント名（GitHub の noreply のメールから取る @login。.mailmap で社内のメールを noreply に対応させられる）で、
-Author の列にだけ書く。名前（git の author 名）は書き出さない。
+人はアカウント名（@login）で、Author の列にだけ書く。--github を付ければ PR の作成者を GitHub から取る（gh api の GET だけ）。
+取れない変更は、noreply のメール（.mailmap を通す）から取る。名前（git の author 名）は書き出さない。
 """
 import argparse
 import collections
@@ -85,6 +85,8 @@ PERIOD_RE = re.compile(r"（\d{4}-\d{2}(?:〜\d{4}-\d{2})?）$")
 # 略した日付（5 月、05-02）。YYYY-MM と YYYY-MM-DD には当たらない
 SHORT_DATE_RE = re.compile(r"\d+\s*月|(?<![\d-])\d{1,2}-\d{1,2}(?![\d-])")
 COMMIT, FIELD = "\x1e", "\x1f"
+# --github で GitHub から取った、PR の番号ごとの作成者（@login）。取れた PR は、メールより先にこれを使う
+PR_AUTHORS = {}
 
 
 def git(*args, tz=None, stdin=None):
@@ -131,6 +133,32 @@ def first_parent(ref, tz):
     return [chunk.split(FIELD) for chunk in out.split(COMMIT)[1:]]
 
 
+def pr_authors(url):
+    """GitHub の REST API（gh api）で、閉じた PR の番号と作成者を 100 件ずつ取る。取れなければ理由を出して空を返す。"""
+    if not url:
+        print("--github：origin が GitHub でないので、PR の作成者は取らない", file=sys.stderr)
+        return {}
+    path = f"repos/{url.removeprefix('https://github.com/')}/pulls?state=closed&per_page=100"
+    try:
+        out = subprocess.run(["gh", "api", "--paginate", path, "--jq", '.[] | "\\(.number) \\(.user.login)"'],
+                             capture_output=True, text=True, encoding="utf-8", errors="replace")
+    except FileNotFoundError:
+        print("--github：gh がないので、PR の作成者は取らない", file=sys.stderr)
+        return {}
+    if out.returncode != 0:
+        print(f"--github：gh api が失敗したので、PR の作成者は取らない（{out.stderr.strip()}）", file=sys.stderr)
+        return {}
+    pairs = (line.split() for line in out.stdout.splitlines())
+    return {number: f"@{login}" for number, login in (p for p in pairs if len(p) == 2)}
+
+
+def by_pr(item):
+    """--github で取った PR の作成者があれば、それを Author にする。"""
+    if item["pr"] in PR_AUTHORS:
+        item["author"] = PR_AUTHORS[item["pr"]]
+    return item
+
+
 def account(email):
     m = NOREPLY_RE.match(email.strip())
     return f"@{m.group(1)}" if m else UNKNOWN
@@ -161,7 +189,7 @@ def changes(tz, branches):
             items.append(item)
     for sha, who in tip_authors(tips).items():
         seen[sha]["author"] = who
-    return sorted(items, key=lambda i: i["date"])
+    return sorted((by_pr(i) for i in items), key=lambda i: i["date"])
 
 
 def tip_authors(tips):
@@ -193,7 +221,7 @@ def inside(item):
             by_sha = {i["sha"]: i for i in found}
             for sha, who in tip_authors(tips).items():
                 by_sha[sha]["author"] = who
-        item["inside"] = found
+        item["inside"] = [by_pr(i) for i in found]
     return item["inside"]
 
 
@@ -421,6 +449,7 @@ def main():
     p.add_argument("--depth", type=int, default=2, help="置き場所として数えるフォルダーの段数（既定 2）")
     p.add_argument("--since", help="この月（YYYY-MM）から書く")
     p.add_argument("--tz", default="Asia/Tokyo", help="日付の時間帯（既定 Asia/Tokyo）")
+    p.add_argument("--github", action="store_true", help="Author を GitHub の PR の作成者にする（gh api を使う。ネットワークに出る）")
     p.add_argument("--check", action="store_true", help="書かずに、最新かを確かめる")
     p.add_argument("--list", metavar="YYYY-MM", help="書かずに、その月の全変更を出す")
     args = p.parse_args()
@@ -432,6 +461,8 @@ def main():
             p.error(f"ブランチ {name} が見つからない")
     branches = [(name, name) for name in args.branch] if args.branch else long_lived()
     url = repo_url()
+    if args.github:
+        PR_AUTHORS.update(pr_authors(url))
     months = collections.defaultdict(list)
     for item in changes(args.tz, branches):
         if not args.since or item["date"][:7] >= args.since:
