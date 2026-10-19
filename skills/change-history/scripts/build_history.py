@@ -19,7 +19,8 @@ PR の番号はマージコミットの件名（Merge pull request #12）か、s
 機能改善・運用改善・バグ対応、月の主な変更の分類は decision-log と同じ 11 種。分類の見出しの直下には
 分類の説明を入れる。主な変更の表の日付と Author は、PR の列の変更から埋め直す（前の形の「- 概要（#12）」の行は表に移す）。
 決まった形でなければ、どこが崩れているかを出し、終了コード 1 を返す。標準ライブラリだけを使う。
-人はアカウント名（GitHub の noreply のメールから取る @login）で、Author の列にだけ書く。名前（git の author 名）は書き出さない。
+人はアカウント名（GitHub の noreply のメールから取る @login。.mailmap で社内のメールを noreply に対応させられる）で、
+Author の列にだけ書く。名前（git の author 名）は書き出さない。
 """
 import argparse
 import collections
@@ -123,7 +124,7 @@ def long_lived():
 
 def first_parent(ref, tz):
     """ref の --first-parent の各コミットを、古い順に返す。"""
-    fmt = FIELD.join(["%H", "%P", "%ae", "%ad", "%s", "%b"])
+    fmt = FIELD.join(["%H", "%P", "%aE", "%ad", "%s", "%b"])  # %aE は .mailmap を通したメール
     out = git("log", "--first-parent", "--reverse", "--diff-merges=first-parent", "--name-only",
               "--date=format-local:%Y-%m-%d", f"--format={COMMIT}{fmt}{FIELD}", ref, "--", tz=tz)
     return [chunk.split(FIELD) for chunk in out.split(COMMIT)[1:]]
@@ -155,7 +156,7 @@ def changes(tz, branches):
             seen[sha] = item
             items.append(item)
     if tips:
-        out = git("log", "--no-walk=unsorted", "--stdin", f"--format=%H{FIELD}%ae", stdin="\n".join(set(tips.values())) + "\n")
+        out = git("log", "--no-walk=unsorted", "--stdin", f"--format=%H{FIELD}%aE", stdin="\n".join(set(tips.values())) + "\n")
         emails = dict(line.split(FIELD, 1) for line in out.splitlines() if FIELD in line)
         for sha, tip in tips.items():
             if tip in emails:

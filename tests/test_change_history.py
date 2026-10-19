@@ -125,6 +125,11 @@ class BuildHistoryTests(unittest.TestCase):
         self.commit("src/auth/session.py", "TTL = 48", "Longer session (#4)", "2025-02-10T00:00:00Z")
         self.assertEqual(self.run_script("--check").returncode, 1)
 
+    def test_mailmap_maps_work_emails_to_accounts(self):
+        # noreply でないメールも、.mailmap で noreply に対応させればアカウント名になる
+        self.write(".mailmap", "<9+main-user@users.noreply.github.com> <m@example.com>")
+        self.assertIn("Extend session（[#2](https://github.com/o/r/pull/2)、src/auth/、@main-user）", self.listing("2025-02"))
+
     def test_old_list_lines_become_rows(self):
         # 前の形（「- 概要（#3）」と「## 一覧」）は、作り直すと表になり、一覧は消える
         self.run_script()

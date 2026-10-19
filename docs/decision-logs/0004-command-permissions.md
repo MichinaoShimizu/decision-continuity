@@ -62,3 +62,7 @@ Active：スキルの `allowed-tools` は読むだけのコマンドと索引の
 **分かった**（2026-10-18）：「PR #79 で `env TZ=…`・`gh pr list` の注意を外したのは、不要になったからか、短くするためか」
 
 PR #79 を書いた Claude が、削るときに意図せず落としたもの。Decision log を書き直したときに見つかり、@MichinaoShimizu の判断で [PR #82](https://github.com/MichinaoShimizu/decision-continuity/pull/82) で戻した（会話で。元の場所なし）。
+
+## 追記 2026-10-19（Kiro とスキルの allowed-tools）
+
+- 2026-10-19 スキルの前書きの `allowed-tools` は Claude Code 向けで、Kiro の文書（kiro.dev/docs/skills）が挙げる前書きの項目（`name`・`description`・`license`・`compatibility`・`metadata`）にない。Agent Skills の仕様でも試験的な項目とされる。前書きは残し（Claude Code で要る。仕様には反しない）、Kiro では確認なしに通らないことと、通るのはサブエージェントの定義のコマンドだけであることを README の Kiro の節に書いた（ブランチ open-items。作成 @MichinaoShimizu）。理由：「キロでインストールしたスキルのフロントマター、正規のもの？」という問いに調べて答え、扱いを @MichinaoShimizu が「適切に対応」と Claude に任せた（会話 2026-10-19）。Kiro の実機で、知らない項目をどう扱うかは確かめていない

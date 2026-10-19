@@ -28,3 +28,10 @@ Active：`build_history.py` は月のファイルに見出しと「## 主な変�
 ## 追記 2026-10-19
 
 - 2026-10-19 `README.md` の表の「主な変更」を、月の表の 1 行目を写すのをやめ、その月の主な変更をまとめた要約の 1 文を人か AI が書く形にした。作り直しても残り、月の主な変更を書いたのに要約がなければ形の崩れとして出す。目立った変更なしの月は、その文をスクリプトが入れる（ブランチ change-history-table。作成 @MichinaoShimizu）。理由：「Readmeの主な変更は、複数の主な変更がある場合も要約した文章にして」（@MichinaoShimizu、会話 2026-10-19）
+
+## 追記 2026-10-19（.mailmap）
+
+**分かった**（2026-10-19）：「noreply のメールを使わないリポジトリでは、Author がほとんど `—` になる。アカウント名を `gh` で引く（ネットワークを使う）ことまでするか（@MichinaoShimizu に聞く）。」
+
+`gh` は使わない。change-history は手元の git だけを読む作りのまま、Author のメールを git の `.mailmap` に通すようにした（`%ae` から `%aE` へ）。社内のメールを noreply のメールに対応させれば、アカウント名が出る（ブランチ open-items。作成 @MichinaoShimizu）。@MichinaoShimizu が「適切に対応」と Claude に任せ、ネットワークを使わない案を Claude が選んだ（会話 2026-10-19）
+Superseded：`build_history.py` は Author を `.mailmap` を通したメール（`%aE`）から取る（`skills/change-history/scripts/build_history.py` の `first_parent`・`changes`）
