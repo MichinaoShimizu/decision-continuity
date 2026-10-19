@@ -13,7 +13,8 @@
 origin/ にあればそちらを読む。
 どのブランチにも入ったコミットは 1 つにまとめ、ブランチ間のマージ（develop から main へのリリースなど）には印を付ける。
 PR の番号はマージコミットの件名（Merge pull request #12）か、squash の件名の末尾（(#12)）から取る。
-各月の「## 主な変更」と、README.md の各年の要点は、作り直しても残す（人か AI が書く）。標準ライブラリだけを使う。
+各月の「## 主な変更」と、README.md の各年の要点は、作り直しても残す（人か AI が書く）。決まった形
+（### <分類> の下に「- 」の行）でなければ、どこが崩れているかを出し、終了コード 1 を返す。標準ライブラリだけを使う。
 人の名前（git の author）は書き出さない。
 """
 import argparse
@@ -39,6 +40,15 @@ LONG_LIVED = ("main", "master", "develop", "development", "dev", "production")
 MONTH_RE = re.compile(r"^\d{4}-\d{2}$")
 SUMMARY = "## 主な変更"
 EMPTY = "（まだ書いていない）"
+# decision-log の format.md と同じ分類（tests/test_docs.py が揃いを確かめる）
+CATEGORIES = ("architecture", "data", "security", "privacy", "compatibility", "reliability", "release",
+              "engineering", "cost", "product", "other")
+NOTHING_RE = re.compile(r"^- 目立った変更なし（(?:ブランチの取り込み|リリース|ブランチの取り込みとリリース)のみ）$")
+# 月の行の末尾は PR かコミット（リンクでも、なくても）、年の行の末尾は月か期間
+REF_RE = re.compile(r"(?:\[#\d+\]\([^)]*\)|#\d+|\[[0-9a-f]{7,40}\]\([^)]*\)|\b[0-9a-f]{7,40}\b)")
+PERIOD_RE = re.compile(r"（\d{4}-\d{2}(?:〜\d{4}-\d{2})?）$")
+# 略した日付（5 月、05-02）。YYYY-MM と YYYY-MM-DD には当たらない
+SHORT_DATE_RE = re.compile(r"\d+\s*月|(?<![\d-])\d{1,2}-\d{1,2}(?![\d-])")
 COMMIT, FIELD = "\x1e", "\x1f"
 
 
@@ -161,12 +171,50 @@ def read_from(branches):
     return "、".join(f"{name}（{ref}）" if ref != name else name for name, ref in shown)
 
 
+def problems(text, kind):
+    """主な変更（kind="month"）か年の要点（kind="year"）の形の崩れを、(行, 中身) で返す。"""
+    if text in (None, "", EMPTY) or (NOTHING_RE.match(text) and "\n" not in text):
+        return []
+    found, seen, heading, at, items = [], set(), None, 0, 0
+    for number, line in enumerate(text.splitlines(), 1):
+        line = line.strip()
+        if not line:
+            continue
+        if line.startswith("### "):
+            if heading and not items:
+                found.append((at, f"### {heading} の下に行がない"))
+            heading, at, items = line[4:].strip(), number, 0
+            if heading not in CATEGORIES:
+                found.append((number, f"分類 {heading} は {'・'.join(CATEGORIES)} のどれでもない"))
+            elif heading in seen:
+                found.append((number, f"分類 {heading} が 2 度ある"))
+            seen.add(heading)
+        elif line.startswith("- "):
+            items += 1
+            if not heading:
+                found.append((number, "行の前に ### <分類> がない"))
+            if kind == "month" and not (line.endswith("）") and REF_RE.search(line)):
+                found.append((number, "行の末尾に PR かコミット（[#123](…) など）がない"))
+            if kind == "year" and not PERIOD_RE.search(line):
+                found.append((number, "行の末尾に（YYYY-MM）か（YYYY-MM〜YYYY-MM）がない"))
+            if SHORT_DATE_RE.search(line.split("（")[0] if kind == "year" else line):
+                found.append((number, "日付は YYYY-MM-DD、月は YYYY-MM で書く"))
+        else:
+            found.append((number, "### <分類> か「- 」で始まる行だけを書く"))
+    if heading and not items:
+        found.append((at, f"### {heading} の下に行がない"))
+    return sorted(found)
+
+
 def year_summaries(path):
-    """いまの年表の、年ごとの要点（見出しの下から表の前まで）。"""
-    if not path.exists():
-        return {}
-    found = re.findall(r"^## (\d{4})\n(.*?)(?=^\| 月 \||^## |\Z)", path.read_text(encoding="utf-8"), re.S | re.M)
-    return {year: text.strip() for year, text in found}
+    """いまの年表の、年ごとの要点。"""
+    return years_in(path.read_text(encoding="utf-8")) if path.exists() else {}
+
+
+def years_in(text):
+    """年表の文から、年ごとの要点（見出しの下から表の前まで）を取る。"""
+    found = re.findall(r"^## (\d{4})\n(.*?)(?=^\| 月 \||^## |\Z)", text, re.S | re.M)
+    return {year: body.strip() for year, body in found}
 
 
 def first_point(summary):
@@ -218,6 +266,12 @@ def main():
     old = args.folder / "timeline.md"
     stale = [name for name, text in sorted(pages.items())
              if not (args.folder / name).exists() or (args.folder / name).read_text(encoding="utf-8") != text]
+    broken = [f"{args.folder / f'{m}.md'} の「{SUMMARY}」{n} 行目：{what}"
+              for m in sorted(months) for n, what in problems(summary_of(args.folder / f"{m}.md"), "month")]
+    broken += [f"{args.folder / 'README.md'} の「## {y}」{n} 行目：{what}"
+               for y, text in sorted(years_in(pages["README.md"]).items()) for n, what in problems(text, "year")]
+    for line in broken:
+        print(line)
     if args.check:
         for name in stale:
             print(f"{args.folder / name} が古い")
@@ -225,15 +279,18 @@ def main():
             print(f"{old} は README.md に移った")
         bad = stale or old.exists()
         print(f"{len(pages) - 1} か月分は最新" if not bad else f"build_history.py {args.folder} で作り直す")
-        return 1 if bad else 0
+        if broken:
+            print(f"形の崩れ {len(broken)} 件")
+        return 1 if bad or broken else 0
     args.folder.mkdir(parents=True, exist_ok=True)
     for name in stale:
         (args.folder / name).write_text(pages[name], encoding="utf-8")
     if old.exists():
         old.unlink()  # 年ごとの要点は README.md に移した
     total = sum(len(v) for v in months.values())
-    print(f"{args.folder}：{len(months)} か月、{total} 件（書き換え {len(stale)} ファイル）。読んだブランチ：{read_from(branches)}")
-    return 0
+    print(f"{args.folder}：{len(months)} か月、{total} 件（書き換え {len(stale)} ファイル、形の崩れ {len(broken)} 件）。"
+          f"読んだブランチ：{read_from(branches)}")
+    return 1 if broken else 0
 
 
 if __name__ == "__main__":
