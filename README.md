@@ -29,6 +29,8 @@ d=$(mktemp -d) && git clone --depth 1 https://github.com/MichinaoShimizu/decisio
 rm -rf .kiro/skills/decision-log .kiro/skills/change-history .kiro/agents/decision-log-planner.* .kiro/agents/decision-log-reader.*
 ```
 
+スキルの前書きの `allowed-tools`（確認なしで通すコマンド）は Claude Code 向けで、Kiro は読まない（Kiro の文書にない項目）。Kiro で確認なしに通るのは、サブエージェントの定義（`.kiro/agents/`）に書いた読むだけのコマンドだけ。メインの会話で回すコマンド（索引のスクリプトなど）は、確認が出たら内容を見て許す。
+
 ## 使い方
 
 まず change-history で流れをつかみ、「なぜ」まで要るテーマを decision-log で起こし、以後は変える前に check、決めたら record。回し方は[判断を途切れさせない回し方](docs/ai-workflow.md)。どちらも既定は下書きを返すだけで、ファイルに書くのは頼んだときだけ。履歴は手元の git から読むので、浅いクローンなら先に `git fetch --unshallow` する。

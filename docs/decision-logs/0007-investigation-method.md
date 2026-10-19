@@ -61,3 +61,9 @@ Superseded：調べ役 `decision-log-planner` は大きな PR に `（大：<N> 
 
 - 2026-10-19 調べ役が大きな PR を、範囲で絞らない `git log --first-parent --shortstat` で、30 ファイルか 1000 行を超えるもので測るようにした（それまでは範囲で絞った一覧のファイルの数だけ）。読み手は行のコメントと issue のコメントを `--paginate` で読み（付けないと 30 件で切れる）、`gh pr view` から `files` を外し、コメントが多いときは決める言葉のあるものから読む。評価に大きな PR の場面 E13 を足した（ブランチ decision-log-large-pr-2。作成 @MichinaoShimizu）。理由：Claude が挙げた改善点の 1〜4 を @MichinaoShimizu が「はい」で進めた（会話 2026-10-19）。30 ファイル・1000 行の線は、まだ @MichinaoShimizu が決めた値ではない
 Superseded：調べ役は大きさを `git log --first-parent --shortstat` で範囲で絞らずに測り、`（大：<N> ファイル・<M> 行、…）` の印を付ける（`agents/claude/decision-log-planner.md` の手順 5）。読み手は手順 1・3 で `--paginate` を付け、手順 6 で多いコメントの読み方を決める
+
+## 追記 2026-10-19（線の値）
+
+**分かった**（2026-10-19）：「線をどこに引くか」
+
+大きな PR の線（30 ファイルか 1000 行）は、@MichinaoShimizu が「適切に対応」と Claude に任せ、Claude の案のまま採用した（会話 2026-10-19）。実際のリポジトリで止まった PR の大きさと比べてはいない
