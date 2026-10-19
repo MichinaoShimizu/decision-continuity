@@ -31,20 +31,36 @@ rm -rf .kiro/skills/decision-log .kiro/skills/change-history .kiro/agents/decisi
 
 ## 使い方
 
-| スキル | 作るもの |
-|---|---|
-| change-history | `docs/change-history/`：月ごとの全変更の一覧、月ごとの主な変更、年表。タグやリリースがなくてもよい |
-| decision-log | `docs/decision-logs/`：大事な変更ごとに、なぜ（記録にある範囲で）、いまのステータス、分かっていないこと。変える前の照合（`check`）と、新しい判断の記録（`record`）も |
+まず change-history で流れをつかみ、「なぜ」まで要るテーマを decision-log で起こし、以後は変える前に check、決めたら record。回し方は[判断を途切れさせない回し方](docs/ai-workflow.md)。どちらも既定は下書きを返すだけで、ファイルに書くのは頼んだときだけ。履歴は手元の git から読むので、浅いクローンなら先に `git fetch --unshallow` する。
+
+### 年表を作る（change-history）
+
+`docs/change-history/` に、月ごとの全変更の一覧、月ごとの主な変更、年表を作る。タグやリリースがなくてもよい。
 
 ```text
 change-history で、いつどんな変更をしてきたかを月ごとにまとめて、年表まで作って。
+change-history で、2024-01 からの分だけまとめて、年表まで作って。
+```
+
+### Decision log を作る（decision-log）
+
+`docs/decision-logs/` に、大事な変更ごとに、なぜ（記録にある範囲で）、いまのステータス、分かっていないことを書く。範囲を言わなければリポジトリ全体から、言えばそのパスや期間だけから、大事なものを洗い出す。
+
+```text
+decision-log で audit して。
 decision-log で audit して。範囲は src/payment/。
-洗い出しは decision-log-planner、読むのは decision-log-reader に、1 回でまとめて並列に任せて。
+decision-log で audit して。期間は 2024 年。
+decision-log で write して。範囲は指定しない。
+```
+
+洗い出しは decision-log-planner、読むのは decision-log-reader が、分類ごとに並列で受け持つ。全体を見るときも大事なものから 20 件に絞るので、残りは報告の「読み残し」を見て範囲を決め、もう一度頼む。
+
+作ったあとは、変える前の照合（`check`）と、新しい判断の記録（`record`）に使う。
+
+```text
 decision-log で check して。これから src/payment/client.py のリトライの上限を変えたい。
 decision-log で record して。@alice がリトライの上限を 7 にすると決めた。理由は…
 ```
-
-まず change-history で流れをつかみ、「なぜ」まで要るテーマを decision-log で起こし、以後は変える前に check、決めたら record。回し方は[判断を途切れさせない回し方](docs/ai-workflow.md)。どちらも既定は下書きを返すだけで、ファイルに書くのは頼んだときだけ。履歴は手元の git から読むので、浅いクローンなら先に `git fetch --unshallow` する。
 
 ## その他
 
