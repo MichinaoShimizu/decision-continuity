@@ -2,6 +2,13 @@
 
 decision-continuity の主な変更。[Keep a Changelog](https://keepachangelog.com/) の形で書く。変更は `changes/` の断片に書き（[changes/README.md](changes/README.md)）、リリースのときに版の節にまとめる。版は中身から決まり（[Semantic Versioning](https://semver.org/)、`sh tools/next-version.sh`）、各版の節がそのまま GitHub のリリースノートになる。手順は [docs/release.md](docs/release.md)。
 
+## v0.9.1 - 2026-10-19
+
+### Changed
+
+- decision-log: 版を上げるだけの定型のリリース（`Release v1.2.0`・`Bump version to 1.2.0`・`chore(release): 1.2.0`・`v1.2.0` の形の件名）を、change-history と同じく書かないようにした。`decision-log-planner` は、版の番号の書き換えが設定ファイルの洗い出しに当たっても候補から落とす
+- change-history: 月の主な変更と年の要点を、3〜5 行に限らず、分類ごとの `### <分類>` の下に書くようにした。分類は decision-log と同じ 11 種（`architecture`・`data`・`security`・`privacy`・`compatibility`・`reliability`・`release`・`engineering`・`cost`・`product`・`other`）で、行のある分類だけを書く。いちばん大事な変更を最初の分類の 1 行目に書き、`README.md` の表に入る
+
 ## v0.9.0 - 2026-10-19
 
 ### Changed

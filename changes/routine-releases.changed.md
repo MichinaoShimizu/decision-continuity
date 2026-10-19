@@ -1,1 +1,0 @@
-- decision-log: 版を上げるだけの定型のリリース（`Release v1.2.0`・`Bump version to 1.2.0`・`chore(release): 1.2.0`・`v1.2.0` の形の件名）を、change-history と同じく書かないようにした。`decision-log-planner` は、版の番号の書き換えが設定ファイルの洗い出しに当たっても候補から落とす
