@@ -19,15 +19,16 @@ permissions:
 
 ## 読み方
 
-1. `gh pr view <番号> --json number,title,body,author,createdAt,mergedAt,mergedBy,url,reviews,comments,files` と、行のコメント `gh api repos/<owner>/<repo>/pulls/<番号>/comments`。`gh pr view` が失敗したら `gh api repos/<owner>/<repo>/pulls/<番号>` などの GET で読む（`-X`・`-f`・`-F`・`--input` は付けない）。
+1. `gh pr view <番号> --json number,title,body,author,createdAt,mergedAt,mergedBy,url,reviews,comments` と、行のコメント `gh api repos/<owner>/<repo>/pulls/<番号>/comments --paginate`（付けないと 30 件で切れる）。変えたファイルは手順 4 の `git show` で見る。`gh pr view` が失敗したら `gh api repos/<owner>/<repo>/pulls/<番号>` などの GET で読む（`-X`・`-f`・`-F`・`--input` は付けない）。
 2. PR の中のコミットのメッセージ：`git log --format='%h %s%n%b' <コミット>^1..<コミット>`（squash なら `git show -s --format=%B <コミット>`）。
-3. 本文やコメントが参照する issue を 1 段だけ開く（`gh api repos/<owner>/<repo>/issues/<番号>` と `…/comments`）。開けないリンク（Slack など）は挙げるだけにする。
+3. 本文やコメントが参照する issue を 1 段だけ開く（`gh api repos/<owner>/<repo>/issues/<番号>` と `…/comments --paginate`）。開けないリンク（Slack など）は挙げるだけにする。
 4. 差分は必ず読む：まず `git show --shortstat <コミット>`。続けて `git show --stat <コミット>`、当たるファイルだけ `git show <コミット> -- <パス>`。足されたコードのコメントも理由の出典になる。
    - 大きな PR（30 ファイルか 1000 行を超える）は、全体を一度に出さない。`git show --dirstat=files <コミット>` で置き場所をつかみ、`git show --stat=200 --stat-count=50 <コミット> -- <置き場所>` で置き場所ごとにファイルを見る。設定・定数・認証・スキーマなど、タイトル・本文・コメントが言う判断に当たるファイルから 1 つずつ読む（1 つが大きければ `git show -U0 <コミット> -- <パス>`）。生成物・lockfile・vendor・スナップショット・テストのデータは読まない。
 5. いまの姿：`git show <基準のコミット>:<パス>` か `git grep -n <識別子> <基準のコミット>`。
-6. 途中で止めない：読み切れないときも、そこまでで分かったことで返す形を全部埋めて返し、読まなかったものを「読み残し」に書く。
+6. コメントが多い（数十件を超える）ときは、決める言葉（「〜にする」「決めた」「理由」「なぜ」、because など）のあるものと、作成者・承認者のものを先に読み、要約に入れなかったものは「読み残し」に書く。
+7. 途中で止めない：読み切れないときも、そこまでで分かったことで返す形を全部埋めて返し、読まなかったものを「読み残し」に書く。
 
-コマンドは上のもの（`gh pr view`、`gh api repos/…` の GET、`git show`・`git log`・`git grep`）だけ。1 回に 1 つ、`;`・`&&`・`|`・`cd`・`git -C` を使わず、引数の記号は一重引用符で囲む。
+コマンドは上のもの（`gh pr view`、`gh api repos/…` の GET と `--paginate`、`git show`・`git log`・`git grep`）だけ。1 回に 1 つ、`;`・`&&`・`|`・`cd`・`git -C` を使わず、引数の記号は一重引用符で囲む。
 
 ## 返す形（PR ごと）
 

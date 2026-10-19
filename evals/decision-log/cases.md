@@ -17,6 +17,7 @@
 | #20 | Refactor helper | 新しいファイル（`result = sum(values)`）。本文なし | ふつうのコードの変更は、差分の洗い出しに当たらない |
 | #21 | Cap batch size | `BATCH_LIMIT = 100`。本文なし。理由は差分の中のコードのコメントにある | 理由が差分にだけ書かれている |
 | #22 | `Merge pull request #22 from example/db-pool`（本文「Raise DB pool size」） | `POOL_SIZE` 10 → 20。理由は PR の中のコミットのメッセージにだけある | `--first-parent` では見えない理由 |
+| #23 | `Merge pull request #23 from example/sdk-v4`（本文「Vendor payment SDK v4」） | 生成された SDK 300 ファイル（約 6,000 行）と、`GATEWAY_TIMEOUT` 5 → 15。理由はコードのコメントと PR の中のコミットのメッセージにある | 大きな PR |
 
 ## ケース
 
@@ -31,6 +32,7 @@
 | E07 | 全体を audit | 洗い出しを `decision-log-planner` に任せ、分類ごとに `decision-log-reader` へ分ける（応答の記録の呼び出しで数え、`missing_agents` が空） | 自分で全部を順に読む |
 | E08 | `src/payment/batch.py` を audit | 理由を「記録あり」とし、コードのコメントを出典にする | 「不明」にする／PR 本文の理由として扱う |
 | E10 | 古くなった DL-1（#12 の時点で確かめたまま、#13 で上限が変わった）を確かめ直す | DL-1 に `Superseded：` の行のある追記（上限は 5、#13）と、`checked` の更新。本文は変えない。追記のあと `--stale` が通る（`stale_after` が偽） | 本文を書き換える／タイムアウトまで変わったことにする |
+| E13 | 2025-04-01 以降を audit | 調べ役が #23 に大きな PR の印を付け、読み手 1 つに 1 件だけ渡す（呼び出しで数え、`missing_agents` が空）。読み手は生成された SDK を読まずに `GATEWAY_TIMEOUT` の 5 から 15 と理由を見つけ、SDK を「読み残し」に書く | 差分を一度に出して止まる／SDK を 1 つずつ読む／`GATEWAY_TIMEOUT` を見落とす |
 | E09 | `src/db/pool.py` を audit | 理由を「記録あり」とし、PR の中のコミットのメッセージ（2025-03-18 の夜間バッチ）を出典にする。値の前後（10 から 20）を書く | 「不明」にする |
 | E11 | DL-1（上限は 5、理由は不明）がある状態で、上限を 3 に戻す前に check | DL-1 を挙げ、上限を 5 にした判断と食い違うこと、理由が不明なので先に確かめる問いを返す。ファイルは書かない（`rewritten_existing` が空） | 照合せずに進める／食い違いに触れない／Decision log を書き換える |
 | E12 | @alice が上限を 5 から 7 にすると決めたことを record | DL-1 に追記するか新しい Decision log を書き、5 から 7、@alice、理由（メンテナンス中の失敗）、ほかの案（タイムアウト）が入る（`missing_facts` が空、`index_check` が真）。DL-1 の本文は書き換えない | 理由や決めた人を推測で足す／DL-1 の本文を書き換える |
