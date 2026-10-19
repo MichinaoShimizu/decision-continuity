@@ -2,6 +2,12 @@
 
 decision-continuity の主な変更。[Keep a Changelog](https://keepachangelog.com/) の形で書く。変更は `changes/` の断片に書き（[changes/README.md](changes/README.md)）、リリースのときに版の節にまとめる。版は中身から決まり（[Semantic Versioning](https://semver.org/)、`sh tools/next-version.sh`）、各版の節がそのまま GitHub のリリースノートになる。手順は [docs/release.md](docs/release.md)。
 
+## v0.10.0 - 2026-10-19
+
+### Added
+
+- change-history: `build_history.py` が、AI か人が書く月の主な変更と年の要点の形を確かめるようにした。`### <分類>`（decision-log と同じ 11 種、同じ分類は 1 度）の下に「- 」の行を書き、月の行の末尾には PR かコミット、年の行の末尾には `（YYYY-MM）` か `（YYYY-MM〜YYYY-MM）` を書く。`5 月`・`05-02` のような略した日付は書かない。崩れていれば、ファイルと行と中身を出し、作り直しでも `--check` でも終了コード 1 を返す。分類の見出しのない以前の要点は、崩れとして出るので書き直す
+
 ## v0.9.1 - 2026-10-19
 
 ### Changed
