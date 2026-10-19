@@ -4,7 +4,8 @@
   build_history.py <フォルダー> [--branch develop --branch main] [--depth 2] [--since YYYY-MM] [--tz Asia/Tokyo]   書き出す
   build_history.py <フォルダー> --check                                                                         最新か確かめる（古ければ終了コード 1）
 
-月ごとの YYYY-MM.md、索引の README.md、年表の timeline.md を書く。
+月ごとの YYYY-MM.md と、年表を兼ねた索引の README.md を書く。日付は YYYY-MM-DD、月は YYYY-MM で書く。
+以前の timeline.md があれば、年ごとの要点を README.md に移して消す。
 
 リポジトリのルートで動かす。手元の git の --first-parent の履歴だけを読み、ネットワークは使わない。
 開発の本流と本番の適用先のようにブランチが分かれていても取りこぼさないよう、--branch を言わなければ
@@ -12,7 +13,7 @@
 origin/ にあればそちらを読む。
 どのブランチにも入ったコミットは 1 つにまとめ、ブランチ間のマージ（develop から main へのリリースなど）には印を付ける。
 PR の番号はマージコミットの件名（Merge pull request #12）か、squash の件名の末尾（(#12)）から取る。
-各月の「## 主な変更」と、年表の各年の要点は、作り直しても残す（人か AI が書く）。標準ライブラリだけを使う。
+各月の「## 主な変更」と、README.md の各年の要点は、作り直しても残す（人か AI が書く）。標準ライブラリだけを使う。
 人の名前（git の author）は書き出さない。
 """
 import argparse
@@ -147,7 +148,7 @@ def month_page(month, items, depth, url, summary, many):
         totals.update(places[:1])
         where = f"、{places[0]}" + (f" ほか {len(places) - 1}" if len(places) > 1 else "") if places else ""
         into = f"、{'・'.join(item['branches'])} へ" if many else ""
-        lines.append(f"- {item['date'][5:]} {item['title']}（{link(item, url)}{where}{into}）")
+        lines.append(f"- {item['date']} {item['title']}（{link(item, url)}{where}{into}）")
     top = "、".join(f"{a} {n}" for a, n in sorted(totals.items(), key=lambda x: (-x[1], x[0]))[:5])
     out = [f"# {month}", "", f"マージされた変更 {len(items)} 件" + (f"（多い置き場所：{top}）" if top else "") + "。",
            "「## 一覧」は build_history.py が作り直す。", "", SUMMARY, "", summary or EMPTY, "", "## 一覧", ""]
@@ -158,17 +159,6 @@ def read_from(branches):
     """main（origin/main）、develop（origin/develop）の形。"""
     shown = [(name, ref.removeprefix("refs/remotes/").removeprefix("refs/heads/")) for name, ref in branches]
     return "、".join(f"{name}（{ref}）" if ref != name else name for name, ref in shown)
-
-
-def index_page(months, folder, branches):
-    total = sum(len(v) for v in months.values())
-    out = ["# 変更の履歴", "", f"マージされた変更 {total} 件を月ごとに並べた。build_history.py が作り直す。年ごとの流れは[年表](timeline.md)。", "",
-           f"読んだブランチ：{read_from(branches)}。それぞれの --first-parent。", "",
-           "| 月 | 件数 | 主な変更を書いたか |", "|---|---|---|"]
-    for month in sorted(months, reverse=True):
-        written = summary_of(folder / f"{month}.md") not in (None, "", EMPTY)
-        out.append(f"| [{month}]({month}.md) | {len(months[month])} | {'あり' if written else 'まだ'} |")
-    return "\n".join(out) + "\n"
 
 
 def year_summaries(path):
@@ -185,15 +175,20 @@ def first_point(summary):
     return line.replace("|", "\\|") if line else None
 
 
-def timeline_page(months, folder):
-    """年ごとに、要点（人か AI が書く）と、月ごとの主な変更の 1 行目の表を並べる。新しい年が上。"""
-    kept = year_summaries(folder / "timeline.md")
-    out = ["# 年表", "", "年ごとの要点の下に、各月の主な変更の 1 行目を並べた。表は build_history.py が作り直す。"]
+def readme_page(months, folder, branches):
+    """年表を兼ねた索引。年ごとに、要点（人か AI が書く）と、月ごとの主な変更の 1 行目の表を並べる。新しい年が上。"""
+    # 以前の timeline.md に書いた要点も拾う。README.md に書いたものが先
+    kept = {**year_summaries(folder / "timeline.md"),
+            **{y: t for y, t in year_summaries(folder / "README.md").items() if t != EMPTY}}
+    total = sum(len(v) for v in months.values())
+    out = ["# 変更の履歴", "",
+           f"マージされた変更 {total} 件を月ごとのファイルに並べ、年ごとに要点と各月の主な変更の 1 行目をまとめた。表は build_history.py が作り直す。", "",
+           f"読んだブランチ：{read_from(branches)}。それぞれの --first-parent。"]
     for year in sorted({m[:4] for m in months}, reverse=True):
         out += ["", f"## {year}", "", kept.get(year) or EMPTY, "", "| 月 | 件数 | 主な変更 |", "|---|---|---|"]
         for month in sorted((m for m in months if m.startswith(year)), reverse=True):
             point = first_point(summary_of(folder / f"{month}.md")) or "まだ"
-            out.append(f"| [{int(month[5:])} 月]({month}.md) | {len(months[month])} | {point} |")
+            out.append(f"| [{month}]({month}.md) | {len(months[month])} | {point} |")
     return "\n".join(out) + "\n"
 
 
@@ -219,18 +214,23 @@ def main():
             months[item["date"][:7]].append(item)
     pages = {f"{m}.md": month_page(m, items, args.depth, url, summary_of(args.folder / f"{m}.md"), len(branches) > 1)
              for m, items in months.items()}
-    pages["README.md"] = index_page(months, args.folder, branches)
-    pages["timeline.md"] = timeline_page(months, args.folder)
+    pages["README.md"] = readme_page(months, args.folder, branches)
+    old = args.folder / "timeline.md"
     stale = [name for name, text in sorted(pages.items())
              if not (args.folder / name).exists() or (args.folder / name).read_text(encoding="utf-8") != text]
     if args.check:
         for name in stale:
             print(f"{args.folder / name} が古い")
-        print(f"{len(pages) - 2} か月分は最新" if not stale else f"build_history.py {args.folder} で作り直す")
-        return 1 if stale else 0
+        if old.exists():
+            print(f"{old} は README.md に移った")
+        bad = stale or old.exists()
+        print(f"{len(pages) - 1} か月分は最新" if not bad else f"build_history.py {args.folder} で作り直す")
+        return 1 if bad else 0
     args.folder.mkdir(parents=True, exist_ok=True)
     for name in stale:
         (args.folder / name).write_text(pages[name], encoding="utf-8")
+    if old.exists():
+        old.unlink()  # 年ごとの要点は README.md に移した
     total = sum(len(v) for v in months.values())
     print(f"{args.folder}：{len(months)} か月、{total} 件（書き換え {len(stale)} ファイル）。読んだブランチ：{read_from(branches)}")
     return 0
