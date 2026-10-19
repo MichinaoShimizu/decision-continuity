@@ -276,6 +276,16 @@ class BuildHistoryTests(unittest.TestCase):
         self.assertIn(f"| 2025-01-10 | 別の月のコミット | [{sha[:7]}](https://github.com/o/r/commit/{sha}) | — |", second["2025-02.md"])
         self.assertNotIn("が古い", self.run_script("--check").stdout)
 
+    def test_rows_are_sorted_by_date_and_any_quiet_month_is_allowed(self):
+        self.run_script()
+        self.fill("2025-02", "### 機能改善\n\n| | 後 | #3 | |\n| | 読めない | #99 | |\n| | 先 | #2 | |")
+        self.fill("2025-01", "- 目立った変更なし（依存の更新のみ）")
+        self.run_script()
+        feb = self.page("2025-02.md")
+        self.assertLess(feb.index("| 先 |"), feb.index("| 後 |"))
+        self.assertLess(feb.index("| 後 |"), feb.index("| 読めない |"))
+        self.assertIn("| [2025-01](2025-01.md) | 1 | 目立った変更なし（依存の更新のみ） |", self.page("README.md"))
+
     def test_empty_repository(self):
         with tempfile.TemporaryDirectory() as empty:
             subprocess.run(["git", "init", "-q", empty], check=True)

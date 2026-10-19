@@ -2,3 +2,5 @@
 - change-history: 件名に PR の番号がないコミット（Rebase and merge など）も、GitHub の PR を入れたコミットから PR の番号とタイトルを付ける
 - change-history: `--until YYYY-MM` で、書く月の終わりを決められる。年表には、その期間の月と、前から年表にある月を載せる
 - change-history: `Merge pull request from GHSA-…` のような番号のないマージも、本文の 1 行目をタイトルにする
+- change-history: 月の表の行を日付の順に並べる。書くもののない月は、理由を問わず `- 目立った変更なし（依存の更新のみ）` のように書ける（以前は取り込みとリリースの 3 通りだけ）
+- change-history: メインの会話は `--list` を読まない（書き手が読む）と SKILL.md に書いた。本物のエージェントで回すと、メインも書き手も同じ月を読んでいた

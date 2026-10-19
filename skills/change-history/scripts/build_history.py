@@ -63,7 +63,8 @@ NOREPLY_RE = re.compile(r"^(?:\d+\+)?([A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?
 UNKNOWN = "—"
 CELL_RE = re.compile(r"(?<!\\)\|")
 OLD_LINE_RE = re.compile(r"^- (.*)（([^（）]*)）$")
-NOTHING_RE = re.compile(r"^- 目立った変更なし（(?:ブランチの取り込み|リリース|ブランチの取り込みとリリース)のみ）$")
+# 書くことのない月：取り込みだけ、リリースだけ、依存の更新だけ、など。理由は（…のみ）に書く
+NOTHING_RE = re.compile(r"^- 目立った変更なし（[^（）\n]+のみ）$")
 # 月の行の末尾は PR かコミット（リンクでも、なくても）、年の行の末尾は月か期間
 KEY_RE = re.compile(r"#(\d+)|\b([0-9a-f]{7,40})\b")
 PERIOD_RE = re.compile(r"（\d{4}-\d{2}(?:〜\d{4}-\d{2})?）$")
@@ -399,6 +400,8 @@ def tidy(text, kind, index=None, url=None, everything=None):
                     rows.append(row(summary, found, url) if found else f"|  | {summary} | {m.group(2)} |  |")
                 elif not parts or len(parts) != 4:
                     rows.append(line)
+            # 表の行は日付の順に（日付のない行は後ろ）。同じ日は書いた順のまま
+            rows.sort(key=lambda r: (cells(r)[0] or "9999") if r.startswith("|") and len(cells(r)) == 4 else "9999")
             lines = [HEADER, RULE] + rows if rows else []
         out += [""] * bool(out) + [f"### {heading}", ""] + ([desc, ""] if desc else []) + lines
     return "\n".join(out).strip()
