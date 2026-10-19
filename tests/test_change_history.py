@@ -94,13 +94,21 @@ class BuildHistoryTests(unittest.TestCase):
         self.run_script()
         self.fill("2025-02", "### reliability\n\n| 日付 | 概要 | PR | Author |\n|---|---|---|---|\n|  | 決済の再試行を増やした | #3 |  |")
         self.assertEqual(self.run_script("--check").returncode, 1)  # 表と索引が古い
+        # 月の要約は年表の表に人か AI が書く。まだなければ崩れとして知らせる
+        result = self.run_script()
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("README.md の 2025-02：主な変更の要約（表の「主な変更」の列）がない", result.stdout)
+        self.assertIn("| [2025-02](2025-02.md) | 2 | まだ |", self.page("README.md"))
+        path = self.repo / "docs/change-history/README.md"
+        path.write_text(path.read_text(encoding="utf-8").replace("| 2 | まだ |", "| 2 | 決済の再試行とセッションを見直した |"), encoding="utf-8")
         self.assertEqual(self.run_script().returncode, 0)
         self.assertEqual(self.page("2025-02.md"), "\n".join([
             "# 2025-02", "", "## 主な変更", "", "### reliability", "",
             "性能・信頼性：負荷や障害のときの振る舞い。タイムアウト、リトライ、上限、キャッシュ、縮退", "",
             "| 日付 | 概要 | PR | Author |", "|---|---|---|---|",
             "| 2025-02-04 | 決済の再試行を増やした | [#3](https://github.com/o/r/pull/3) | @alice |"]) + "\n")
-        self.assertIn("| [2025-02](2025-02.md) | 2 | 決済の再試行を増やした（[#3](https://github.com/o/r/pull/3)） |", self.page("README.md"))
+        # 要約は作り直しても残る
+        self.assertIn("| [2025-02](2025-02.md) | 2 | 決済の再試行とセッションを見直した |", self.page("README.md"))
         self.assertEqual(self.run_script("--check").returncode, 0)
         # 間違えた日付と Author は直す。いくつかの PR をまとめた行は、最初の日付と Author を重ねずに
         path = self.repo / "docs/change-history/2025-02.md"
@@ -112,7 +120,7 @@ class BuildHistoryTests(unittest.TestCase):
         # PR のないコミットは、ハッシュかそのリンクで書ける。リンク先の URL の中は数えない
         sha = self.git("log", "-1", "--format=%H", "--grep", "Initial import").strip()
         self.fill("2025-01", f"### other\n\n| | 始めた | [{sha[:7]}](https://github.com/o/r/commit/{sha}) | |")
-        self.assertEqual(self.run_script().returncode, 0)
+        self.assertEqual(self.run_script().returncode, 1)  # 2025-01 の要約がまだ
         self.assertIn(f"| 2025-01-10 | 始めた | [{sha[:7]}](https://github.com/o/r/commit/{sha}) | — |", self.page("2025-01.md"))
         self.commit("src/auth/session.py", "TTL = 48", "Longer session (#4)", "2025-02-10T00:00:00Z")
         self.assertEqual(self.run_script("--check").returncode, 1)
@@ -123,22 +131,27 @@ class BuildHistoryTests(unittest.TestCase):
         path = self.repo / "docs/change-history/2025-02.md"
         path.write_text("# 2025-02\n\nマージされた変更 2 件。\n\n## 主な変更\n\n### reliability\n\n- 決済の再試行を a|b に（[#3](x)）\n"
                         "\n### security\n\n- セッションを延ばした（#2）\n\n## 一覧\n\n- 2025-02-01 Extend session\n", encoding="utf-8")
-        self.assertEqual(self.run_script().returncode, 0)
+        self.assertEqual(self.run_script().returncode, 1)  # 要約がまだ
         feb = self.page("2025-02.md")
         self.assertNotIn("一覧", feb)
         self.assertNotIn("マージされた変更", feb)
         self.assertIn("| 2025-02-04 | 決済の再試行を a\\|b に | [#3](https://github.com/o/r/pull/3) | @alice |", feb)
         self.assertIn("認証・権限・セキュリティ：認証方式", feb)
-        self.assertIn("| [2025-02](2025-02.md) | 2 | 決済の再試行を a\\|b に（[#3](https://github.com/o/r/pull/3)） |", self.page("README.md"))
+        self.assertIn("| [2025-02](2025-02.md) | 2 | まだ |", self.page("README.md"))
 
-    def test_year_summaries_get_category_descriptions(self):
+    def test_year_summaries_use_three_kinds(self):
+        # 年表の要点は 機能改善・運用改善・バグ対応 で分け、見出しの直下に説明が入る。月の 11 種は使えない
         self.run_script()
         path = self.repo / "docs/change-history/README.md"
-        path.write_text(path.read_text(encoding="utf-8").replace("（まだ書いていない）", "### reliability\n\n- 決済の再試行を見直した（2025-02）"), encoding="utf-8")
+        text = path.read_text(encoding="utf-8")
+        path.write_text(text.replace("（まだ書いていない）", "### バグ対応\n\n- 決済の再試行を直した（2025-02）\n\n### 機能改善\n\n- セッションを延ばした（2025-02）"), encoding="utf-8")
         self.assertEqual(self.run_script().returncode, 0)
-        self.assertIn("## 2025\n\n### reliability\n\n性能・信頼性：負荷や障害のときの振る舞い。タイムアウト、リトライ、上限、キャッシュ、縮退\n\n"
-                      "- 決済の再試行を見直した（2025-02）\n\n| 月 |", self.page("README.md"))
+        self.assertIn("## 2025\n\n### バグ対応\n\n不具合の修正と、その再発を防ぐ変更\n\n- 決済の再試行を直した（2025-02）\n\n"
+                      "### 機能改善\n\n使う人に見える機能の追加と変更\n\n- セッションを延ばした（2025-02）\n\n| 月 |", self.page("README.md"))
         self.assertEqual(self.run_script("--check").returncode, 0)
+        path.write_text(text.replace("（まだ書いていない）", "### reliability\n\n- 決済の再試行を見直した（2025-02）"), encoding="utf-8")
+        result = self.run_script("--check")
+        self.assertIn("分類 reliability は 機能改善・運用改善・バグ対応 のどれでもない", result.stdout)
 
     def test_broken_summaries_are_reported(self):
         self.run_script()
@@ -148,7 +161,7 @@ class BuildHistoryTests(unittest.TestCase):
             "| | ない PR | #99 | |", "| | PR がない | なし | |", "| | 列が 3 つ | #2 |", "### security", "| | もう 1 つ | #2 | |",
             "### reliability", "* 記号が違う", "### release"]))
         path = folder / "README.md"
-        path.write_text(path.read_text(encoding="utf-8").replace("（まだ書いていない）", "### product\n\n- 期間がない\n- 3 月に始めた（2025-03）"), encoding="utf-8")
+        path.write_text(path.read_text(encoding="utf-8").replace("（まだ書いていない）", "### 機能改善\n\n- 期間がない\n- 3 月に始めた（2025-03）"), encoding="utf-8")
         result = self.run_script("--check")
         self.assertEqual(result.returncode, 1)
         for want in ["2025-02.md の「## 主な変更」1 行目：### <分類> と表の行だけを書く",
@@ -187,7 +200,7 @@ class BuildHistoryTests(unittest.TestCase):
         self.assertIn("## 2025\n\n- 前に書いた要点（2025-02）\n\n| 月 |", self.page("README.md"))
         self.assertFalse((folder / "timeline.md").exists())
         path = folder / "README.md"
-        path.write_text(path.read_text(encoding="utf-8").replace("- 前に書いた要点", "### product\n\n- 前に書いた要点"), encoding="utf-8")
+        path.write_text(path.read_text(encoding="utf-8").replace("- 前に書いた要点", "### 運用改善\n\n- 前に書いた要点"), encoding="utf-8")
         self.assertEqual(self.run_script("--check").returncode, 1)  # 分類の説明がまだない
         self.assertEqual(self.run_script().returncode, 0)
         self.assertEqual(self.run_script("--check").returncode, 0)
