@@ -158,5 +158,15 @@ class AgentTests(unittest.TestCase):
                     self.assertFalse(allowed(cmd, rules), cmd)
 
 
+    def test_change_history_uses_the_decision_log_categories(self):
+        # change-history の主な変更は decision-log と同じ分類で書く。表を変えたら両方を直す
+        table = (ROOT / "skills/decision-log/references/format.md").read_text(encoding="utf-8")
+        want = [c for c in re.findall(r"^\| `([a-z]+)` \|", table, re.M) if c != "category"]
+        skill = (ROOT / "skills/change-history/SKILL.md").read_text(encoding="utf-8")
+        line = next(l for l in skill.splitlines() if "分類は decision-log と同じ" in l)
+        got = re.findall(r"`([a-z]+)`", line.split("分類は decision-log と同じ", 1)[1].split("で、", 1)[0])
+        self.assertEqual(len(want), 11)
+        self.assertEqual(got, want)
+
 if __name__ == "__main__":
     unittest.main()

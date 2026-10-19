@@ -56,3 +56,4 @@ CI の必須チェック、テストの方針、lint・コードの規約、ブ�
 - 2026-10-18 [DL-17](0017-check-and-record.md) 過去の判断を照合する check と、新しい判断を記録する record を足した
 - 2026-10-19 [DL-19](0019-long-lived-branches.md) 履歴を、1 つのブランチではなく長く続くブランチ全部から読むことにした
 - 2026-10-19 [DL-20](0020-change-history-readme-and-dates.md) change-history の年表を README.md にまとめ、日付を YYYY-MM-DD にそろえた
+- 2026-10-19 [DL-21](0021-change-history-categories.md) change-history の主な変更を、行の数を決めずに分類ごとに書くことにした

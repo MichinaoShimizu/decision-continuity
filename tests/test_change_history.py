@@ -103,6 +103,24 @@ class BuildHistoryTests(unittest.TestCase):
         self.assertIn("## 2025\n\n- 決済の再試行を見直した（2025-02）\n\n| 月 |", self.page("README.md"))
         self.assertEqual(self.run_script("--check").returncode, 0)
 
+    def test_summaries_by_category(self):
+        # 主な変更と年の要点は分類ごとの見出しで書く。作り直しても残り、表には最初の行が入る
+        self.run_script()
+        folder = self.repo / "docs/change-history"
+        month = "### reliability\n\n- 決済の再試行を 5 回に（#3）\n\n### security\n\n- セッションを延ばした（#2）\n- もう 1 つ（#2）"
+        path = folder / "2025-02.md"
+        path.write_text(path.read_text(encoding="utf-8").replace("（まだ書いていない）", month), encoding="utf-8")
+        self.run_script()
+        year = "### reliability\n\n- 決済の再試行を見直した（2025-02）"
+        path = folder / "README.md"
+        path.write_text(path.read_text(encoding="utf-8").replace("（まだ書いていない）", year), encoding="utf-8")
+        self.assertEqual(self.run_script().returncode, 0)
+        self.assertIn(f"## 主な変更\n\n{month}\n\n## 一覧", self.page("2025-02.md"))
+        readme = self.page("README.md")
+        self.assertIn(f"## 2025\n\n{year}\n\n| 月 |", readme)
+        self.assertIn("| [2025-02](2025-02.md) | 2 | 決済の再試行を 5 回に（#3） |", readme)
+        self.assertEqual(self.run_script("--check").returncode, 0)
+
     def test_old_timeline_moves_into_readme(self):
         self.run_script()
         folder = self.repo / "docs/change-history"
