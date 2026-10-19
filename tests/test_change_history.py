@@ -233,6 +233,29 @@ class BuildHistoryTests(unittest.TestCase):
         self.assertIn("分類 security は", result.stdout)
         self.assertIn("PR の列の参照が、この月の変更にない", result.stdout)
 
+    def test_duplicate_and_unknown_references_are_kept(self):
+        # 同じ PR を 2 度書いても、後ろの読めない参照を落とさない。どこにもないハッシュは書かれたまま
+        self.run_script()
+        self.fill("2025-02", "### 機能改善\n\n| | 重なり | #2、#2、#99 | |\n| | ハッシュ | deadbeef1 | |")
+        self.run_script()
+        feb = self.page("2025-02.md")
+        self.assertIn("| 2025-02-01 | 重なり | [#2](https://github.com/o/r/pull/2)、[#99](https://github.com/o/r/pull/99) | — |", feb)
+        self.assertIn("|  | ハッシュ | [deadbeef1](https://github.com/o/r/commit/deadbeef1) | — |", feb)
+
+    def test_rebuilding_twice_changes_nothing(self):
+        # 決まりから外れた行（別の月の PR、決まりにない見出し、前の形、読めない参照）が混じっても、2 回目は何も変えない
+        self.run_script()
+        sha = self.git("log", "-1", "--format=%H", "--grep", "Initial").strip()
+        self.fill("2025-02", "\n".join(["### security", "| | 別の月のコミット | " + sha[:9] + " | |", "### バグ対応",
+                                         "- 前の形（#3）", "- 読めない（#99）", "| | まとめ | [#2](x)、#3 | @someone |"]))
+        self.run_script()
+        first = {p.name: p.read_text(encoding="utf-8") for p in (self.repo / "docs/change-history").glob("*.md")}
+        self.run_script()
+        second = {p.name: p.read_text(encoding="utf-8") for p in (self.repo / "docs/change-history").glob("*.md")}
+        self.assertEqual(first, second)
+        self.assertIn(f"| 2025-01-10 | 別の月のコミット | [{sha[:7]}](https://github.com/o/r/commit/{sha}) | — |", second["2025-02.md"])
+        self.assertNotIn("が古い", self.run_script("--check").stdout)
+
     def test_empty_repository(self):
         with tempfile.TemporaryDirectory() as empty:
             subprocess.run(["git", "init", "-q", empty], check=True)
@@ -419,6 +442,14 @@ class WriterAgentTests(unittest.TestCase):
         for cmd in ("python3 .kiro/skills/change-history/scripts/build_history.py x; rm -rf ~", "python3 -c 'import os'", "git push"):
             self.assertFalse(any(p.fullmatch(cmd) for p in allowed), cmd)
         self.assertEqual(kiro["toolsSettings"]["write"]["allowedPaths"], ["docs/change-history/*.md"])
+
+    def test_writer_names_the_scripts_categories(self):
+        import re, sys
+        sys.path.insert(0, str(SCRIPT.parent))
+        import build_history
+        body = (ROOT / "agents/claude/change-history-writer.md").read_text(encoding="utf-8")
+        line = next(l for l in body.splitlines() if "分類は" in l)
+        self.assertEqual(re.findall(r"`(.+?)`（", line), list(build_history.DESCRIPTIONS))
 
     def test_skill_calls_the_writer_by_name(self):
         self.assertIn("change-history-writer", (ROOT / "skills/change-history/SKILL.md").read_text(encoding="utf-8"))

@@ -248,7 +248,7 @@ def parse(subject, body, parents, branch, shas):
 def link(item, url):
     if item["pr"]:
         return f"[#{item['pr']}]({url}/pull/{item['pr']})" if url else f"#{item['pr']}"
-    short = item["sha"][:7]
+    short = item.get("short") or item["sha"][:7]  # どこにもないハッシュは、書かれたまま（作り直しても変わらない）
     return f"[{short}]({url}/commit/{item['sha']})" if url else short
 
 
@@ -312,10 +312,10 @@ def resolve(text, index, everything):
     """PR の列の参照を、その月の変更、なければ全部の月の変更から探す。どこにもなければ、番号かハッシュだけの変更にする
     （リンクと、GitHub から取れた Author は入れる）。その月にない参照は、problems が崩れとして知らせる。"""
     found = []
-    for i, m in zip(lookup(text, index), KEY_RE.finditer(re.sub(r"\]\([^)]*\)", "]", text))):
+    for m in KEY_RE.finditer(re.sub(r"\]\([^)]*\)", "]", text)):  # 参照ごとに探す（重なっても、後ろの参照を落とさない）
         pr, sha = m.groups()
-        item = i or lookup(m.group(0), everything)[0] or {
-            "pr": pr, "sha": sha or "", "date": "", "author": PR_AUTHORS.get(pr, UNKNOWN) if pr else UNKNOWN}
+        item = lookup(m.group(0), index)[0] or lookup(m.group(0), everything)[0] or {
+            "pr": pr, "sha": sha or "", "short": sha, "date": "", "author": PR_AUTHORS.get(pr, UNKNOWN) if pr else UNKNOWN}
         if item not in found:
             found.append(item)
     return found
