@@ -60,3 +60,4 @@ CI の必須チェック、テストの方針、lint・コードの規約、ブ�
 - 2026-10-19 [DL-20](0020-change-history-readme-and-dates.md) change-history の年表を README.md にまとめ、日付を YYYY-MM-DD にそろえた
 - 2026-10-19 [DL-21](0021-change-history-categories.md) change-history の主な変更を、行の数を決めずに分類ごとに書くことにした
 - 2026-10-19 [DL-23](0023-change-history-table.md) change-history の月のファイルを主な変更の表だけにし、Author をアカウント名で出すことにした
+- 2026-10-20 [DL-25](0025-change-history-counts-and-quiet-months.md) change-history の年表の件数を取り込まれた変更まで数え、変更のない月も載せることにした
