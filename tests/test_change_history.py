@@ -145,6 +145,40 @@ class BuildHistoryTests(unittest.TestCase):
         self.commit("src/auth/session.py", "TTL = 48", "Longer session (#4)", "2025-02-10T00:00:00Z")
         self.assertEqual(self.run_script("--check").returncode, 1)
 
+    def test_decision_logs_that_cite_a_pr_are_linked_after_it(self):
+        # PR を挙げた Decision log へのリンクを、PR の後ろに番号の順に添える。書き手が書かなくても、作り直すたびに入れ直す
+        self.write("docs/decision-logs/0007-retry.md", "# 再試行\n\n- 2025-02-04 上限を 5 に（[PR #3][pr3]）\n\n"
+                                                      "[pr3]: https://github.com/o/r/pull/3")
+        self.write("docs/decision-logs/0002-retry-again.md", "# 再試行の続き\n\n- [リンクだけ](https://github.com/o/r/pull/3)")
+        # 索引、ほかのリポジトリの PR、#3 の文だけのものは当たらない
+        self.write("docs/decision-logs/README.md", "- [PR #3](https://github.com/o/r/pull/3)")
+        self.write("docs/decision-logs/0003-other.md", "# ほか\n\n- https://github.com/x/y/pull/3 と #3")
+        self.run_script()
+        self.fill("2025-02", "### 運用改善\n\n|  | 決済の再試行を増やした | #3 |  |\n|  | セッションを延ばした | #2 |  |")
+        self.run_script()
+        rows = self.page("2025-02.md")
+        self.assertIn("| [#3](https://github.com/o/r/pull/3)、[DL-2](../decision-logs/0002-retry-again.md)、"
+                      "[DL-7](../decision-logs/0007-retry.md) | @alice |", rows)
+        self.assertIn("| [#2](https://github.com/o/r/pull/2) | — |", rows)
+        # リンクは PR の列の参照に数えない。作り直しても変わらず、Decision log が消えればリンクも消える
+        path = self.repo / "docs/change-history/README.md"
+        path.write_text(path.read_text(encoding="utf-8").replace("| 2 | まだ |", "| 2 | 再試行を増やした |"), encoding="utf-8")
+        self.assertEqual(self.run_script().returncode, 0)
+        self.assertEqual(self.page("2025-02.md"), rows)
+        self.assertEqual(self.run_script("--check").returncode, 0)
+        (self.repo / "docs/decision-logs/0002-retry-again.md").unlink()
+        self.assertEqual(self.run_script("--check").returncode, 1)
+        self.run_script()
+        self.assertIn("| [#3](https://github.com/o/r/pull/3)、[DL-7](../decision-logs/0007-retry.md) |", self.page("2025-02.md"))
+        # 置き場所は --decision-logs で変えられる
+        shutil.move(self.repo / "docs/decision-logs", self.repo / "decisions")
+        self.run_script("--decision-logs", "decisions")
+        self.assertIn("、[DL-7](../../decisions/0007-retry.md) |", self.page("2025-02.md"))
+        # --repo のとき（中央にまとめる）は、言われなければリンクしない
+        self.write("docs/decision-logs/0007-retry.md", "- [PR #3][pr3]")
+        self.run_script("--repo", ".")
+        self.assertIn("| [#3](https://github.com/o/r/pull/3) | @alice |", self.page("2025-02.md"))
+
     def test_github_gives_pr_authors(self):
         # gh があれば、言われなくても PR の作成者を GitHub から取り、.git の中に覚えておく。PR のないコミットはメールから取る
         env = self.fake_gh('echo "$@" >> gh-args.txt; printf "2\\tbob\\t\\tExtend\\n3\\tcarol\\t\\tRetries\\n"')
