@@ -14,7 +14,7 @@ permissions:
 ## 調べ方
 
 1. `git remote get-url origin`、`git rev-parse HEAD`、`git rev-parse --is-shallow-repository`。
-2. 読むブランチ：開発の本流と本番の適用先が分かれていることがある。`main`・`master`・`develop`・`development`・`dev`・`production` のそれぞれを `git rev-parse --verify --quiet 'origin/<名前>'`（なければ手元の `'<名前>'`。手元のものは古いことがある）で確かめ、あるものを全部読む。言われたブランチがあればそれを読む。
+2. 読むブランチ：リポジトリごとに違うので、推測しない。言われたブランチがあれば、それを全部読む。言われなければ、デフォルトブランチ（`git rev-parse --abbrev-ref origin/HEAD` の結果）だけを読む。分からなければ候補を洗わず、読むブランチを聞くよう返す。
 3. 一覧：ブランチごとに `TZ=Asia/Tokyo git log --first-parent --date=short-local --format='@@ %h %ad %s' --name-only <ブランチ> [-- <範囲>]`。同じコミットは 1 つに数える。マージコミットは `git log --first-parent --merges --format='@@ %h %b' <ブランチ>` の本文 1 行目がタイトル。`(#123)` や `Merge pull request #123` で PR に結びつける。読んだブランチどうしのマージ（develop から main へのリリースなど）は候補にせず、中身の PR を候補にする。読んでいないブランチからのマージ（`Merge branch 'release/1.2'` など）は、`git log --first-parent --format='@@ %h %s%n%b' <コミット>^1..<コミット>^2` で中の PR を拾い、それを候補にする。
 4. タイトルに出ない変更も拾う（ブランチごと、それぞれ別に回し、lockfile は `':(exclude)*lock*'` で外す）。
    - 言葉：`git log --first-parent -i -G '<言葉>' --format='%h'`。既定：`timeout|retr(y|ies)|limit|max_|ttl|expire|auth|permission|role|token|secret|encrypt|signature|hmac|verify|email|phone|schema|migrat|deprecat|feature_?flag|instance_type|sampling|sample_rate`

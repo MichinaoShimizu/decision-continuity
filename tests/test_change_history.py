@@ -22,6 +22,8 @@ class BuildHistoryTests(unittest.TestCase):
         self.git("config", "user.name", "main-user")
         self.git("config", "user.email", "m@example.com")
         self.git("remote", "add", "origin", "git@github.com:o/r.git")
+        # clone したときに git が覚える origin のデフォルトブランチ（ここでは手元の main を指す）
+        self.git("symbolic-ref", "refs/remotes/origin/HEAD", "refs/heads/main")
         # 2025-01-31 23:30 UTC は JST で 2025-02-01
         self.commit("README.md", "a", "Initial import", "2025-01-10T00:00:00Z")
         self.commit("src/auth/session.py", "TTL = 24", "Extend session (#2)", "2025-01-31T23:30:00Z")
@@ -559,7 +561,7 @@ class BuildHistoryTests(unittest.TestCase):
         self.assertIn("| キャッシュを直した | [#20](https://github.com/o/r/pull/20) | @bob-gh |", page)
         self.assertIn("| DB を変えた | [#22](https://github.com/o/r/pull/22) | @lead |", page)
 
-    def test_development_and_production_branches(self):
+    def test_default_branch_only_unless_branches_are_named(self):
         # 機能の修正は develop へ、リリースは develop から main へ、緊急の修正は main へ直接
         self.git("switch", "-q", "-c", "develop")
         self.git("switch", "-q", "-c", "feature-x")
@@ -572,39 +574,51 @@ class BuildHistoryTests(unittest.TestCase):
         self.git("switch", "-q", "develop")
         self.merge("main", "Merge branch 'main' into develop", "2025-05-05T00:00:00Z")
         self.git("switch", "-q", "main")
-        # develop が origin にしかなくても読む
         self.git("update-ref", "refs/remotes/origin/develop", "develop")
         self.git("branch", "-q", "-D", "develop", "feature-x")
-        # 手元の main が古くても、origin/main を読む
+        # 手元の main が古くても、origin のデフォルトブランチ（origin/HEAD の先の origin/main）を読む。develop は推測で足さない
         self.git("update-ref", "refs/remotes/origin/main", "main")
+        self.git("symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main")
         self.git("update-ref", "refs/heads/main", "main~1")
         self.git("switch", "-q", "--detach", "origin/main")
         self.assertEqual(self.run_script().returncode, 0)
         may = self.listing("2025-05")
-        for line in ["- 2025-05-02 Raise search limit（[#10](https://github.com/o/r/pull/10)、src/search/、@alice、develop へ）",
-                     "- 2025-05-03 （develop から取り込み）Release 2025-05（[#11](https://github.com/o/r/pull/11)、",
-                     "- 2025-05-04 Shorten session（[#12](https://github.com/o/r/pull/12)、src/auth/、@alice、main へ）",
-                     "- 2025-05-05 （main から取り込み）Merge branch 'main' into develop（["]:
-            self.assertIn(line, may)
-        # どちらにも入ったコミットは 1 件
-        feb = self.listing("2025-02")
-        self.assertEqual(feb.count("Extend session"), 1)
-        self.assertIn("Extend session（[#2](https://github.com/o/r/pull/2)、src/auth/、—、main・develop へ）", feb)
-        self.assertIn("読んだブランチ：main（origin/main）、develop（origin/develop）", feb)
-        # 1 つに絞れば、ブランチは書かない
-        # 読んだブランチどうしのマージの下には、中身を並べない（元のブランチの行に出ている）
-        self.assertRegex(self.listing("2025-05"), r"Release 2025-05（[^\n]*main へ）\n- 2025-05-04 ")
+        self.assertIn("読んだブランチ：main（origin/main）", may)
+        self.assertNotIn("develop（", may)
         # develop を読まなければ、main に入ったマージの下に、develop で入った PR が見える
-        may = self.listing("2025-05", "--branch", "main")
         self.assertIn("- 2025-05-03 Release 2025-05（[#11](https://github.com/o/r/pull/11)、src/search/、@alice）\n"
                       "  - Raise search limit（[#10](https://github.com/o/r/pull/10)、@alice）", may)
-        self.assertNotIn(" へ）", may)
+        self.assertIn("- 2025-05-04 Shorten session（[#12](https://github.com/o/r/pull/12)、src/auth/、@alice）", may)
+        self.assertNotIn("Merge branch 'main' into develop", may)
         # 表は、マージの中の PR を指してよい。日付は main に入った日
-        self.assertEqual(self.run_script("--branch", "main").returncode, 0)
         self.fill("2025-05", "| | 検索の上限を上げた | #10 | |")
-        self.run_script("--branch", "main")
+        self.run_script()
         self.assertIn("| 2025-05-03 | 検索の上限を上げた | [#10](https://github.com/o/r/pull/10) | @alice |", self.page("2025-05.md"))
+        # 言われたブランチは全部読む。どれにも入ったコミットは 1 件、読んだブランチどうしのマージには印を付ける
+        both = ("--branch", "origin/main", "--branch", "origin/develop")
+        may = self.listing("2025-05", *both)
+        for line in ["- 2025-05-02 Raise search limit（[#10](https://github.com/o/r/pull/10)、src/search/、@alice、origin/develop へ）",
+                     "- 2025-05-03 （origin/develop から取り込み）Release 2025-05（[#11](https://github.com/o/r/pull/11)、",
+                     "- 2025-05-05 （origin/main から取り込み）Merge branch 'main' into develop（["]:
+            self.assertIn(line, may)
+        feb = self.listing("2025-02", *both)
+        self.assertEqual(feb.count("Extend session"), 1)
+        self.assertIn("、origin/main・origin/develop へ）", feb)
         self.assertEqual(self.run_script("--branch", "nope").returncode, 2)
+
+    def test_unknown_default_branch_is_not_guessed(self):
+        # origin/HEAD がなければ、main や HEAD を推測せず、--branch を求めて止まる
+        self.git("symbolic-ref", "--delete", "refs/remotes/origin/HEAD")
+        result = self.run_script()
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("デフォルトブランチが分からない", result.stderr)
+        self.assertFalse((self.repo / "docs/change-history").exists())
+        self.assertEqual(self.run_script("--branch", "main").returncode, 0)
+        # gh があれば、GitHub のデフォルトブランチを聞いて origin/ のそれを読む
+        self.git("update-ref", "refs/remotes/origin/trunk", "main")
+        env = self.fake_gh('case "$*" in *default_branch*) echo trunk;; *) exit 1;; esac')
+        result = self.run_script("--list", "2025-02", env=env)
+        self.assertIn("読んだブランチ：trunk（origin/trunk）", result.stdout)
 
     def test_since_and_depth(self):
         self.run_script("--since", "2025-02", "--depth", "1")

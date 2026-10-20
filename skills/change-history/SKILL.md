@@ -11,7 +11,7 @@ allowed-tools: Bash(git log:*) Bash(git show:*) Bash(git rev-parse:*) Bash(git r
 ## 使い方
 
 - 置き場所は `docs/change-history/`（言われたらそこ）。期間を言われたら `--since YYYY-MM`・`--until YYYY-MM` で絞る（どのコマンドにも同じに付ける）。
-- 読むブランチは、既定で長く続くもの全部（`main`・`master`・`develop`・`development`・`dev`・`production`。`origin/` にあればそちら）。ほかの名前（`staging` など）も読むなら、全部を `--branch` で並べる（`--branch main --branch staging`）。
+- 読むブランチはリポジトリごとに違うので、推測しない。言われなければデフォルトブランチ（`origin/HEAD` の先。なければ `gh` で GitHub に聞く）だけを読む。ほかも読むなら、言われたものを全部 `--branch` で並べる（`--branch main --branch develop`）。
 - 書くのは頼まれたときだけ。頼まれていなければ、主な変更の下書きを返す。
 - 対象はいまのリポジトリ。一覧にした複数のリポジトリを中央にまとめるなら [references/many-repos.md](references/many-repos.md)。
 

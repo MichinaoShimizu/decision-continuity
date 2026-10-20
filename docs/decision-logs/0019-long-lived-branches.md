@@ -28,3 +28,8 @@ Active：change-history の `build_history.py` は、`--branch` を言わなけ�
 
 - 2026-10-19 `--first-parent` だけでは、マージコミットの件名と変えたファイルしか見えず、PR の中のコミットや、読んでいないブランチ（`release/1.2` など）でマージされた PR が見えなかった。change-history の `--list` は、マージコミットの下に、取り込んだ側の `--first-parent` のコミットを字下げで出すようにし、主な変更の表はその中の PR やコミットを指せるようにした。読んだブランチどうしのマージの下には出さない（中身は元のブランチの行に出る）。decision-log の調べ役も、読んでいないブランチからのマージの中の PR を候補にする（ブランチ follow-merges。作成 @MichinaoShimizu）。理由：「マージコミットの件名からPRを追うようにしないと実際の改修内容は見えないよ」（@MichinaoShimizu、会話 2026-10-19）
 Superseded：`build_history.py` の `inside` がマージコミットの `<1 つ目の親>..<2 つ目の親>` を `--first-parent` で読み、`--list` と表の参照に使う（`skills/change-history/scripts/build_history.py`）。`agents/claude/decision-log-planner.md` の手順 3 が、読んでいないブランチからのマージの中の PR を候補にする
+
+## 追記 2026-10-20（デフォルトブランチだけ）
+
+- 2026-10-20 長く続くブランチ（`main`・`master`・`develop`・`development`・`dev`・`production`）を名前で探して全部読むのをやめ、言われなければデフォルトブランチだけを読むことにした。change-history の `build_history.py` は `origin/HEAD` の先（bare のクローンは `HEAD` の先。どちらもなければ `gh api` で GitHub のデフォルトブランチ）を読み、分からなければ `--branch` を求めて止まる。`decision-log-planner` も `git rev-parse --abbrev-ref origin/HEAD` のブランチだけを読み、分からなければ読むブランチを聞くよう返す。ほかのブランチは、言われたものを全部読む（ブランチ default-branch-only。作成 @MichinaoShimizu）。理由：「リポジトリによって対象のブランチがことなる。勝手に推測しない。デフォルトはデフォルトブランチへの変更のみをみる。」（@MichinaoShimizu、会話 2026-10-20）。planner にも同じ決まりを当てたのは、この Decision log が 2 つで同じブランチを読むと決めていたことに合わせた Claude の判断
+Superseded：`build_history.py` は `default_branch` でデフォルトブランチだけを読み、`LONG_LIVED` はない（`skills/change-history/scripts/build_history.py`）。`decision-log-planner` の手順 2 は、言われたブランチか `origin/HEAD` のブランチだけを読む（`agents/claude/decision-log-planner.md`）
