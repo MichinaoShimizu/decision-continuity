@@ -601,11 +601,15 @@ class WriterAgentTests(unittest.TestCase):
         allowed = [re.compile(p) for p in kiro["toolsSettings"]["shell"]["allowedCommands"]]
         for cmd in ("python3 .kiro/skills/change-history/scripts/build_history.py docs/change-history --list 2025-02",
                     "python3 .kiro/skills/change-history/scripts/build_history.py docs/change-history --list 2025-02 --branch main",
+                    "python3 .kiro/skills/change-history/scripts/build_history.py docs/change-history --show abc1234",
+                    "python3 .kiro/skills/change-history/scripts/build_history.py docs/change-history/o/r --list 2025-02"
+                    " --repo .cache/change-history/o/r --branch main",
                     "git show --stat abc1234"):
             self.assertTrue(any(p.fullmatch(cmd) for p in allowed), cmd)
         for cmd in ("python3 .kiro/skills/change-history/scripts/build_history.py x; rm -rf ~", "python3 -c 'import os'", "git push"):
             self.assertFalse(any(p.fullmatch(cmd) for p in allowed), cmd)
-        self.assertEqual(kiro["toolsSettings"]["write"]["allowedPaths"], ["docs/change-history/*.md"])
+        # 1 つのリポジトリの置き場所と、中央にまとめるときの <owner>/<repo> の下だけ
+        self.assertEqual(kiro["toolsSettings"]["write"]["allowedPaths"], ["docs/change-history/*.md", "docs/change-history/*/*/*.md"])
 
     def test_writer_names_the_scripts_categories(self):
         import re, sys

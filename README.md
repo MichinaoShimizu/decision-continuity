@@ -44,6 +44,24 @@ change-history で、いつどんな変更をしてきたかを月ごとにま�
 change-history で、2024-01 からの分だけまとめて、年表まで作って。
 ```
 
+#### 複数のリポジトリの年表を中央にまとめる
+
+一覧にしたリポジトリの年表を、1 つのリポジトリ（中央のリポジトリ）にまとめて作ることもできる。各リポジトリには何も書かない。上の、いまのリポジトリを対象にする使い方はそのまま使える。
+
+中央にするリポジトリに入れ（Claude Code はプラグインのまま、Kiro は中央のリポジトリのルートで上の導入のコマンド）、ルートに `repos.txt` を置く。1 行に 1 つ、`owner/repo` か clone できる URL を書き、後ろに `--branch` を書ける。
+
+```text
+pallets/click
+pallets/flask --branch main --branch stable
+https://gitlab.example.com/team/api.git
+```
+
+```text
+change-history で、repos.txt のリポジトリの年表を中央にまとめて作って。
+```
+
+`docs/change-history/<owner>/<repo>/` に各リポジトリの年表（形は 1 つのときと同じ）を、`docs/change-history/README.md` に、年ごとのリポジトリ別の要点と月 × リポジトリの件数の表を作る。クローンは `.cache/change-history/` に置き（git には入れない）、次からは差分だけを取る。非公開のリポジトリは、回す環境の git と `gh` に読む権限が要る。全体の年表を読める人は全部のリポジトリの変更の概要を読めるので、中央のリポジトリの公開範囲に気をつける。詳しくは [複数のリポジトリを中央にまとめる](skills/change-history/references/many-repos.md)。
+
 ### Decision log を作る（decision-log）
 
 `docs/decision-logs/` に、大事な変更ごとに、なぜ（記録にある範囲で）、いまのステータス、分かっていないことを書く。範囲を言わなければリポジトリ全体から、言えばそのパスや期間だけから、大事なものを洗い出す。
