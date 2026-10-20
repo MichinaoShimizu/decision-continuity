@@ -55,3 +55,8 @@ Superseded：`build_history.py` は `github_prs` で PR を覚えておいた分
 
 - 2026-10-19 `gh` で取れない変更の Author に、フォークからのマージの件名（`Merge pull request #12 from alice/fix` の `alice`。origin の持ち主と違うときだけ）を使うことにした。そのマージの先頭のコミットのメールも覚え、同じメールで PR を通さない変更にも使う。同じリポジトリのブランチからのマージにも出るメール（メンテナーが別の人の PR に足したコミットなど）と、2 人以上に当たるメールは使わない。前に `—` と書いた行は、取れるようになった名前に替える（ブランチ change-history-writer。作成 @MichinaoShimizu）。理由：「高精度でフォーマットに沿った可読性の高い変更履歴年表を高速で作成可能（リポジトリ問わず）」という目標（@MichinaoShimizu、2026-10-19）に向けて、Claude が `gh` を使えない flask の 2023 年で試すと、41 行中 38 行の Author が `—` だった。フォークの持ち主を使うと 31 行に減った（Claude の判断）
 Superseded：`build_history.py` は `credit` でフォークの持ち主を Author にし、`by_pr` で覚えたメールを使う（`skills/change-history/scripts/build_history.py`）
+
+## 追記 2026-10-20（Decision log へのリンク）
+
+- 2026-10-20 主な変更の表の PR の列に、その PR を挙げた（`PR #12` の文か、origin の `/pull/12` の URL がある）Decision log へのリンクを、PR の後ろに番号の順に添えることにした（`[#12](…)、[DL-3](../decision-logs/0003-x.md)`）。PR の列の参照の数には数えず、作り直すたびにスクリプトが入れ直す。置き場所は既定で `docs/decision-logs/`、`--decision-logs` で変える。`--repo`（中央にまとめるとき）では、クローンが git に入らないので、言われなければ添えない（ブランチ change-history-dl-links。作成 @MichinaoShimizu）。理由：年表のつなぎ先を PR から Decision log に変える案について、Claude は、置き換えると Decision log のない行が空になり、一次の出典の PR がなくなると答えた。@MichinaoShimizu が「置き換えずに、ある場合にはデシジョンログにもリンク貼る」と決めた（会話 2026-10-20）。年の要点ではなく月の表の PR の列に、新しい列を作らずに添えるのは Claude の判断（いまの 4 列の表と形の検査をそのまま使える）
+Superseded：`build_history.py` は `decision_logs` で PR を挙げた Decision log を集め、`row` で PR の列の PR の後ろにリンクを添える（`skills/change-history/scripts/build_history.py`）
