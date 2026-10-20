@@ -1,2 +1,0 @@
-- change-history: 主な変更の表の PR の列に、その PR を挙げた Decision log（`docs/decision-logs/`）へのリンクを、PR の後ろに添える（`[#12](…)、[DL-3](…)`）
-  - 置き場所は `--decision-logs` で変えられる。複数のリポジトリを中央にまとめるときは添えない

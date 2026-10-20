@@ -1,1 +1,0 @@
-- change-history: 書き手（`change-history-writer`）は、変えたファイルを `git show --stat` ではなく `build_history.py --show` で見る。`--repo` を受け取ったら `--list` と `--show` に付ける。Kiro の書き手は `docs/change-history/<owner>/<repo>/*.md` にも確認なしで書ける
