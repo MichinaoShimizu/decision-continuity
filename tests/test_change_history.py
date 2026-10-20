@@ -106,9 +106,9 @@ class BuildHistoryTests(unittest.TestCase):
         self.assertEqual(self.run_script("--list", "2025-2").returncode, 2)
 
     def test_summary_table_is_filled_from_the_changes(self):
-        # 概要と PR だけ書けば、日付・Author・PR のリンクと分類の説明はスクリプトが入れる
+        # 概要と PR だけ書けば、日付・Author・PR のリンクはスクリプトが入れる
         self.run_script()
-        self.fill("2025-02", "### 運用改善\n\n| 日付 | 概要 | PR | Author |\n|---|---|---|---|\n|  | 決済の再試行を増やした | #3 |  |")
+        self.fill("2025-02", "| 日付 | 概要 | PR | Author |\n|---|---|---|---|\n|  | 決済の再試行を増やした | #3 |  |")
         self.assertEqual(self.run_script("--check").returncode, 1)  # 表と索引が古い
         # 月の要約は年表の表に人か AI が書く。まだなければ崩れとして知らせる
         result = self.run_script()
@@ -119,8 +119,7 @@ class BuildHistoryTests(unittest.TestCase):
         path.write_text(path.read_text(encoding="utf-8").replace("| 2 | まだ |", "| 2 | 決済の再試行とセッションを見直した |"), encoding="utf-8")
         self.assertEqual(self.run_script().returncode, 0)
         self.assertEqual(self.page("2025-02.md"), "\n".join([
-            "# 2025-02", "", "## 主な変更", "", "### 運用改善", "",
-            "開発・リリース・運用の進め方の改善（CI、デプロイ、監視、手順、文書など）", "",
+            "# 2025-02", "", "## 主な変更", "",
             "| 日付 | 概要 | PR | Author |", "|---|---|---|---|",
             "| 2025-02-04 | 決済の再試行を増やした | [#3](https://github.com/o/r/pull/3) | @alice |"]) + "\n")
         # 要約は作り直しても残る
@@ -139,7 +138,7 @@ class BuildHistoryTests(unittest.TestCase):
         self.assertIn("| [#2](https://github.com/o/r/pull/2)、[#3](https://github.com/o/r/pull/3) | —、@alice |", self.page("2025-02.md"))
         # PR のないコミットは、ハッシュかそのリンクで書ける。リンク先の URL の中は数えない
         sha = self.git("log", "-1", "--format=%H", "--grep", "Initial import").strip()
-        self.fill("2025-01", f"### 運用改善\n\n| | 始めた | [{sha[:7]}](https://github.com/o/r/commit/{sha}) | |")
+        self.fill("2025-01", f"| | 始めた | [{sha[:7]}](https://github.com/o/r/commit/{sha}) | |")
         self.assertEqual(self.run_script().returncode, 1)  # 2025-01 の要約がまだ
         self.assertIn(f"| 2025-01-10 | 始めた | [{sha[:7]}](https://github.com/o/r/commit/{sha}) | — |", self.page("2025-01.md"))
         self.commit("src/auth/session.py", "TTL = 48", "Longer session (#4)", "2025-02-10T00:00:00Z")
@@ -154,7 +153,7 @@ class BuildHistoryTests(unittest.TestCase):
         self.write("docs/decision-logs/README.md", "- [PR #3](https://github.com/o/r/pull/3)")
         self.write("docs/decision-logs/0003-other.md", "# ほか\n\n- https://github.com/x/y/pull/3 と #3")
         self.run_script()
-        self.fill("2025-02", "### 運用改善\n\n|  | 決済の再試行を増やした | #3 |  |\n|  | セッションを延ばした | #2 |  |")
+        self.fill("2025-02", "|  | 決済の再試行を増やした | #3 |  |\n|  | セッションを延ばした | #2 |  |")
         self.run_script()
         rows = self.page("2025-02.md")
         self.assertIn("| [#3](https://github.com/o/r/pull/3)、[DL-2](../decision-logs/0002-retry-again.md)、"
@@ -194,7 +193,7 @@ class BuildHistoryTests(unittest.TestCase):
         self.assertRegex(result.stdout, r"  - Raise retries（\[[0-9a-f]{7}\]\([^)]*\)、@alice）")
         self.assertFalse((self.repo / "gh-args.txt").exists())
         # 表の Author にも入る
-        self.fill("2025-02", "### 機能改善\n\n| | セッションを延ばした | #2 | |")
+        self.fill("2025-02", "| | セッションを延ばした | #2 | |")
         self.run_script(env=env)
         self.assertIn("| 2025-02-01 | セッションを延ばした | [#2](https://github.com/o/r/pull/2) | @bob |", self.page("2025-02.md"))
         # gh が失敗しても、覚えておいた分を使う
@@ -246,7 +245,7 @@ class BuildHistoryTests(unittest.TestCase):
         # gh で作った表は、gh のない環境（CI など）の --check でも最新のまま
         env = self.fake_gh('printf "2\\tbob\\t\\tExtend\\n"')
         self.run_script(env=env)
-        self.fill("2025-02", "### 機能改善\n\n| | セッションを延ばした | #2 | |")
+        self.fill("2025-02", "| | セッションを延ばした | #2 | |")
         self.run_script(env=env)
         self.fill("2025-01", "- 目立った変更なし（リリースのみ）")
         path = self.repo / "docs/change-history/README.md"
@@ -259,7 +258,7 @@ class BuildHistoryTests(unittest.TestCase):
         self.run_script()
         path = self.repo / "docs/change-history/README.md"
         path.write_text(path.read_text(encoding="utf-8").replace("| [2025-01](2025-01.md) | 1 | まだ |", "| [2025-01](2025-01.md) | 1 | 始めた |"), encoding="utf-8")
-        self.fill("2025-01", "### 機能改善\n\n| | 始めた | " + self.git("log", "-1", "--format=%h", "--grep", "Initial").strip() + " | |")
+        self.fill("2025-01", "| | 始めた | " + self.git("log", "-1", "--format=%h", "--grep", "Initial").strip() + " | |")
         self.run_script("--since", "2025-02")
         self.assertIn("| [2025-01](2025-01.md) | 1 | 始めた |", self.page("README.md"))
         # --list は --since に関わらず、その月を出す
@@ -274,25 +273,24 @@ class BuildHistoryTests(unittest.TestCase):
 
     def test_unresolved_old_lines_are_reported_as_rows(self):
         self.run_script()
-        self.fill("2025-02", "### バグ対応\n\n- 旧（#99）")
+        self.fill("2025-02", "- 旧（#99）")
         result = self.run_script()
         self.assertIn("|  | 旧 | [#99](https://github.com/o/r/pull/99) | — |", self.page("2025-02.md"))
         self.assertIn("PR の列の参照が、この月の変更にない", result.stdout)
         self.assertNotIn("下に行がない", result.stdout)
 
     def test_rows_are_filled_even_when_they_break_the_rules(self):
-        # 別の月の PR を書いても、決まりにない見出しの下に書いても、リンク・日付・Author は入れ、崩れとして知らせる
+        # 別の月の PR を書いても、リンク・日付・Author は入れ、崩れとして知らせる
         self.run_script()
-        self.fill("2025-01", "### security\n\n| | セッションを延ばした | #2 | |")
+        self.fill("2025-01", "| | セッションを延ばした | #2 | |")
         result = self.run_script()
         self.assertIn("| 2025-02-01 | セッションを延ばした | [#2](https://github.com/o/r/pull/2) | — |", self.page("2025-01.md"))
-        self.assertIn("分類 security は", result.stdout)
         self.assertIn("PR の列の参照が、この月の変更にない", result.stdout)
 
     def test_duplicate_and_unknown_references_are_kept(self):
         # 同じ PR を 2 度書いても、後ろの読めない参照を落とさない。どこにもないハッシュは書かれたまま
         self.run_script()
-        self.fill("2025-02", "### 機能改善\n\n| | 重なり | #2、#2、#99 | |\n| | ハッシュ | deadbeef1 | |")
+        self.fill("2025-02", "| | 重なり | #2、#2、#99 | |\n| | ハッシュ | deadbeef1 | |")
         self.run_script()
         feb = self.page("2025-02.md")
         self.assertIn("| 2025-02-01 | 重なり | [#2](https://github.com/o/r/pull/2)、[#99](https://github.com/o/r/pull/99) | — |", feb)
@@ -314,7 +312,7 @@ class BuildHistoryTests(unittest.TestCase):
 
     def test_rows_are_sorted_by_date_and_any_quiet_month_is_allowed(self):
         self.run_script()
-        self.fill("2025-02", "### 機能改善\n\n| | 後 | #3 | |\n| | 読めない | #99 | |\n| | 先 | #2 | |")
+        self.fill("2025-02", "| | 後 | #3 | |\n| | 読めない | #99 | |\n| | 先 | #2 | |")
         self.fill("2025-01", "- 目立った変更なし（依存の更新のみ）")
         self.run_script()
         feb = self.page("2025-02.md")
@@ -324,7 +322,7 @@ class BuildHistoryTests(unittest.TestCase):
 
     def test_too_many_references_in_a_row_are_reported(self):
         self.run_script()
-        self.fill("2025-02", "### 運用改善\n\n| | 翻訳 | #2、#3、#91、#92、#93、#94 | |")
+        self.fill("2025-02", "| | 翻訳 | #2、#3、#91、#92、#93、#94 | |")
         self.assertIn("PR は 1 行に 5 件まで", self.run_script().stdout)
 
     def test_unwritten_months_are_listed(self):
@@ -346,58 +344,54 @@ class BuildHistoryTests(unittest.TestCase):
         self.assertIn("Extend session（[#2](https://github.com/o/r/pull/2)、src/auth/、@main-user）", self.listing("2025-02"))
 
     def test_old_list_lines_become_rows(self):
-        # 前の形（「- 概要（#3）」と「## 一覧」）は、作り直すと表になり、一覧は消える
+        # 前の形（分類の見出しと説明、「- 概要（#3）」、「## 一覧」）は、作り直すと日付の順の 1 つの表になり、見出しと一覧は消える
         self.run_script()
         path = self.repo / "docs/change-history/2025-02.md"
         path.write_text("# 2025-02\n\nマージされた変更 2 件。\n\n## 主な変更\n\n### 運用改善\n\n- 決済の再試行を a|b に（[#3](x)）\n"
-                        "\n### 機能改善\n\n- セッションを延ばした（#2）\n\n## 一覧\n\n- 2025-02-01 Extend session\n", encoding="utf-8")
+                        "\n### 機能改善\n\n使う人に見える機能の追加と変更\n\n- セッションを延ばした（#2）\n\n## 一覧\n\n- 2025-02-01 Extend session\n", encoding="utf-8")
         self.assertEqual(self.run_script().returncode, 1)  # 要約がまだ
         feb = self.page("2025-02.md")
         self.assertNotIn("一覧", feb)
         self.assertNotIn("マージされた変更", feb)
-        self.assertIn("| 2025-02-04 | 決済の再試行を a\\|b に | [#3](https://github.com/o/r/pull/3) | @alice |", feb)
-        self.assertIn("使う人に見える機能の追加と変更", feb)
+        self.assertEqual(feb, "\n".join([
+            "# 2025-02", "", "## 主な変更", "", "| 日付 | 概要 | PR | Author |", "|---|---|---|---|",
+            "| 2025-02-01 | セッションを延ばした | [#2](https://github.com/o/r/pull/2) | — |",
+            "| 2025-02-04 | 決済の再試行を a\\|b に | [#3](https://github.com/o/r/pull/3) | @alice |"]) + "\n")
         self.assertIn("| [2025-02](2025-02.md) | 2 | まだ |", self.page("README.md"))
 
-    def test_year_summaries_use_three_kinds(self):
-        # 年表の要点は 機能改善・運用改善・バグ対応 で分け、見出しの直下に説明が入る。月の 11 種は使えない
+    def test_year_summaries_are_plain_lines(self):
+        # 年表の要点は分類に分けず、「- 」の行を並べる。前の形の分類の見出しと説明は、作り直すと外れる
         self.run_script()
         path = self.repo / "docs/change-history/README.md"
         text = path.read_text(encoding="utf-8")
-        path.write_text(text.replace("（まだ書いていない）", "### バグ対応\n\n- 決済の再試行を直した（2025-02）\n\n### 機能改善\n\n- セッションを延ばした（2025-02）"), encoding="utf-8")
+        path.write_text(text.replace("（まだ書いていない）", "- セッションを延ばした（2025-02）\n- 決済の再試行を直した（2025-02）"), encoding="utf-8")
         self.assertEqual(self.run_script().returncode, 0)
-        self.assertIn("## 2025\n\n### バグ対応\n\n不具合の修正と、その再発を防ぐ変更\n\n- 決済の再試行を直した（2025-02）\n\n"
-                      "### 機能改善\n\n使う人に見える機能の追加と変更\n\n- セッションを延ばした（2025-02）\n\n| 月 |", self.page("README.md"))
+        self.assertIn("## 2025\n\n- セッションを延ばした（2025-02）\n- 決済の再試行を直した（2025-02）\n\n| 月 |", self.page("README.md"))
         self.assertEqual(self.run_script("--check").returncode, 0)
-        # 以前の 11 種の分類は、年でも月でも崩れとして出る
-        path.write_text(text.replace("（まだ書いていない）", "### reliability\n\n- 決済の再試行を見直した（2025-02）"), encoding="utf-8")
-        self.fill("2025-02", "### security\n\n| | セッションを延ばした | #2 | |")
-        result = self.run_script("--check")
-        self.assertIn("README.md の「## 2025」1 行目：分類 reliability は 機能改善・運用改善・バグ対応 のどれでもない", result.stdout)
-        self.assertIn("2025-02.md の「## 主な変更」1 行目：分類 security は 機能改善・運用改善・バグ対応 のどれでもない", result.stdout)
+        path.write_text(text.replace("（まだ書いていない）", "不具合の修正と、その再発を防ぐ変更\n\n- 決済の再試行を直した（2025-02）"
+                                     "\n\n### reliability\n\n- セッションを延ばした（2025-02）"), encoding="utf-8")
+        self.assertEqual(self.run_script("--check").returncode, 1)
+        self.assertEqual(self.run_script().returncode, 0)
+        self.assertIn("## 2025\n\n- 決済の再試行を直した（2025-02）\n- セッションを延ばした（2025-02）\n\n| 月 |", self.page("README.md"))
 
     def test_broken_summaries_are_reported(self):
         self.run_script()
         folder = self.repo / "docs/change-history"
         self.fill("2025-02", "\n".join([
-            "認証を変えた", "### セキュリティ", "| | x | #2 | |", "### 機能改善", "| | 5 月に延ばした | #2 | |",
-            "| | ない PR | #99 | |", "| | PR がない | なし | |", "| | 列が 3 つ | #2 |", "### 機能改善", "| | もう 1 つ | #2 | |",
-            "### 運用改善", "* 記号が違う", "### バグ対応"]))
+            "認証を変えた", "| | x | #2 | |", "| | 5 月に延ばした | #2 | |",
+            "| | ない PR | #99 | |", "| | PR がない | なし | |", "| | 列が 3 つ | #2 |", "* 記号が違う"]))
         path = folder / "README.md"
-        path.write_text(path.read_text(encoding="utf-8").replace("（まだ書いていない）", "### 機能改善\n\n- 期間がない\n- 3 月に始めた（2025-03）"), encoding="utf-8")
+        path.write_text(path.read_text(encoding="utf-8").replace("（まだ書いていない）", "- 期間がない\n- 3 月に始めた（2025-03）"), encoding="utf-8")
         result = self.run_script("--check")
         self.assertEqual(result.returncode, 1)
-        for want in ["2025-02.md の「## 主な変更」1 行目：### <分類> と表の行だけを書く",
-                     "行目：分類 セキュリティ は 機能改善・運用改善・バグ対応 のどれでもない",
+        for want in ["2025-02.md の「## 主な変更」1 行目：表の行だけを書く",
+                     "2025-02.md の「## 主な変更」2 行目：表の行だけを書く",
                      "行目：日付は YYYY-MM-DD、月は YYYY-MM で書く",
                      "行目：PR の列の参照が、この月の変更にない",
                      "行目：PR の列に PR かコミット",
                      "行目：表の行は | 日付 | 概要 | PR | Author | の 4 列で書く",
-                     "行目：分類 機能改善 が 2 度ある",
-                     "行目：### <分類> と表の行だけを書く",
-                     "行目：### バグ対応 の下に行がない",
-                     "README.md の「## 2025」5 行目：行の末尾に（YYYY-MM）か（YYYY-MM〜YYYY-MM）がない",
-                     "README.md の「## 2025」6 行目：日付は YYYY-MM-DD"]:
+                     "README.md の「## 2025」1 行目：行の末尾に（YYYY-MM）か（YYYY-MM〜YYYY-MM）がない",
+                     "README.md の「## 2025」2 行目：日付は YYYY-MM-DD"]:
             self.assertIn(want, result.stdout)
         # 作り直しても書き出しはするが、崩れが残れば終了コード 1
         self.assertEqual(self.run_script().returncode, 1)
@@ -416,16 +410,9 @@ class BuildHistoryTests(unittest.TestCase):
         (folder / "README.md").write_text("# 変更の履歴\n\n| 月 | 件数 | 主な変更を書いたか |\n", encoding="utf-8")
         (folder / "timeline.md").write_text("# 年表\n\n## 2025\n\n- 前に書いた要点（2025-02）\n\n| 月 | 件数 | 主な変更 |\n", encoding="utf-8")
         self.assertEqual(self.run_script("--check").returncode, 1)
-        # 以前の要点は分類の見出しがないので、移したうえで形の崩れとして知らせる
-        result = self.run_script()
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("README.md の「## 2025」1 行目：行の前に ### <分類> がない", result.stdout)
+        self.assertEqual(self.run_script().returncode, 0)
         self.assertIn("## 2025\n\n- 前に書いた要点（2025-02）\n\n| 月 |", self.page("README.md"))
         self.assertFalse((folder / "timeline.md").exists())
-        path = folder / "README.md"
-        path.write_text(path.read_text(encoding="utf-8").replace("- 前に書いた要点", "### 運用改善\n\n- 前に書いた要点"), encoding="utf-8")
-        self.assertEqual(self.run_script("--check").returncode, 1)  # 分類の説明がまだない
-        self.assertEqual(self.run_script().returncode, 0)
         self.assertEqual(self.run_script("--check").returncode, 0)
 
     def test_branch_syncs_are_marked(self):
@@ -465,7 +452,7 @@ class BuildHistoryTests(unittest.TestCase):
         self.assertIn("| [2025-06](2025-06.md) | 1 | 目立った変更なし（依存の更新のみ） |", self.page("README.md"))
         self.assertIn("主な変更をまだ書いていない月（2）：2025-01、2025-02", self.run_script().stdout)
         # 書いたものは上書きしない
-        self.fill_over("2025-06", "- 目立った変更なし（依存の更新のみ）", "### 運用改善\n\n| | requests を上げた | " +
+        self.fill_over("2025-06", "- 目立った変更なし（依存の更新のみ）", "| | requests を上げた | " +
                        self.git("log", "-1", "--format=%h").strip() + " | |")
         self.run_script()
         self.assertIn("requests を上げた", self.page("2025-06.md"))
@@ -566,7 +553,7 @@ class BuildHistoryTests(unittest.TestCase):
         self.assertRegex(june, r"Tune cache（\[[0-9a-f]{7}\][^\n]*、@bob-gh）")
         self.assertRegex(june, r"Tidy db（\[[0-9a-f]{7}\][^\n]*、—）")
         # 前に — と書いた行は、取れるようになった名前に替わる。取れない側は、書いてある名前を残す
-        self.fill("2025-06", "### バグ対応\n\n| | キャッシュを直した | #20 | — |\n| | DB を変えた | #22 | @lead |")
+        self.fill("2025-06", "| | キャッシュを直した | #20 | — |\n| | DB を変えた | #22 | @lead |")
         self.run_script()
         page = self.page("2025-06.md")
         self.assertIn("| キャッシュを直した | [#20](https://github.com/o/r/pull/20) | @bob-gh |", page)
@@ -614,7 +601,7 @@ class BuildHistoryTests(unittest.TestCase):
         self.assertNotIn(" へ）", may)
         # 表は、マージの中の PR を指してよい。日付は main に入った日
         self.assertEqual(self.run_script("--branch", "main").returncode, 0)
-        self.fill("2025-05", "### 機能改善\n\n| | 検索の上限を上げた | #10 | |")
+        self.fill("2025-05", "| | 検索の上限を上げた | #10 | |")
         self.run_script("--branch", "main")
         self.assertIn("| 2025-05-03 | 検索の上限を上げた | [#10](https://github.com/o/r/pull/10) | @alice |", self.page("2025-05.md"))
         self.assertEqual(self.run_script("--branch", "nope").returncode, 2)
@@ -645,13 +632,11 @@ class WriterAgentTests(unittest.TestCase):
         # 1 つのリポジトリの置き場所と、中央にまとめるときの <owner>/<repo> の下だけ
         self.assertEqual(kiro["toolsSettings"]["write"]["allowedPaths"], ["docs/change-history/*.md", "docs/change-history/*/*/*.md"])
 
-    def test_writer_names_the_scripts_categories(self):
-        import re, sys
-        sys.path.insert(0, str(SCRIPT.parent))
-        import build_history
-        body = (ROOT / "agents/claude/change-history-writer.md").read_text(encoding="utf-8")
-        line = next(l for l in body.splitlines() if "分類は" in l)
-        self.assertEqual(re.findall(r"`(.+?)`（", line), list(build_history.DESCRIPTIONS))
+    def test_writer_does_not_sort_into_categories(self):
+        for path in ("agents/claude/change-history-writer.md", "skills/change-history/SKILL.md"):
+            text = (ROOT / path).read_text(encoding="utf-8")
+            for word in ("機能改善", "運用改善", "バグ対応", "### <分類>"):
+                self.assertNotIn(word, text, path)
 
     def test_skill_calls_the_writer_by_name(self):
         self.assertIn("change-history-writer", (ROOT / "skills/change-history/SKILL.md").read_text(encoding="utf-8"))

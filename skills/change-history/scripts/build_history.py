@@ -22,9 +22,9 @@ origin/ にあればそちらを読む。
 PR の番号はマージコミットの件名（Merge pull request #12）か、squash の件名の末尾（(#12)）から取る。
 年表の件数は PR と直接のコミットの数（PR の中のコミットは数えず、保守ブランチから取り込んだ変更は数える）。変更のなかった月も
 「変更なし」の行で載せる。依存の更新・リリースだけの終わった月は、主な変更に「- 目立った変更なし（…のみ）」と書く。
-各月の「## 主な変更」と、README.md の各年の要点・各月の要約は、作り直しても残す（人か AI が書く）。月の主な変更と年の要点の分類は
-機能改善・運用改善・バグ対応の 3 つ。分類の見出しの直下には
-分類の説明を入れる。主な変更の表の日付と Author は、PR の列の変更から埋め直す（前の形の「- 概要（#12）」の行は表に移す）。
+各月の「## 主な変更」と、README.md の各年の要点・各月の要約は、作り直しても残す（人か AI が書く）。月の主な変更は 1 つの表、
+年の要点は「- 」の行で、どちらも分類に分けない（前の形の ### <分類> の見出しと説明の文は外す）。主な変更の表の日付と Author は、
+PR の列の変更から埋め直す（前の形の「- 概要（#12）」の行は表に移す）。
 決まった形でなければ、どこが崩れているかを出し、終了コード 1 を返す。標準ライブラリだけを使う。
 主な変更の表の PR の列には、その PR を挙げた Decision log（docs/decision-logs/ の 0001-*.md。--decision-logs で変える）への
 リンクも、あれば PR の後ろに添える（[DL-3](…)）。
@@ -64,11 +64,11 @@ LONG_LIVED = ("main", "master", "develop", "development", "dev", "production")
 MONTH_RE = re.compile(r"^\d{4}-\d{2}$")
 SUMMARY = "## 主な変更"
 EMPTY = "（まだ書いていない）"
-# 月の主な変更と年表（README.md の年の要点）の分類。変更の性質で 3 つに分け、見出しの直下に説明を入れる
-DESCRIPTIONS = {
-    "機能改善": "使う人に見える機能の追加と変更",
-    "運用改善": "開発・リリース・運用の進め方の改善（CI、デプロイ、監視、手順、文書など）",
-    "バグ対応": "不具合の修正と、その再発を防ぐ変更",
+# 前の形で、月の主な変更と年の要点を分けていた分類の説明（見出しの直下にスクリプトが入れていた）。作り直すときに外す
+OLD_DESCRIPTIONS = {
+    "使う人に見える機能の追加と変更",
+    "開発・リリース・運用の進め方の改善（CI、デプロイ、監視、手順、文書など）",
+    "不具合の修正と、その再発を防ぐ変更",
 }
 HEADER, RULE = "| 日付 | 概要 | PR | Author |", "|---|---|---|---|"
 # 1 行の PR の列に書く参照の上限（多すぎる行は読めない）
@@ -473,43 +473,30 @@ def row(summary, items, url, written=""):
 
 
 def tidy(text, kind, index=None, url=None, everything=None):
-    """分類の見出しの直下に説明を入れ、月の表の日付・Author・PR の列を、その月の変更から埋め直す。
-    前の形の「- 概要（#12）」の行は表の行に移す。中身の言葉（概要・年の要点）は変えない。"""
+    """月の表の日付・Author・PR の列を、その月の変更から埋め直し、日付の順に 1 つの表に並べる。前の形の「- 概要（#12）」の行は
+    表の行に移し、前の形の ### <分類> の見出しと説明の文は外す。中身の言葉（概要・年の要点）は変えない。"""
     if text in (None, "", EMPTY, NONE) or NOTHING_RE.match(text):
         return text
-    blocks, head = [], []
-    for line in text.splitlines():
-        if line.strip().startswith("### "):
-            blocks.append((line.strip()[4:].strip(), []))
-        elif blocks:
-            blocks[-1][1].append(line.strip())
-        else:
-            head.append(line.strip())
-    out = [l for l in head if l]
-    for heading, lines in blocks:
-        lines = [l for l in lines if l]
-        desc = DESCRIPTIONS.get(heading)
-        if lines and lines[0] == desc:
-            lines = lines[1:]
-        if kind == "month":  # 分類が決まりと違っても、表の行は埋める（分類の崩れは problems が知らせる）
-            rows = []
-            for line in lines:
-                m = OLD_LINE_RE.match(line)
-                parts = cells(line) if line.startswith("|") else None
-                if parts and is_row(parts):
-                    found = resolve(parts[2], index, everything or {})
-                    rows.append(row(parts[1], found, url, parts[3]) if found else line)
-                elif m:
-                    found = resolve(m.group(2), index, everything or {})
-                    summary = m.group(1).replace("|", "\\|")
-                    rows.append(row(summary, found, url) if found else f"|  | {summary} | {m.group(2)} |  |")
-                elif not parts or len(parts) != 4:
-                    rows.append(line)
-            # 表の行は日付の順に（日付のない行は後ろ）。同じ日は書いた順のまま
-            rows.sort(key=lambda r: (cells(r)[0] or "9999") if r.startswith("|") and len(cells(r)) == 4 else "9999")
-            lines = [HEADER, RULE] + rows if rows else []
-        out += [""] * bool(out) + [f"### {heading}", ""] + ([desc, ""] if desc else []) + lines
-    return "\n".join(out).strip()
+    lines = [l.strip() for l in text.splitlines()]
+    lines = [l for l in lines if l and not l.startswith("### ") and l not in OLD_DESCRIPTIONS]
+    if kind != "month":
+        return "\n".join(lines)
+    rows, rest = [], []
+    for line in lines:
+        m = OLD_LINE_RE.match(line)
+        parts = cells(line) if line.startswith("|") else None
+        if parts and is_row(parts):
+            found = resolve(parts[2], index, everything or {})
+            rows.append(row(parts[1], found, url, parts[3]) if found else line)
+        elif m:
+            found = resolve(m.group(2), index, everything or {})
+            summary = m.group(1).replace("|", "\\|")
+            rows.append(row(summary, found, url) if found else f"|  | {summary} | {m.group(2)} |  |")
+        elif not parts or len(parts) != 4:
+            (rows if parts else rest).append(line)
+    # 表の行は日付の順に（日付のない行は後ろ）。同じ日は書いた順のまま。表でない行は、表の前に残す（problems が知らせる）
+    rows.sort(key=lambda r: (cells(r)[0] or "9999") if r.startswith("|") and len(cells(r)) == 4 else "9999")
+    return "\n".join(rest + ([""] if rest and rows else []) + ([HEADER, RULE] + rows if rows else [])).strip()
 
 
 def read_from(branches):
@@ -522,26 +509,13 @@ def problems(text, kind, index=None):
     """主な変更（kind="month"）か年の要点（kind="year"）の形の崩れを、(行, 中身) で返す。tidy を通したあとの文に使う。"""
     if text in (None, "", EMPTY, NONE) or NOTHING_RE.match(text):
         return []
-    found, seen, heading, at, items = [], set(), None, 0, 0
-    names = DESCRIPTIONS
+    found = []
     for number, line in enumerate(text.splitlines(), 1):
         line = line.strip()
-        if not line or (heading and line in (names.get(heading), HEADER, RULE)):
+        if not line or (kind == "month" and line in (HEADER, RULE)):
             continue
-        if line.startswith("### "):
-            if heading and not items:
-                found.append((at, f"### {heading} の下に行がない"))
-            heading, at, items = line[4:].strip(), number, 0
-            if heading not in names:
-                found.append((number, f"分類 {heading} は {'・'.join(names)} のどれでもない"))
-            elif heading in seen:
-                found.append((number, f"分類 {heading} が 2 度ある"))
-            seen.add(heading)
-        elif kind == "month" and line.startswith("|"):
-            items += 1
+        if kind == "month" and line.startswith("|"):
             parts = cells(line)
-            if not heading:
-                found.append((number, "行の前に ### <分類> がない"))
             if len(parts) != 4:
                 found.append((number, f"表の行は {HEADER} の 4 列で書く"))
                 continue
@@ -557,18 +531,13 @@ def problems(text, kind, index=None):
             if SHORT_DATE_RE.search(parts[1]):
                 found.append((number, "日付は YYYY-MM-DD、月は YYYY-MM で書く"))
         elif kind == "year" and line.startswith("- "):
-            items += 1
-            if not heading:
-                found.append((number, "行の前に ### <分類> がない"))
             if not PERIOD_RE.search(line):
                 found.append((number, "行の末尾に（YYYY-MM）か（YYYY-MM〜YYYY-MM）がない"))
             if SHORT_DATE_RE.search(line.split("（")[0]):
                 found.append((number, "日付は YYYY-MM-DD、月は YYYY-MM で書く"))
         else:
-            found.append((number, f"### <分類> と{'表の行' if kind == 'month' else '「- 」で始まる行'}だけを書く"))
-    if heading and not items:
-        found.append((at, f"### {heading} の下に行がない"))
-    return sorted(found)
+            found.append((number, f"{'表の行' if kind == 'month' else '「- 」で始まる行'}だけを書く"))
+    return found
 
 
 def year_summaries(path):

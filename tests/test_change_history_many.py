@@ -86,11 +86,11 @@ class BuildManyTests(unittest.TestCase):
         self.many()
         path = self.central / "docs/change-history/o/old/README.md"
         path.write_text(path.read_text(encoding="utf-8").replace(
-            "## 2023\n\n（まだ書いていない）", "## 2023\n\n### 機能改善\n\n- 始めて、終えた（2023-01〜2023-06）"), encoding="utf-8")
+            "## 2023\n\n（まだ書いていない）", "## 2023\n\n- 始めて、終えた（2023-01〜2023-06）"), encoding="utf-8")
         self.many()
         overview = self.page("README.md")
-        # 年の要点は見出しを 1 段下げて写す。変更のなかった年は「変更なし」
-        self.assertIn("### [o/old](o/old/README.md)\n\n#### 機能改善\n\n使う人に見える機能の追加と変更\n\n- 始めて、終えた（2023-01〜2023-06）", overview)
+        # 年の要点はそのまま写す。変更のなかった年は「変更なし」
+        self.assertIn("### [o/old](o/old/README.md)\n\n- 始めて、終えた（2023-01〜2023-06）", overview)
         self.assertIn("## 2024\n\n### [o/app](o/app/README.md)\n\n（まだ書いていない）\n\n### [o/old](o/old/README.md)\n\n変更なし", overview)
         # どこにも変更のない月が続けば 1 行。マスが変われば分ける
         self.assertIn("| 2023-07〜2023-12 | 0 |", overview)
