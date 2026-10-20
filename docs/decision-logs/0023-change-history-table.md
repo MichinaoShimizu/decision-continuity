@@ -60,3 +60,8 @@ Superseded：`build_history.py` は `credit` でフォークの持ち主を Auth
 
 - 2026-10-20 主な変更の表の PR の列に、その PR を挙げた（`PR #12` の文か、origin の `/pull/12` の URL がある）Decision log へのリンクを、PR の後ろに番号の順に添えることにした（`[#12](…)、[DL-3](../decision-logs/0003-x.md)`）。PR の列の参照の数には数えず、作り直すたびにスクリプトが入れ直す。置き場所は既定で `docs/decision-logs/`、`--decision-logs` で変える。`--repo`（中央にまとめるとき）では、クローンが git に入らないので、言われなければ添えない（ブランチ change-history-dl-links。作成 @MichinaoShimizu）。理由：年表のつなぎ先を PR から Decision log に変える案について、Claude は、置き換えると Decision log のない行が空になり、一次の出典の PR がなくなると答えた。@MichinaoShimizu が「置き換えずに、ある場合にはデシジョンログにもリンク貼る」と決めた（会話 2026-10-20）。年の要点ではなく月の表の PR の列に、新しい列を作らずに添えるのは Claude の判断（いまの 4 列の表と形の検査をそのまま使える）
 Superseded：`build_history.py` は `decision_logs` で PR を挙げた Decision log を集め、`row` で PR の列の PR の後ろにリンクを添える（`skills/change-history/scripts/build_history.py`）
+
+## 追記 2026-10-20（GitHub の PR から）
+
+- 2026-10-20 表の日付・Author・PR を、GitHub のマージ済み PR から取ることにした（DL-27）。Author はいつも GitHub の値にし、`gh` が使えないときに書いてある Author を残す扱いと、メール・`.mailmap`・フォークの持ち主から当てる道をなくした（ブランチ change-history-from-prs。作成 @MichinaoShimizu）。理由は DL-27
+Superseded：`build_history.py` の `row` は、PR の作成者か GitHub のコミットのアカウントを Author にする（`skills/change-history/scripts/build_history.py`）

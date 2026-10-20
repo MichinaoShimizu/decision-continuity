@@ -33,11 +33,11 @@ rm -rf .kiro/skills/decision-log .kiro/skills/change-history .kiro/agents/decisi
 
 ## 使い方
 
-まず change-history で流れをつかみ、「なぜ」まで要るテーマを decision-log で起こし、以後は変える前に check、決めたら record。回し方は[判断を途切れさせない回し方](docs/ai-workflow.md)。どちらも既定は下書きを返すだけで、ファイルに書くのは頼んだときだけ。履歴は手元の git から読み（浅いクローンなら先に `git fetch --unshallow`）、`gh` があれば PR の作成者・本文・レビューを GitHub から取る。
+まず change-history で流れをつかみ、「なぜ」まで要るテーマを decision-log で起こし、以後は変える前に check、決めたら record。回し方は[判断を途切れさせない回し方](docs/ai-workflow.md)。どちらも既定は下書きを返すだけで、ファイルに書くのは頼んだときだけ。change-history は GitHub の PR から作るので `gh` が要る。decision-log は手元の git から読み（浅いクローンなら先に `git fetch --unshallow`）、`gh` があれば PR の本文・レビューを GitHub から取る。
 
 ### 年表を作る（change-history）
 
-`docs/change-history/` に、月ごとの主な変更の表（`YYYY-MM.md`。日付・概要・PR・Author）と、年表を兼ねた索引（`README.md`）を作る。タグやリリースがなくてもよい。表の PR の列には、その PR を挙げた Decision log（`docs/decision-logs/`）があればリンクも入る。月ごとの表は change-history-writer が受け持ち、12 か月ずつの回に分けて並べて書く。
+`docs/change-history/` に、月ごとの主な変更の表（`YYYY-MM.md`。日付・概要・PR・Author）と、年表を兼ねた索引（`README.md`）を作る。材料は、GitHub でデフォルトブランチにマージされた PR と、PR を通さない直接のコミット。タグやリリースがなくてもよい。表の PR の列には、その PR を挙げた Decision log（`docs/decision-logs/`）があればリンクも入る。月ごとの表は change-history-writer が受け持ち、12 か月ずつの回に分けて並べて書く。
 
 ```text
 change-history で、いつどんな変更をしてきたかを月ごとにまとめて、年表まで作って。
@@ -48,12 +48,11 @@ change-history で、2024-01 からの分だけまとめて、年表まで作っ
 
 一覧にしたリポジトリの年表を、1 つのリポジトリ（中央のリポジトリ）にまとめて作ることもできる。各リポジトリには何も書かない。上の、いまのリポジトリを対象にする使い方はそのまま使える。
 
-中央にするリポジトリに入れ（Claude Code はプラグインのまま、Kiro は中央のリポジトリのルートで上の導入のコマンド）、ルートに `repos.txt` を置く。1 行に 1 つ、`owner/repo` か clone できる URL を書き、後ろに `--branch` を書ける。
+中央にするリポジトリに入れ（Claude Code はプラグインのまま、Kiro は中央のリポジトリのルートで上の導入のコマンド）、ルートに `repos.txt` を置く。1 行に 1 つ、GitHub の `owner/repo` か、その URL を書き、後ろに `--branch` を書ける。
 
 ```text
 pallets/click
 pallets/flask --branch main --branch stable
-https://gitlab.example.com/team/api.git
 ```
 
 ```text
