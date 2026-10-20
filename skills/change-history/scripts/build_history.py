@@ -19,7 +19,7 @@ gh が要る。書き出すときだけ GitHub に問い合わせ、取ったも
 変更のなかった月も「変更なし」の行で載せる。依存の更新・リリースだけの終わった月は、主な変更に「- 目立った変更なし（…のみ）」と書く。
 各月の「## 主な変更」と、README.md の各年の要点・各月の要約は、作り直しても残す（人か AI が書く）。月の主な変更は 1 つの表、
 年の要点は「- 」の行で、どちらも分類に分けない（前の形の ### <分類> の見出しと説明の文は外す）。表は人か AI が概要と
-PR の列だけを書き、日付・Author・PR のリンクと、その PR を挙げた Decision log へのリンクはスクリプトが入れる。
+PR の列だけを書き、日付・Author・PR のリンクはスクリプトが入れる（前の形の Decision log へのリンクは外す）。
 決まった形でなければ、どこが崩れているかを出し、終了コード 1 を返す。標準ライブラリだけを使う。
 人はアカウント名（@login）で、Author の列にだけ書く。名前（git の author 名）は書き出さない。
 """
@@ -76,16 +76,6 @@ PERIOD_RE = re.compile(r"（\d{4}-\d{2}(?:〜\d{4}-\d{2})?）$")
 # 略した日付（5 月、05-02）。YYYY-MM と YYYY-MM-DD には当たらない
 SHORT_DATE_RE = re.compile(r"\d+\s*月|(?<![\d-])\d{1,2}-\d{1,2}(?![\d-])")
 COMMIT, FIELD = "\x1e", "\x1f"
-# PR の番号ごとの、その PR を挙げた Decision log の (番号, 月のファイルからの相対パス)。PR の列に PR の後ろに添える
-DECISIONS = {}
-# 1 行に並べる Decision log のリンクの上限。超えたら件数を書き、Decision log の索引（DL_INDEX）にリンクする
-MAX_DLS = 3
-DL_INDEX = []
-# Decision log のファイル（0001-retry-limit.md）と、その中の PR（[PR #101][pr101] の文か、<origin>/pull/101 のリンク）。
-# PR を拾うのは「起きたこと」の行（- 2025-03-04 …。追記の中も）だけ。理由や問いの中で触れただけの PR は拾わない
-DL_FILE_RE = re.compile(r"^(\d{4})-[^/]*\.md$")
-DL_PR_RE = re.compile(r"\bPR #(\d+)")
-DL_EVENT_RE = re.compile(r"^- \d{4}-\d{2}-\d{2} ", re.M)
 # 書き手が書く主な変更の行：- #12、#13：概要（PR のない変更はコミットのハッシュ）。スクリプトが表の行にする
 LINE_RE = re.compile(r"^- ([^：]+?)：\s*(.+)$")
 # GraphQL で 1 回に聞くコミットの数
@@ -257,25 +247,6 @@ def changes(cache, branches, tz, online, slug):
     return sorted(items.values(), key=lambda i: i["at"])
 
 
-def decision_logs(logs, folder, url):
-    """Decision log の置き場所から、PR の番号 → [(DL の番号, 月のファイルからの相対パス)]。置き場所がなければ空。"""
-    found = collections.defaultdict(list)
-    if not logs or not logs.is_dir():
-        return found
-    pulls = re.compile(rf"{re.escape(url)}/pull/(\d+)\b")
-    for path in sorted(logs.iterdir()):
-        m = DL_FILE_RE.match(path.name)
-        if not m:
-            continue
-        events = "\n".join(l for l in path.read_text(encoding="utf-8").splitlines() if DL_EVENT_RE.match(l))
-        prs = set(DL_PR_RE.findall(events)) | set(pulls.findall(events))
-        where = pathlib.PurePath(os.path.relpath(path, folder)).as_posix()
-        for pr in prs:
-            found[pr].append((int(m.group(1)), where))
-    DL_INDEX[:] = [pathlib.PurePath(os.path.relpath(logs / "README.md", folder)).as_posix()]
-    return found
-
-
 def key(item):
     return f"#{item['pr']}" if item["pr"] else item["sha"]
 
@@ -366,13 +337,10 @@ def resolve(text, index, everything):
 
 
 def row(summary, items, url):
-    """日付は最初の変更の日、Author は変更ごとのアカウント名（重なりは 1 つ）。PR を挙げた Decision log を PR の後ろに添える。"""
+    """日付は最初の変更の日、Author は変更ごとのアカウント名（重なりは 1 つ）。"""
     authors = "、".join(dict.fromkeys(i["author"] for i in items))
     date = next((i["date"] for i in items if i["date"]), "")
-    logs = sorted({d for i in items for d in DECISIONS.get(i["pr"] or "", ())})
-    refs = [link(i, url) for i in items]
-    refs += [f"[DL-{n}]({where})" for n, where in logs] if len(logs) <= MAX_DLS else [f"[Decision log {len(logs)} 件]({DL_INDEX[0]})"]
-    return f"| {date} | {summary} | {'、'.join(refs)} | {authors} |"
+    return f"| {date} | {summary} | {'、'.join(link(i, url) for i in items)} | {authors} |"
 
 
 def tidy(text, kind, index=None, url=None, everything=None):
@@ -527,8 +495,6 @@ def main():
     p.add_argument("--show", metavar="コミット", help="書かずに、そのコミットの件名・本文と変えたファイルを出す（人の名前は出さない）")
     p.add_argument("--repo", type=pathlib.Path, help="読むリポジトリ（既定はいまのディレクトリ）")
     p.add_argument("--github-repo", metavar="OWNER/REPO", help="GitHub のリポジトリ（既定は origin の URL から）")
-    p.add_argument("--decision-logs", type=pathlib.Path,
-                   help="PR の列にリンクを添える Decision log の置き場所（既定は docs/decision-logs。--repo のときは言われたときだけ）")
     args = p.parse_args()
     global REPO
     if args.repo:
@@ -566,8 +532,6 @@ def main():
     items = changes(cache, branches, args.tz, online, slug)
     if online:
         save_cache(cache)
-    # --repo のクローン（中央にまとめるとき）は git に入らないので、その中の Decision log へは既定でリンクしない
-    DECISIONS.update(decision_logs(args.decision_logs or (None if REPO else pathlib.Path("docs/decision-logs")), args.folder, url))
     months = collections.defaultdict(list)
     for item in items:
         months[item["date"][:7]].append(item)

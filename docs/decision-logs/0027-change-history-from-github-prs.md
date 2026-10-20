@@ -12,7 +12,7 @@ Active：`build_history.py` は、GitHub でデフォルトブランチ（`--bra
 ## 起きたこと
 
 - 2026-10-20 git の件名から PR の番号を拾い、メール・`.mailmap`・フォークの持ち主・覚えた PR から Author を当て、マージの中身や保守ブランチの取り込みまで数える作りをやめた。PR は GitHub のマージ済み PR から、直接のコミットは git から取る。`--no-github` をなくし、`--github-repo` を足した。年表の件数は、その月の PR と直接のコミットの数になった。書いてある Author を残す扱いもなくし、Author はいつも GitHub の値にした（ブランチ change-history-from-prs。作成 @MichinaoShimizu）
-- 2026-10-20 書き手は表を書かず、`- #12、#13：概要` の行だけを書き、スクリプトが表にすることにした。PR の列に添える Decision log は、その「起きたこと」の行（`- 2025-03-04 …`）に PR が出てくるものだけにし、1 行に 4 つ以上なら件数を書いて Decision log の索引にリンクする（ブランチ change-history-from-prs。作成 @MichinaoShimizu）。理由：この repo で作った年表を見て「使い勝手よくなった？」と聞かれ、Claude が、Decision log のリンクが 1 行に 13 個並ぶことと、書き手が書いた表の行をスクリプトが読み直すところで今日の不具合が出ていたことを挙げ、直す案に @MichinaoShimizu が「はい」と答えた（会話 2026-10-20）
+- 2026-10-20 書き手は表を書かず、`- #12、#13：概要` の行だけを書き、スクリプトが表にすることにした。Decision log へのリンクはやめた（DL-23 の追記）（ブランチ change-history-from-prs。作成 @MichinaoShimizu）。理由：この repo で作った年表を見て「使い勝手よくなった？」と聞かれ、Claude が、書き手が書いた表の行をスクリプトが読み直すところで今日の不具合が出ていたことを挙げ、直す案に @MichinaoShimizu が「はい」と答えた（会話 2026-10-20）
 
 ## 理由
 

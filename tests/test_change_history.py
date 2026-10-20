@@ -233,47 +233,18 @@ class BuildHistoryTests(unittest.TestCase):
         self.assertIn(f"| [#2]({URL}/pull/2)、[#99]({URL}/pull/99) | @bob、— |", jan)
         self.assertEqual(result.stdout.count("PR の列の参照が、この月の変更にない"), 3)
 
-    def test_decision_logs_that_cite_a_pr_are_linked_after_it(self):
-        # PR を挙げた Decision log へのリンクを、PR の後ろに番号の順に添える。書き手が書かなくても、作り直すたびに入れ直す
-        self.write("docs/decision-logs/0007-retry.md", "# 再試行\n\n- 2025-02-04 上限を 5 に（[PR #3][pr3]）\n\n"
-                                                      f"[pr3]: {URL}/pull/3")
-        self.write("docs/decision-logs/0002-retry-again.md", f"# 再試行の続き\n\n## 追記 2025-03-01\n\n- 2025-03-01 戻した（[リンクだけ]({URL}/pull/3)）")
-        # 索引、ほかのリポジトリの PR、#3 の文だけのもの、起きたことの行でなく理由や問いで触れただけのものは当たらない
-        self.write("docs/decision-logs/README.md", f"- 2025-02-04 [PR #3]({URL}/pull/3)")
-        self.write("docs/decision-logs/0003-other.md", "# ほか\n\n- 2025-02-04 https://github.com/x/y/pull/3 と #3")
-        self.write("docs/decision-logs/0004-mention.md", "# 別の判断\n\n## 理由\n\n記録あり：PR #3 の流れを受けて決めた\n\n"
-                                                        "- PR #3 と同じか（@alice に聞く）")
+    def test_decision_log_links_are_not_added_and_old_ones_go(self):
+        # Decision log へのリンクは添えない。前の形で入ったリンクは、作り直すと外れる
+        self.write("docs/decision-logs/0007-retry.md", "# 再試行\n\n- 2025-02-04 上限を 5 に（[PR #3][pr3]）")
         self.run_script()
-        self.fill("2025-02", "|  | 決済の再試行を増やした | #3 |  |\n|  | セッションを延ばした | #2 |  |")
+        self.fill("2025-02", f"| 2025-02-04 | 決済 | [#3]({URL}/pull/3)、[DL-7](../decision-logs/0007-retry.md) | @alice |\n"
+                             f"| 2025-02-01 | 見直し | [#2]({URL}/pull/2)、[Decision log 13 件](../decision-logs/README.md) | @bob |")
         self.run_script()
-        rows = self.page("2025-02.md")
-        self.assertIn(f"| [#3]({URL}/pull/3)、[DL-2](../decision-logs/0002-retry-again.md)、"
-                      "[DL-7](../decision-logs/0007-retry.md) | @alice |", rows)
-        self.assertIn(f"| [#2]({URL}/pull/2) | @bob |", rows)
-        # リンクは PR の列の参照に数えない。作り直しても変わらず、Decision log が消えればリンクも消える
-        self.point("2025-02", "再試行を増やした")
-        self.assertEqual(self.run_script().returncode, 0)
-        self.assertEqual(self.page("2025-02.md"), rows)
-        self.assertEqual(self.run_script("--check").returncode, 0)
-        (self.repo / "docs/decision-logs/0002-retry-again.md").unlink()
-        self.assertEqual(self.run_script("--check").returncode, 1)
-        self.run_script()
-        self.assertIn(f"| [#3]({URL}/pull/3)、[DL-7](../decision-logs/0007-retry.md) |", self.page("2025-02.md"))
-        # 4 つ以上になる行は、件数を書いて Decision log の索引にリンクする
-        for n in (11, 12, 13):
-            self.write(f"docs/decision-logs/00{n}-more.md", "- 2025-02-04 これも（PR #3）")
-        self.run_script()
-        self.assertIn(f"| [#3]({URL}/pull/3)、[Decision log 4 件](../decision-logs/README.md) |", self.page("2025-02.md"))
-        for n in (11, 12, 13):
-            (self.repo / f"docs/decision-logs/00{n}-more.md").unlink()
-        # 置き場所は --decision-logs で変えられる
-        shutil.move(self.repo / "docs/decision-logs", self.repo / "decisions")
-        self.run_script("--decision-logs", "decisions")
-        self.assertIn("、[DL-7](../../decisions/0007-retry.md) |", self.page("2025-02.md"))
-        # --repo のとき（中央にまとめる）は、言われなければリンクしない
-        self.write("docs/decision-logs/0007-retry.md", "- [PR #3][pr3]")
-        self.run_script("--repo", ".")
-        self.assertIn(f"| [#3]({URL}/pull/3) | @alice |", self.page("2025-02.md"))
+        feb = self.page("2025-02.md")
+        self.assertIn(f"| 2025-02-04 | 決済 | [#3]({URL}/pull/3) | @alice |", feb)
+        self.assertIn(f"| 2025-02-01 | 見直し | [#2]({URL}/pull/2) | @bob |", feb)
+        self.assertNotIn("DL-", feb)
+        self.assertEqual(self.run_script("--decision-logs", "x").returncode, 2)
 
     def test_github_is_asked_only_when_writing_and_only_for_new_things(self):
         self.run_script()

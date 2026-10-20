@@ -37,7 +37,7 @@ rm -rf .kiro/skills/decision-log .kiro/skills/change-history .kiro/agents/decisi
 
 ### 年表を作る（change-history）
 
-`docs/change-history/` に、月ごとの主な変更の表（`YYYY-MM.md`。日付・概要・PR・Author）と、年表を兼ねた索引（`README.md`）を作る。材料は、GitHub でデフォルトブランチにマージされた PR と、PR を通さない直接のコミット。タグやリリースがなくてもよい。表の PR の列には、その PR を挙げた Decision log（`docs/decision-logs/`）があればリンクも入る。月ごとの表は change-history-writer が受け持ち、12 か月ずつの回に分けて並べて書く。
+`docs/change-history/` に、月ごとの主な変更の表（`YYYY-MM.md`。日付・概要・PR・Author）と、年表を兼ねた索引（`README.md`）を作る。材料は、GitHub でデフォルトブランチにマージされた PR と、PR を通さない直接のコミット。タグやリリースがなくてもよい。月ごとの表は change-history-writer が受け持ち、12 か月ずつの回に分けて並べて書く。
 
 ```text
 change-history で、いつどんな変更をしてきたかを月ごとにまとめて、年表まで作って。

@@ -65,3 +65,8 @@ Superseded：`build_history.py` は `decision_logs` で PR を挙げた Decision
 
 - 2026-10-20 表の日付・Author・PR を、GitHub のマージ済み PR から取ることにした（DL-27）。Author はいつも GitHub の値にし、`gh` が使えないときに書いてある Author を残す扱いと、メール・`.mailmap`・フォークの持ち主から当てる道をなくした（ブランチ change-history-from-prs。作成 @MichinaoShimizu）。理由は DL-27
 Superseded：`build_history.py` の `row` は、PR の作成者か GitHub のコミットのアカウントを Author にする（`skills/change-history/scripts/build_history.py`）
+
+## 追記 2026-10-20（Decision log へのリンクをやめる）
+
+- 2026-10-20 PR の列に Decision log へのリンクを添えるのをやめ、`--decision-logs` をなくした。前に入ったリンクは作り直すときに外す（ブランチ change-history-from-prs。作成 @MichinaoShimizu）。理由：この repo の年表で、1 行に 13 個のリンクが並ぶ行が出た（#79 が 13 の判断を実際に変えていた）。拾う範囲を「起きたこと」の行に絞り、4 つ以上は件数にまとめる案を入れたあと、@MichinaoShimizu が「デシジョンログと繋げるのやめよう」と決めた（会話 2026-10-20）
+Superseded：`build_history.py` の `row` は PR とコミットのリンクだけを書き、`decision_logs` はない（`skills/change-history/scripts/build_history.py`）
