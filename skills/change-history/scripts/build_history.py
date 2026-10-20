@@ -17,6 +17,8 @@
 origin/ にあればそちらを読む。
 どのブランチにも入ったコミットは 1 つにまとめ、ブランチ間のマージ（develop から main へのリリースなど）には印を付ける。
 PR の番号はマージコミットの件名（Merge pull request #12）か、squash の件名の末尾（(#12)）から取る。
+年表の件数は PR と直接のコミットの数（PR の中のコミットは数えず、保守ブランチから取り込んだ変更は数える）。変更のなかった月も
+「変更なし」の行で載せる。依存の更新・リリースだけの終わった月は、主な変更に「- 目立った変更なし（…のみ）」と書く。
 各月の「## 主な変更」と、README.md の各年の要点・各月の要約は、作り直しても残す（人か AI が書く）。月の主な変更と年の要点の分類は
 機能改善・運用改善・バグ対応の 3 つ。分類の見出しの直下には
 分類の説明を入れる。主な変更の表の日付と Author は、PR の列の変更から埋め直す（前の形の「- 概要（#12）」の行は表に移す）。
@@ -27,12 +29,14 @@ PR の番号はマージコミットの件名（Merge pull request #12）か、s
 """
 import argparse
 import collections
+import datetime
 import json
 import os
 import pathlib
 import re
 import subprocess
 import sys
+import zoneinfo
 
 # 番号のないもの（Merge pull request from GHSA-…：セキュリティ修正のマージ）も、本文の 1 行目をタイトルにする
 # 2 つ目のグループは、取り込んだブランチのリポジトリの持ち主（フォークなら PR の作成者）
@@ -45,6 +49,10 @@ SYNC = "（ブランチの取り込み）"
 RELEASE_RE = re.compile(r"^(?:chore\(release\)|(?:chore:\s*)?(?:release|prepare release|bump version|version)\b).*?\bv?\d+\.\d+"
                         r"|^v?\d+\.\d+(?:\.\d+)*$", re.I)
 RELEASE = "（リリース）"
+# 依存の更新（Dependabot・Renovate・pre-commit.ci などの定型の件名）
+DEPS_RE = re.compile(r"^(?:(?:chore|build|fix|ci)\((?:deps|deps-dev)\)!?:|bump \S+ from \S+ to \S+|bump the \S+ group"
+                     r"|update dependency \S+|\[pre-commit\.ci\] pre-commit autoupdate)", re.I)
+DEPS = "（依存の更新）"
 # 読んだブランチどうしのマージ。中身は元のブランチの一覧に 1 件ずつ出る
 BETWEEN = "（{} から取り込み）"
 LONG_LIVED = ("main", "master", "develop", "development", "dev", "production")
@@ -69,6 +77,11 @@ CELL_RE = re.compile(r"(?<!\\)\|")
 OLD_LINE_RE = re.compile(r"^- (.*)（([^（）]*)）$")
 # 書くことのない月：取り込みだけ、リリースだけ、依存の更新だけ、など。理由は（…のみ）に書く
 NOTHING_RE = re.compile(r"^- 目立った変更なし（[^（）\n]+のみ）$")
+# 書き手を呼ばずにスクリプトが「目立った変更なし（…のみ）」と書く変更の印と、（…のみ）に書く名前（この順に並べる）
+QUIET = {DEPS: "依存の更新", RELEASE: "リリース"}
+BETWEEN_NAME = "ブランチの取り込み"
+# 変更のなかった月（年表の表の行）と年（年の要点）
+NONE = "変更なし"
 # 月の行の末尾は PR かコミット（リンクでも、なくても）、年の行の末尾は月か期間
 KEY_RE = re.compile(r"#(\d+)|\b([0-9a-f]{7,40})\b")
 PERIOD_RE = re.compile(r"（\d{4}-\d{2}(?:〜\d{4}-\d{2})?）$")
@@ -223,7 +236,7 @@ def changes(tz, branches):
             item = parse(subject, body, parents, name, shas)
             item.update(sha=sha, date=date, email=email, author=account(email), branches=[name],
                         files=[f for f in files.splitlines() if f.strip()])
-            between = item.pop("between")
+            between = item["between"]
             if len(parents) > 1:
                 tips[sha] = parents[1]
                 if not between:
@@ -269,7 +282,6 @@ def inside(item):
             for sha, parents, email, subject, body in (c.split(FIELD) for c in out.split(COMMIT)[1:]):
                 parents = parents.split()
                 inner = parse(subject, body, parents, None, {})
-                inner.pop("between")
                 inner.update(sha=sha, date=item["date"], email=email, author=account(email), branches=item["branches"], files=[])
                 if len(parents) > 1:
                     tips[sha] = parents[1]
@@ -287,7 +299,7 @@ def parse(subject, body, parents, branch, shas):
     """件名と本文から PR の番号とタイトルを取り、印を付ける。"""
     m = MERGE_RE.match(subject)
     if m and len(parents) > 1:
-        item = dict(pr=m.group(1), head=m.group(2), title=next((l.strip() for l in body.splitlines() if l.strip()), subject))
+        item = dict(pr=m.group(1), head=m.group(2), merged_pr=True, title=next((l.strip() for l in body.splitlines() if l.strip()), subject))
     elif SQUASH_RE.match(subject):
         title, pr = SQUASH_RE.match(subject).groups()
         item = dict(pr=pr, title=title)
@@ -302,7 +314,36 @@ def parse(subject, body, parents, branch, shas):
         item["title"] = BETWEEN.format(source) + item["title"].removeprefix(SYNC)
     elif RELEASE_RE.match(item["title"]):
         item["title"] = RELEASE + item["title"]
+    elif DEPS_RE.match(item["title"]):
+        item["title"] = DEPS + item["title"]
     return item
+
+
+def size(item):
+    """1 つの変更（--first-parent の 1 コミット）が入れた変更の数。ブランチ間のマージは元のブランチで数えるので 0。
+    PR のマージは 1 と、中でマージされた別の PR の数。PR を通さないブランチの取り込み（Merge branch '8.1.x'）は、
+    取り込んだ側の変更（そのブランチでマージされた PR と、直接のコミット）の数。その中のブランチの取り込みは数えない
+    （本流を保守ブランチに戻したマージなど。中身はほかで数えている）。"""
+    if item["between"]:
+        return 0
+    if not item.get("range"):
+        return 1
+    if item.get("merged_pr"):
+        return 1 + len({i["pr"] for i in inside(item) if i["pr"] and i["pr"] != item["pr"]})
+    return len([i for i in inside(item) if not i["title"].startswith(SYNC)]) or 1
+
+
+def count(items):
+    return sum(size(i) for i in items)
+
+
+def quiet(items):
+    """依存の更新・ブランチ間の取り込み・リリースだけの月なら、「- 目立った変更なし（…のみ）」の文。ほかがあれば None。"""
+    kinds = {BETWEEN_NAME if i["between"] else next((n for mark, n in QUIET.items() if i["title"].startswith(mark)), None)
+             for i in items}
+    if not kinds or None in kinds:
+        return None
+    return f"- 目立った変更なし（{'・'.join(n for n in (*QUIET.values(), BETWEEN_NAME) if n in kinds)}のみ）"
 
 
 def link(item, url):
@@ -330,7 +371,11 @@ def list_lines(items, depth, url, many):
         where = f"、{places[0]}" + (f" ほか {len(places) - 1}" if len(places) > 1 else "") if places else ""
         into = f"、{'・'.join(item['branches'])} へ" if many else ""
         lines.append(f"- {item['date']} {item['title']}（{link(item, url)}{where}、{item['author']}{into}）")
-        lines += [f"  - {i['title']}（{link(i, url)}、{i['author']}）" for i in inside(item)]
+        inner = inside(item)
+        # 1 コミットだけの PR（中のコミットが同じタイトル）は、同じ行を 2 度出さない
+        if len(inner) == 1 and inner[0]["title"] == item["title"] and inner[0]["pr"] in (None, item["pr"]):
+            inner = []
+        lines += [f"  - {i['title']}（{link(i, url)}、{i['author']}）" for i in inner]
     return lines
 
 
@@ -396,7 +441,7 @@ def row(summary, items, url, written=""):
 def tidy(text, kind, index=None, url=None, everything=None):
     """分類の見出しの直下に説明を入れ、月の表の日付・Author・PR の列を、その月の変更から埋め直す。
     前の形の「- 概要（#12）」の行は表の行に移す。中身の言葉（概要・年の要点）は変えない。"""
-    if text in (None, "", EMPTY) or NOTHING_RE.match(text):
+    if text in (None, "", EMPTY, NONE) or NOTHING_RE.match(text):
         return text
     blocks, head = [], []
     for line in text.splitlines():
@@ -441,7 +486,7 @@ def read_from(branches):
 
 def problems(text, kind, index=None):
     """主な変更（kind="month"）か年の要点（kind="year"）の形の崩れを、(行, 中身) で返す。tidy を通したあとの文に使う。"""
-    if text in (None, "", EMPTY) or NOTHING_RE.match(text):
+    if text in (None, "", EMPTY, NONE) or NOTHING_RE.match(text):
         return []
     found, seen, heading, at, items = [], set(), None, 0, 0
     names = DESCRIPTIONS
@@ -514,24 +559,47 @@ def needs_point(summary):
     return summary not in (None, "", EMPTY) and not NOTHING_RE.match(summary)
 
 
+def month_range(first, last):
+    """first から last までの月（YYYY-MM）を全部。"""
+    y, m = map(int, first.split("-"))
+    found = []
+    while f"{y:04d}-{m:02d}" <= last:
+        found.append(f"{y:04d}-{m:02d}")
+        y, m = (y + 1, 1) if m == 12 else (y, m + 1)
+    return found
+
+
 def readme_page(months, folder, summaries, shown):
     """年表を兼ねた索引。年ごとに、要点と、月ごとの主な変更の要約（どちらも人か AI が書く）の表を並べる。新しい年が上。
     載せるのは、書き直す月（shown）と、前から年表にある月（人が書いた要約を消さない）。"""
     # 以前の timeline.md に書いた要点も拾う。README.md に書いたものが先
     kept = {**year_summaries(folder / "timeline.md"),
-            **{y: t for y, t in year_summaries(folder / "README.md").items() if t != EMPTY}}
+            **{y: t for y, t in year_summaries(folder / "README.md").items() if t not in (EMPTY, NONE)}}
     readme = folder / "README.md"
     text = readme.read_text(encoding="utf-8") if readme.exists() else ""
     points = points_in(text)
     listed = {m.group(1) for m in (ROW_RE.match(l) for l in text.splitlines()) if m}
     months = {m: months[m] for m in months if m in set(shown) | listed}
     out = ["# 変更の履歴"]
-    for year in sorted({m[:4] for m in months}, reverse=True):
-        out += ["", f"## {year}", "", tidy(kept.get(year), "year") or EMPTY, "", "| 月 | 件数 | 主な変更 |", "|---|---|---|"]
-        for month in sorted((m for m in months if m.startswith(year)), reverse=True):
+    every = month_range(min(months), max(months)) if months else []
+    for year in sorted({m[:4] for m in every}, reverse=True):
+        # 変更のなかった年は、要点の代わりに「変更なし」
+        quiet_year = not any(m.startswith(year) for m in months)
+        out += ["", f"## {year}", "", NONE if quiet_year else tidy(kept.get(year), "year") or EMPTY, "",
+                "| 月 | 件数 | 主な変更 |", "|---|---|---|"]
+        gap = []  # 続けて変更のなかった月（新しい順）
+        for month in sorted((m for m in every if m.startswith(year)), reverse=True) + [None]:
+            if month and month not in months:
+                gap.append(month)
+                continue
+            if gap:  # 変更のなかった月も載せ、空いた期間が分かるようにする（続いた月は 1 行。月のファイルはない）
+                out.append(f"| {gap[-1] if len(gap) == 1 else f'{gap[-1]}〜{gap[0]}'} | 0 | {NONE} |")
+                gap = []
+            if not month:
+                break
             summary = summaries[month]
             point = summary[2:] if summary and NOTHING_RE.match(summary) else points.get(month) if needs_point(summary) else None
-            out.append(f"| [{month}]({month}.md) | {len(months[month])} | {point or NO_POINT} |")
+            out.append(f"| [{month}]({month}.md) | {count(months[month])} | {point or NO_POINT} |")
     return "\n".join(out) + "\n"
 
 
@@ -572,9 +640,10 @@ def main():
     if args.list:
         for line in list_lines(months.get(args.list, []), args.depth, url, len(branches) > 1):
             print(line)
-        print(f"{args.list}：{len(months.get(args.list, []))} 件。読んだブランチ：{read_from(branches)}")
+        print(f"{args.list}：{count(months.get(args.list, []))} 件。読んだブランチ：{read_from(branches)}")
         return 0
     indexes, summaries = {}, {}
+    this_month = datetime.datetime.now(zoneinfo.ZoneInfo(args.tz)).strftime("%Y-%m")
     everything = {key(i): i for items in months.values() for i in items}
     for m, items in months.items():
         index = {key(i): i for i in items}
@@ -585,6 +654,10 @@ def main():
                 for j in inside(i):
                     index.setdefault(key(j), j)
         indexes[m] = index
+        # 依存の更新・リリース・ブランチ間の取り込みだけの月は、書き手を呼ばずにスクリプトが書く
+        # （終わっていない月は、あとから変更が増えるので書き手に任せる）
+        if summary in (None, "", EMPTY) and m < this_month and m in shown:
+            summary = quiet(items) or summary
         summaries[m] = tidy(summary, "month", index, url, everything)
     pages = {f"{m}.md": month_page(m, summaries[m]) for m in shown}
     pages["README.md"] = readme_page(months, args.folder, summaries, shown)
@@ -618,7 +691,7 @@ def main():
         (args.folder / name).write_text(pages[name], encoding="utf-8")
     if old.exists():
         old.unlink()  # 年ごとの要点は README.md に移した
-    total = sum(len(months[m]) for m in shown)
+    total = sum(count(months[m]) for m in shown)
     print(f"{args.folder}：{len(shown)} か月、{total} 件（書き換え {len(stale)} ファイル、形の崩れ {len(broken)} 件）。"
           f"読んだブランチ：{read_from(branches)}")
     return 1 if broken else 0

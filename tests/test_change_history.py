@@ -1,4 +1,5 @@
 """change-history の build_history.py を、合成のリポジトリで回す。"""
+import datetime
 import os
 import pathlib
 import shutil
@@ -6,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import zoneinfo
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "skills" / "change-history" / "scripts" / "build_history.py"
@@ -409,8 +411,96 @@ class BuildHistoryTests(unittest.TestCase):
         april = self.listing("2025-04")
         for line in ["- 2025-04-01 （リリース）Release v0.8.0（[#90]", "- 2025-04-02 （リリース）Bump version to 1.2.0（",
                      "- 2025-04-03 （リリース）chore(release): 1.3.0（", "- 2025-04-04 （リリース）v1.4.0（",
-                     "- 2025-04-05 Release automation for the docs site（[#91]", "- 2025-04-06 Bump requests from 2.31 to 2.32（"]:
+                     "- 2025-04-05 Release automation for the docs site（[#91]", "- 2025-04-06 （依存の更新）Bump requests from 2.31 to 2.32（"]:
             self.assertIn(line, april)
+
+    def test_dependency_updates_are_marked_and_quiet_months_are_written(self):
+        subjects = ["Bump requests from 2.31 to 2.32", "build(deps): bump the pip group with 3 updates",
+                    "chore(deps): update dependency ruff to v0.5", "Update dependency eslint to v9",
+                    "[pre-commit.ci] pre-commit autoupdate", "Release v0.9.0"]
+        for i, subject in enumerate(subjects):
+            self.commit("requirements.txt", str(i), subject, f"2025-05-0{i + 1}T00:00:00Z")
+        self.commit("requirements.txt", "x", "Bump requests from 2.32 to 2.33", "2025-06-01T00:00:00Z")
+        self.run_script()
+        may = self.listing("2025-05")
+        for subject in subjects[:-1]:
+            self.assertIn(f"（依存の更新）{subject}（", may)
+        # 依存の更新とリリースだけの月は、書き手を呼ばずにスクリプトが書く
+        self.assertIn("- 目立った変更なし（依存の更新・リリースのみ）", self.page("2025-05.md"))
+        self.assertIn("- 目立った変更なし（依存の更新のみ）", self.page("2025-06.md"))
+        self.assertIn("| [2025-06](2025-06.md) | 1 | 目立った変更なし（依存の更新のみ） |", self.page("README.md"))
+        self.assertIn("主な変更をまだ書いていない月（2）：2025-01、2025-02", self.run_script().stdout)
+        # 書いたものは上書きしない
+        self.fill_over("2025-06", "- 目立った変更なし（依存の更新のみ）", "### 運用改善\n\n| | requests を上げた | " +
+                       self.git("log", "-1", "--format=%h").strip() + " | |")
+        self.run_script()
+        self.assertIn("requests を上げた", self.page("2025-06.md"))
+        # 終わっていない月は、あとから変更が増えるので書かない
+        now = datetime.datetime.now(zoneinfo.ZoneInfo("Asia/Tokyo"))
+        self.commit("requirements.txt", "y", "Bump requests from 2.33 to 2.34", now.astimezone(datetime.timezone.utc).isoformat())
+        self.run_script()
+        self.assertIn("（まだ書いていない）", self.page(f"{now:%Y-%m}.md"))
+
+    def fill_over(self, month, old, new):
+        path = self.repo / "docs/change-history" / f"{month}.md"
+        path.write_text(path.read_text(encoding="utf-8").replace(old, new), encoding="utf-8")
+
+    def test_quiet_months_and_years_stay_in_the_timeline(self):
+        self.commit("src/a.py", "1", "Pick it up again (#7)", "2027-03-01T00:00:00Z")
+        self.assertEqual(self.run_script().returncode, 0)
+        index = self.page("README.md")
+        # 変更のなかった月も 0 件の行で載せ（月のファイルは作らない）、年ごと変更のない年は要点を「変更なし」にする
+        # 続いた月は 1 行にまとめ、年はまたがない
+        self.assertIn("| [2027-03](2027-03.md) | 1 | まだ |\n| 2027-01〜2027-02 | 0 | 変更なし |\n", index)
+        self.assertIn("## 2026\n\n変更なし\n\n| 月 | 件数 | 主な変更 |\n|---|---|---|\n| 2026-01〜2026-12 | 0 | 変更なし |\n", index)
+        self.assertIn("| 2025-03〜2025-12 | 0 | 変更なし |\n| [2025-02](2025-02.md) | 2 | まだ |\n| [2025-01](2025-01.md) | 1 | まだ |", index)
+        self.assertNotIn("| 2027-04", index)
+        self.commit("src/a.py", "2", "One more (#13)", "2026-06-01T00:00:00Z")
+        self.run_script()
+        self.assertIn("| 2026-07〜2026-12 | 0 | 変更なし |\n| [2026-06](2026-06.md) | 1 | まだ |\n| 2026-01〜2026-05 | 0 | 変更なし |",
+                      self.page("README.md"))
+        self.assertIn("## 2026\n\n（まだ書いていない）", self.page("README.md"))
+        self.assertTrue((self.repo / "docs/change-history/2025-02.md").exists())
+        self.assertFalse((self.repo / "docs/change-history/2025-03.md").exists())
+        self.assertEqual(self.run_script("--check").returncode, 0)
+
+    def test_counts_include_changes_merged_on_other_branches(self):
+        # 保守ブランチでマージした PR と直接のコミットは、取り込んだ月の件数に入る。PR の中のコミットは数えない
+        self.git("switch", "-q", "-c", "1.x")
+        self.git("switch", "-q", "-c", "fix")
+        self.commit("src/a.py", "1", "Fix a", "2025-03-01T00:00:00Z")
+        self.commit("src/a.py", "2", "Fix a again", "2025-03-01T00:00:00Z")
+        self.git("switch", "-q", "1.x")
+        self.merge("fix", "Merge pull request #8 from alice/fix\n\nFix a", "2025-03-02T00:00:00Z")
+        self.commit("src/b.py", "1", "Fix b (#9)", "2025-03-03T00:00:00Z")
+        self.commit("CHANGES.md", "1", "Release 1.0.1", "2025-03-04T00:00:00Z")
+        self.merge("main", "Merge branch 'main' into 1.x", "2025-03-04T00:00:00Z")  # 本流を戻したマージは数えない
+        self.git("switch", "-q", "main")
+        self.merge("1.x", "Merge branch '1.x'", "2025-03-05T00:00:00Z")
+        # 中で別の PR をマージした PR は、その PR も数える
+        self.git("switch", "-q", "-c", "big")
+        self.git("switch", "-q", "-c", "part")
+        self.commit("src/c.py", "1", "Part (#10)", "2025-03-06T00:00:00Z")
+        self.git("switch", "-q", "big")
+        self.merge("part", "Merge pull request #11 from o/part\n\nPart", "2025-03-07T00:00:00Z")
+        self.commit("src/c.py", "2", "Finish", "2025-03-07T00:00:00Z")
+        self.git("switch", "-q", "main")
+        self.merge("big", "Merge pull request #12 from o/big\n\nBig", "2025-03-08T00:00:00Z")
+        self.run_script()
+        self.assertIn("| [2025-03](2025-03.md) | 5 | まだ |", self.page("README.md"))
+        self.assertIn("2025-03：5 件。", self.listing("2025-03"))
+        self.assertIn("| [2025-02](2025-02.md) | 2 | まだ |", self.page("README.md"))
+
+    def test_single_commit_prs_are_not_listed_twice(self):
+        self.git("switch", "-q", "-c", "one")
+        self.commit("src/a.py", "1", "Add a", "2025-03-01T00:00:00Z")
+        self.git("switch", "-q", "main")
+        self.merge("one", "Merge pull request #5 from o/one\n\nAdd a", "2025-03-02T00:00:00Z")
+        march = self.listing("2025-03")
+        self.assertIn("- 2025-03-02 Add a（[#5]", march)
+        self.assertNotIn("  - Add a（", march)
+        # 中のコミットが別のタイトルなら出す
+        self.assertIn("  - Raise retries（", self.listing("2025-02"))
 
     def merge(self, branch, message, date):
         self.git("merge", "-q", "--no-ff", branch, "-m", message, env={"GIT_AUTHOR_DATE": date, "GIT_COMMITTER_DATE": date})
