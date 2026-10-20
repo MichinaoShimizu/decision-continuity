@@ -40,6 +40,7 @@ import pathlib
 import re
 import subprocess
 import sys
+import unicodedata
 import zoneinfo
 
 # 番号のないもの（Merge pull request from GHSA-…：セキュリティ修正のマージ）も、本文の 1 行目をタイトルにする
@@ -442,12 +443,20 @@ def is_row(parts):
     return len(parts) == 4 and parts[0] != "日付" and not all(c and set(c) <= set("-:") for c in parts)
 
 
+def ref_text(text):
+    """PR の列の文を、参照（#12 かコミットのハッシュ）を拾える形にする。リンク先の URL の中は見ない。書き方の揺れも読む：
+    全角（＃１２）、PR の URL（…/pull/12）、数字だけの列（12、13）。"""
+    text = unicodedata.normalize("NFKC", re.sub(r"\]\([^)]*\)", "]", text))
+    text = re.sub(r"https?://\S*?/pull/(\d+)\S*", r"#\1", text)
+    return re.sub(r"\d+", r"#\g<0>", text) if re.fullmatch(r"[\d\s、,]+", text) else text
+
+
 def lookup(text, index):
-    """PR の列の文から、その月の変更を順に返す。見つからない参照は None。"""
+    """PR の列の文から、その月の変更を順に返す。見つからない参照は None。ハッシュは、PR から入ったコミットにも当てる。"""
     found = []
-    for m in KEY_RE.finditer(re.sub(r"\]\([^)]*\)", "]", text)):  # リンク先の URL の中は見ない
+    for m in KEY_RE.finditer(ref_text(text)):
         pr, sha = m.groups()
-        item = index.get(f"#{pr}") if pr else next((i for k, i in index.items() if k.startswith(sha)), None)
+        item = index.get(f"#{pr}") if pr else next((i for i in index.values() if i.get("sha", "").startswith(sha)), None)
         if item is None or item not in found:
             found.append(item)
     return found
@@ -457,7 +466,7 @@ def resolve(text, index, everything):
     """PR の列の参照を、その月の変更、なければ全部の月の変更から探す。どこにもなければ、番号かハッシュだけの変更にする
     （リンクと、GitHub から取れた Author は入れる）。その月にない参照は、problems が崩れとして知らせる。"""
     found = []
-    for m in KEY_RE.finditer(re.sub(r"\]\([^)]*\)", "]", text)):  # 参照ごとに探す（重なっても、後ろの参照を落とさない）
+    for m in KEY_RE.finditer(ref_text(text)):  # 参照ごとに探す（重なっても、後ろの参照を落とさない）
         pr, sha = m.groups()
         item = lookup(m.group(0), index)[0] or lookup(m.group(0), everything)[0] or {
             "pr": pr, "sha": sha or "", "short": sha, "date": "", "author": PR_AUTHORS.get(pr, UNKNOWN) if pr else UNKNOWN}

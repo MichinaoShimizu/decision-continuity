@@ -180,6 +180,24 @@ class BuildHistoryTests(unittest.TestCase):
         self.run_script("--repo", ".")
         self.assertIn("| [#3](https://github.com/o/r/pull/3) | @alice |", self.page("2025-02.md"))
 
+    def test_pr_column_variants_are_read(self):
+        # 全角の ＃、PR の URL、数字だけの列、PR から入ったコミットのハッシュも、日付・リンク・Author を埋める
+        self.run_script()
+        squash = self.git("log", "-1", "--format=%h", "--grep", "Extend session").strip()
+        self.fill("2025-02", "\n".join([
+            "|  | 全角 | ＃３ |  |",
+            "|  | URL | https://github.com/o/r/pull/3 |  |",
+            "|  | 数字だけ | 2、3 |  |",
+            f"|  | PR のコミットのハッシュ | {squash} |  |",
+            "|  | 概要の数字は PR にしない | #3 ほか 2 件 |  |"]))
+        result = self.run_script()
+        self.assertNotIn("参照", result.stdout)
+        feb = self.page("2025-02.md")
+        for summary in ("全角", "URL", "概要の数字は PR にしない"):
+            self.assertIn(f"| 2025-02-04 | {summary} | [#3](https://github.com/o/r/pull/3) | @alice |", feb)
+        self.assertIn("| 2025-02-01 | 数字だけ | [#2](https://github.com/o/r/pull/2)、[#3](https://github.com/o/r/pull/3) | —、@alice |", feb)
+        self.assertIn("| 2025-02-01 | PR のコミットのハッシュ | [#2](https://github.com/o/r/pull/2) | — |", feb)
+
     def test_github_gives_pr_authors(self):
         # gh があれば、言われなくても PR の作成者を GitHub から取り、.git の中に覚えておく。PR のないコミットはメールから取る
         env = self.fake_gh('echo "$@" >> gh-args.txt; printf "2\\tbob\\t\\tExtend\\n3\\tcarol\\t\\tRetries\\n"')
