@@ -33,7 +33,7 @@ rm -rf .kiro/skills/decision-log .kiro/skills/change-history .kiro/agents/decisi
 
 ## 使い方
 
-まず change-history で流れをつかみ、「なぜ」まで要るテーマを decision-log で起こし、以後は変える前に check、決めたら record。回し方は[判断を途切れさせない回し方](docs/ai-workflow.md)。どちらも既定は下書きを返すだけで、ファイルに書くのは頼んだときだけ。履歴は手元の git から読むので、浅いクローンなら先に `git fetch --unshallow` する。
+まず change-history で流れをつかみ、「なぜ」まで要るテーマを decision-log で起こし、以後は変える前に check、決めたら record。回し方は[判断を途切れさせない回し方](docs/ai-workflow.md)。どちらも既定は下書きを返すだけで、ファイルに書くのは頼んだときだけ。履歴は手元の git から読み（浅いクローンなら先に `git fetch --unshallow`）、`gh` があれば PR の作成者・本文・レビューを GitHub から取る。
 
 ### 年表を作る（change-history）
 
@@ -60,7 +60,7 @@ https://gitlab.example.com/team/api.git
 change-history で、repos.txt のリポジトリの年表を中央にまとめて作って。
 ```
 
-`docs/change-history/<owner>/<repo>/` に各リポジトリの年表（形は 1 つのときと同じ）を、`docs/change-history/README.md` に、年ごとのリポジトリ別の要点と月 × リポジトリの件数の表を作る。クローンは `.cache/change-history/` に置き（git には入れない）、次からは差分だけを取る。非公開のリポジトリは、回す環境の git と `gh` に読む権限が要る。全体の年表を読める人は全部のリポジトリの変更の概要を読めるので、中央のリポジトリの公開範囲に気をつける。詳しくは [複数のリポジトリを中央にまとめる](skills/change-history/references/many-repos.md)。
+`docs/change-history/<owner>/<repo>/` に各リポジトリの年表を、`docs/change-history/README.md` に全体の年表を作る。非公開のリポジトリは、回す環境の git と `gh` に読む権限が要る。全体の年表は全部のリポジトリの変更の概要を見せるので、中央のリポジトリの公開範囲に気をつける。詳しくは [複数のリポジトリを中央にまとめる](skills/change-history/references/many-repos.md)。
 
 ### Decision log を作る（decision-log）
 
@@ -73,7 +73,7 @@ decision-log で audit して。期間は 2024 年。
 decision-log で write して。範囲は指定しない。
 ```
 
-洗い出しは decision-log-planner、読むのは decision-log-reader が受け持つ。候補は大事な順に 20 件ずつの回に分け、全部の回を終えるまで続ける。読み手 1 つに渡すのは 5 件まで（30 ファイルか 1000 行を超える大きな PR は 1 件だけ。置き場所ごとに判断に当たるファイルから読み、読まなかったものは「読み残し」に返す）で、Decision log は 1 つずつ、節を全部埋めて書く。途中で止まったら、報告の「読み残し」にある次の回から頼み直す。
+洗い出しは decision-log-planner、読むのは decision-log-reader が受け持ち、大事な順に 20 件ずつの回に分けて全部の回を終えるまで続ける。途中で止まったら、報告の「読み残し」にある次の回から頼み直す。
 
 作ったあとは、変える前の照合（`check`）と、新しい判断の記録（`record`）に使う。
 
