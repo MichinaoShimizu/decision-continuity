@@ -1,2 +1,0 @@
-- change-history: 一覧（`repos.txt`）にした複数のリポジトリの年表を、1 つのリポジトリ（中央のリポジトリ）にまとめて作る `build_many.py` を足した。各リポジトリは `.cache/change-history/` に bare のクローン（`--filter=blob:none`）を作って取り直し、`docs/change-history/<owner>/<repo>/` に 1 つのときと同じ形の年表を、`docs/change-history/README.md` に年ごとのリポジトリ別の要点と月 × リポジトリの件数の表を書く。手順は `skills/change-history/references/many-repos.md`。いまのリポジトリを対象にする使い方は変わらない
-- change-history: `build_history.py` に、いまのディレクトリでないリポジトリを読む `--repo` と、コミットの件名・本文と変えたファイルを出す `--show` を足した（author の名前とメールは出さない）

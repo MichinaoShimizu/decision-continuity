@@ -2,6 +2,40 @@
 
 decision-continuity の主な変更。[Keep a Changelog](https://keepachangelog.com/) の形で書く。変更は `changes/` の断片に書き（[changes/README.md](changes/README.md)）、リリースのときに版の節にまとめる。版は中身から決まり（[Semantic Versioning](https://semver.org/)、`sh tools/next-version.sh`）、各版の節がそのまま GitHub のリリースノートになる。手順は [docs/release.md](docs/release.md)。
 
+## v0.13.0 - 2026-10-20
+
+### Added
+
+- change-history: 主な変更の表の PR の列に、その PR を挙げた Decision log（`docs/decision-logs/`）へのリンクを、PR の後ろに添える（`[#12](…)、[DL-3](…)`）
+  - 置き場所は `--decision-logs` で変えられる。複数のリポジトリを中央にまとめるときは添えない
+- change-history: 一覧（`repos.txt`）にした複数のリポジトリの年表を、1 つのリポジトリ（中央のリポジトリ）にまとめて作る `build_many.py` を足した。各リポジトリは `.cache/change-history/` に bare のクローン（`--filter=blob:none`）を作って取り直し、`docs/change-history/<owner>/<repo>/` に 1 つのときと同じ形の年表を、`docs/change-history/README.md` に年ごとのリポジトリ別の要点と月 × リポジトリの件数の表を書く。手順は `skills/change-history/references/many-repos.md`。いまのリポジトリを対象にする使い方は変わらない
+- change-history: `build_history.py` に、いまのディレクトリでないリポジトリを読む `--repo` と、コミットの件名・本文と変えたファイルを出す `--show` を足した（author の名前とメールは出さない）
+- change-history: 月ごとの主な変更の表を書くサブエージェント `change-history-writer` を足した。12 か月ずつの回に分けて並べて呼び、書き手は月のファイルだけを書いて要約の 1 文を返す（年表にはメインの会話が入れる）。Kiro では、`--list` と `git show` を確認なしで通し、書き込みを `docs/change-history/*.md` に限る
+- change-history: 書き手は月のファイルを相対パスのまま読んでから書き、読み直して確かめる（長い絶対パスを写し間違えて別の場所に書き、「書いた」と返すことがあった）。作り直しのたびに「主な変更をまだ書いていない月」を出し、メインの会話はその月だけ書き手に頼み直す
+
+### Changed
+
+- change-history: 書き手（`change-history-writer`）は、変えたファイルを `git show --stat` ではなく `build_history.py --show` で見る。`--repo` を受け取ったら `--list` と `--show` に付ける。Kiro の書き手は `docs/change-history/<owner>/<repo>/*.md` にも確認なしで書ける
+- change-history: 月の主な変更と年の要点を分類（機能改善・運用改善・バグ対応）に分けず、月は日付の順の 1 つの表、年は「- 」の行にする
+  - 前の形の分類の見出しと説明の文は、次に作り直すときにスクリプトが外し、月の表は 1 つにまとめ直す
+- change-history: GitHub から取った PR（作成者・PR を入れたコミット・タイトル）を `.git/decision-continuity-prs.json` に覚えておき、2 回目からは更新の新しい PR だけを取る。`--list`（書き手が月ごとに呼ぶ）は問い合わせず、覚えておいた分を使う。PR が数万件のリポジトリで、作り直しや書き手のたびに全部の PR を取り直していた
+- change-history: 件名に PR の番号がないコミット（Rebase and merge など）も、GitHub の PR を入れたコミットから PR の番号とタイトルを付ける
+- change-history: `--until YYYY-MM` で、書く月の終わりを決められる。年表には、その期間の月と、前から年表にある月を載せる
+- change-history: `Merge pull request from GHSA-…` のような番号のないマージも、本文の 1 行目をタイトルにする
+- change-history: 月の表の行を日付の順に並べる。書くもののない月は、理由を問わず `- 目立った変更なし（依存の更新のみ）` のように書ける（以前は取り込みとリリースの 3 通りだけ）
+- change-history: メインの会話は `--list` を読まない（書き手が読む）と SKILL.md に書いた。本物のエージェントで回すと、メインも書き手も同じ月を読んでいた
+- change-history: 1 行の PR の列は 5 件までにし、超える行を形の崩れとして知らせる。同じ種類の変更が多いときは、代表を書いて件数を概要に書く（翻訳 98 件を 1 行に並べて、表が読めなくなっていた）。文書・翻訳・CI は運用改善と書き手の決まりに書いた
+- change-history: `gh` で PR の作成者を取れないとき、フォークからのマージの件名（`Merge pull request #12 from alice/fix`）から Author を取るようにした。同じメールの PR を通さない変更にも使う。前に `—` と書いた Author は、取れるようになった名前に替わる
+- change-history: 年表の件数を、PR の中のコミットを数えず、保守ブランチ（`Merge branch '8.1.x'` など）でマージされてから取り込まれた PR と直接のコミットまで数える形にした。中で別の PR をマージした PR は、その PR も数える。ブランチ間のマージは元のブランチで数える（pallets/click の 2023-07 は 7 件と出ていたが、実際は 32 件）
+- change-history: 変更のなかった月も年表に `| 2024-01〜2024-02 | 0 | 変更なし |` の行で載せ、空いた期間が分かるようにした（続いた月は 1 行。月のファイルは作らない）。変更のなかった年は、年の要点を「変更なし」にする
+- change-history: 依存の更新（`Bump requests from 2.31 to 2.32`・`build(deps): …`・`chore(deps): …`・`Update dependency …`・`[pre-commit.ci] pre-commit autoupdate`）に「（依存の更新）」の印を付ける。依存の更新・リリース・ブランチ間の取り込みだけの終わった月は、スクリプトが `- 目立った変更なし（依存の更新のみ）` のように書き、書き手を呼ばない
+- change-history: `--list` は、1 コミットだけの PR の中のコミットを、マージの行と同じタイトルならもう出さない（pallets/click で字下げした行の 2 割がこれだった）
+
+### Fixed
+
+- change-history: その月の変更にない PR を書いた行や、決まりにない分類の見出しの下の行は、Author が空で PR もリンクにならないまま残っていた。全部の月の変更から探して日付・リンク・Author を入れ（どこにもない PR も、リンクと GitHub から取れた Author は入れる）、崩れとしては今までどおり知らせる
+- change-history: PR の列に同じ PR を 2 度書くと、後ろの読めない参照が消えていた。どこにもないコミットのハッシュは、作り直すたびに 7 文字に切り詰められ、リンク先まで変わっていた
+
 ## v0.12.0 - 2026-10-19
 
 ### Changed
