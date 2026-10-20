@@ -78,9 +78,16 @@ SHORT_DATE_RE = re.compile(r"\d+\s*月|(?<![\d-])\d{1,2}-\d{1,2}(?![\d-])")
 COMMIT, FIELD = "\x1e", "\x1f"
 # PR の番号ごとの、その PR を挙げた Decision log の (番号, 月のファイルからの相対パス)。PR の列に PR の後ろに添える
 DECISIONS = {}
-# Decision log のファイル（0001-retry-limit.md）と、その中の PR（[PR #101][pr101] の文か、<origin>/pull/101 のリンク）
+# 1 行に並べる Decision log のリンクの上限。超えたら件数を書き、Decision log の索引（DL_INDEX）にリンクする
+MAX_DLS = 3
+DL_INDEX = []
+# Decision log のファイル（0001-retry-limit.md）と、その中の PR（[PR #101][pr101] の文か、<origin>/pull/101 のリンク）。
+# PR を拾うのは「起きたこと」の行（- 2025-03-04 …。追記の中も）だけ。理由や問いの中で触れただけの PR は拾わない
 DL_FILE_RE = re.compile(r"^(\d{4})-[^/]*\.md$")
 DL_PR_RE = re.compile(r"\bPR #(\d+)")
+DL_EVENT_RE = re.compile(r"^- \d{4}-\d{2}-\d{2} ", re.M)
+# 書き手が書く主な変更の行：- #12、#13：概要（PR のない変更はコミットのハッシュ）。スクリプトが表の行にする
+LINE_RE = re.compile(r"^- ([^：]+?)：\s*(.+)$")
 # GraphQL で 1 回に聞くコミットの数
 BATCH = 50
 # 読むリポジトリ（--repo）。None ならいまのディレクトリ
@@ -260,11 +267,12 @@ def decision_logs(logs, folder, url):
         m = DL_FILE_RE.match(path.name)
         if not m:
             continue
-        text = path.read_text(encoding="utf-8")
-        prs = set(DL_PR_RE.findall(text)) | set(pulls.findall(text))
+        events = "\n".join(l for l in path.read_text(encoding="utf-8").splitlines() if DL_EVENT_RE.match(l))
+        prs = set(DL_PR_RE.findall(events)) | set(pulls.findall(events))
         where = pathlib.PurePath(os.path.relpath(path, folder)).as_posix()
         for pr in prs:
             found[pr].append((int(m.group(1)), where))
+    DL_INDEX[:] = [pathlib.PurePath(os.path.relpath(logs / "README.md", folder)).as_posix()]
     return found
 
 
@@ -327,6 +335,12 @@ def ref_text(text):
     return re.sub(r"(?<!\d)\d{1,6}(?!\d)", r"#\g<0>", text) if re.fullmatch(r"[\d\s、,]+", text) else text
 
 
+def refs_only(text):
+    """参照（#12・ハッシュ）と区切りだけの文か。「- #12、#13：概要」の前半を見分ける。"""
+    text = ref_text(text)
+    return bool(KEY_RE.search(text)) and not re.sub(r"[\s、,]", "", KEY_RE.sub("", text))
+
+
 def lookup(text, index):
     """PR の列の文から、その月の変更を順に返す。見つからない参照は None。ハッシュは、PR を入れたコミットにも当てる。"""
     found = []
@@ -356,13 +370,15 @@ def row(summary, items, url):
     authors = "、".join(dict.fromkeys(i["author"] for i in items))
     date = next((i["date"] for i in items if i["date"]), "")
     logs = sorted({d for i in items for d in DECISIONS.get(i["pr"] or "", ())})
-    refs = [link(i, url) for i in items] + [f"[DL-{n}]({where})" for n, where in logs]
+    refs = [link(i, url) for i in items]
+    refs += [f"[DL-{n}]({where})" for n, where in logs] if len(logs) <= MAX_DLS else [f"[Decision log {len(logs)} 件]({DL_INDEX[0]})"]
     return f"| {date} | {summary} | {'、'.join(refs)} | {authors} |"
 
 
 def tidy(text, kind, index=None, url=None, everything=None):
-    """月の表の日付・Author・PR の列を、その月の変更から埋め直し、日付の順に 1 つの表に並べる。前の形の「- 概要（#12）」の行は
-    表の行に移し、前の形の ### <分類> の見出しと説明の文は外す。中身の言葉（概要・年の要点）は変えない。"""
+    """月の主な変更を、日付の順の 1 つの表にする。書き手が書いた「- #12、#13：概要」の行と、前の形の「- 概要（#12）」の行は
+    表の行にし、表の行は日付・Author・PR の列をその月の変更から埋め直す。前の形の ### <分類> の見出しと説明の文は外す。
+    中身の言葉（概要・年の要点）は変えない。"""
     if text in (None, "", EMPTY, NONE) or NOTHING_RE.match(text):
         return text
     lines = [l.strip() for l in text.splitlines()]
@@ -373,7 +389,11 @@ def tidy(text, kind, index=None, url=None, everything=None):
     for line in lines:
         m = OLD_LINE_RE.match(line)
         parts = cells(line) if line.startswith("|") else None
-        if parts and is_row(parts):
+        written = LINE_RE.match(line)
+        if written and refs_only(written.group(1)):
+            found = resolve(written.group(1), index, everything or {})
+            rows.append(row(written.group(2).replace("|", "\\|"), found, url))
+        elif parts and is_row(parts):
             found = resolve(parts[2], index, everything or {})
             rows.append(row(parts[1], found, url) if found else line)
         elif m:

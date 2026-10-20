@@ -178,6 +178,26 @@ class BuildHistoryTests(unittest.TestCase):
         self.run_script()
         self.assertIn(f"| 2025-02-01 | 決済とセッション | [#2]({URL}/pull/2)、[#3]({URL}/pull/3) | @bob、@alice |", self.page("2025-02.md"))
 
+    def test_written_lines_become_table_rows(self):
+        # 書き手は「- #12、#13：概要」の行だけを書く。スクリプトが表にし、日付の順に並べる
+        self.run_script()
+        sha = self.git("log", "-1", "--format=%H", "--grep", "Initial").strip()
+        self.fill("2025-02", "- #3：決済の再試行を a|b に増やした\n- ＃2、#3 ：まとめて見直した\n- #99：ない PR")
+        self.fill("2025-01", f"- {sha[:7]}：始めた")
+        result = self.run_script()
+        self.assertEqual(self.page("2025-02.md"), "\n".join([
+            "# 2025-02", "", "## 主な変更", "", "| 日付 | 概要 | PR | Author |", "|---|---|---|---|",
+            f"| 2025-02-01 | まとめて見直した | [#2]({URL}/pull/2)、[#3]({URL}/pull/3) | @bob、@alice |",
+            f"| 2025-02-04 | 決済の再試行を a\\|b に増やした | [#3]({URL}/pull/3) | @alice |",
+            f"|  | ない PR | [#99]({URL}/pull/99) | — |"]) + "\n")
+        self.assertIn(f"| 2025-01-10 | 始めた | [{sha[:7]}]({URL}/commit/{sha}) | @carol |", self.page("2025-01.md"))
+        self.assertIn("PR の列の参照が、この月の変更にない", result.stdout)
+        # 参照のない行や、コロンのない行は書き換えず、崩れとして知らせる
+        self.fill("2025-01", "- 説明：参照がない\n- コロンがない", old=f"| 2025-01-10 | 始めた | [{sha[:7]}]({URL}/commit/{sha}) | @carol |")
+        result = self.run_script()
+        self.assertIn("- 説明：参照がない", self.page("2025-01.md"))
+        self.assertEqual(result.stdout.count("2025-01.md の「## 主な変更」"), 2)
+
     def test_pr_column_variants_are_read(self):
         # 全角の ＃、PR の URL、数字だけの列、PR を入れたコミットのハッシュも、日付・リンク・Author を埋める
         self.run_script()
@@ -217,10 +237,12 @@ class BuildHistoryTests(unittest.TestCase):
         # PR を挙げた Decision log へのリンクを、PR の後ろに番号の順に添える。書き手が書かなくても、作り直すたびに入れ直す
         self.write("docs/decision-logs/0007-retry.md", "# 再試行\n\n- 2025-02-04 上限を 5 に（[PR #3][pr3]）\n\n"
                                                       f"[pr3]: {URL}/pull/3")
-        self.write("docs/decision-logs/0002-retry-again.md", f"# 再試行の続き\n\n- [リンクだけ]({URL}/pull/3)")
-        # 索引、ほかのリポジトリの PR、#3 の文だけのものは当たらない
-        self.write("docs/decision-logs/README.md", f"- [PR #3]({URL}/pull/3)")
-        self.write("docs/decision-logs/0003-other.md", "# ほか\n\n- https://github.com/x/y/pull/3 と #3")
+        self.write("docs/decision-logs/0002-retry-again.md", f"# 再試行の続き\n\n## 追記 2025-03-01\n\n- 2025-03-01 戻した（[リンクだけ]({URL}/pull/3)）")
+        # 索引、ほかのリポジトリの PR、#3 の文だけのもの、起きたことの行でなく理由や問いで触れただけのものは当たらない
+        self.write("docs/decision-logs/README.md", f"- 2025-02-04 [PR #3]({URL}/pull/3)")
+        self.write("docs/decision-logs/0003-other.md", "# ほか\n\n- 2025-02-04 https://github.com/x/y/pull/3 と #3")
+        self.write("docs/decision-logs/0004-mention.md", "# 別の判断\n\n## 理由\n\n記録あり：PR #3 の流れを受けて決めた\n\n"
+                                                        "- PR #3 と同じか（@alice に聞く）")
         self.run_script()
         self.fill("2025-02", "|  | 決済の再試行を増やした | #3 |  |\n|  | セッションを延ばした | #2 |  |")
         self.run_script()
@@ -237,6 +259,13 @@ class BuildHistoryTests(unittest.TestCase):
         self.assertEqual(self.run_script("--check").returncode, 1)
         self.run_script()
         self.assertIn(f"| [#3]({URL}/pull/3)、[DL-7](../decision-logs/0007-retry.md) |", self.page("2025-02.md"))
+        # 4 つ以上になる行は、件数を書いて Decision log の索引にリンクする
+        for n in (11, 12, 13):
+            self.write(f"docs/decision-logs/00{n}-more.md", "- 2025-02-04 これも（PR #3）")
+        self.run_script()
+        self.assertIn(f"| [#3]({URL}/pull/3)、[Decision log 4 件](../decision-logs/README.md) |", self.page("2025-02.md"))
+        for n in (11, 12, 13):
+            (self.repo / f"docs/decision-logs/00{n}-more.md").unlink()
         # 置き場所は --decision-logs で変えられる
         shutil.move(self.repo / "docs/decision-logs", self.repo / "decisions")
         self.run_script("--decision-logs", "decisions")

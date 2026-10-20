@@ -2,3 +2,5 @@
   - `--no-github` をなくし、`build_history.py` に `--github-repo OWNER/REPO` を足した。`build_many.py` の `repos.txt` は GitHub の `owner/repo` か、その URL だけを受け付ける
   - 年表の件数は、その月の PR と直接のコミットの数になった（マージの中身や保守ブランチの取り込みの中は数えない）
   - `--check`・`--list` は GitHub に問い合わせず、書き出したときに覚えた分を使う
+  - 書き手は主な変更を `- #12、#13：概要` の行で書き、スクリプトが表にする（前の表の形もそのまま読む）
+  - PR の列に添える Decision log は、その「起きたこと」の行に PR が出てくるものだけにした。4 つ以上は件数を書き、Decision log の索引にリンクする
