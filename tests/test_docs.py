@@ -160,15 +160,6 @@ class AgentTests(unittest.TestCase):
                     self.assertFalse(allowed(cmd, rules), cmd)
 
 
-    def test_change_history_categories(self):
-        # change-history の主な変更と年の要点は、機能改善・運用改善・バグ対応の 3 つで分ける。SKILL.md とスクリプトを揃える
-        script = (ROOT / "skills/change-history/scripts/build_history.py").read_text(encoding="utf-8")
-        got = re.findall(r'^    "(.+?)": ".+?",$', re.search(r"DESCRIPTIONS = \{(.*?)\n\}", script, re.S).group(1), re.M)
-        self.assertEqual(got, ["機能改善", "運用改善", "バグ対応"])
-        skill = (ROOT / "skills/change-history/SKILL.md").read_text(encoding="utf-8")
-        line = next(l for l in skill.splitlines() if "分類は `機能改善`" in l)
-        self.assertEqual(re.findall(r"`(.+?)`", line.split("分類は ", 1)[1].split(" の 3 つ", 1)[0]), got)
-
     def test_both_skills_skip_the_same_routine_releases(self):
         # 版を上げるだけのリリースは、change-history の主な変更にも decision-log の候補にも入れない
         script = (ROOT / "skills/change-history/scripts/build_history.py").read_text(encoding="utf-8")

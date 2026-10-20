@@ -107,9 +107,8 @@ def overview(folder, keys):
         # その年までに始まっていたリポジトリ。最後の変更より後の年も、変更なしとして載せる
         here = [k for k, (counts, _) in repos.items() if counts and min(counts)[:4] <= year]
         for key in here:
-            # 各リポジトリの年の要点を、見出しを 1 段下げて写す
-            point = re.sub(r"^### ", "#### ", repos[key][1].get(year, bh.NONE), flags=re.M)
-            out += ["", f"### [{key}]({key}/README.md)", "", point]
+            # 各リポジトリの年の要点を写す
+            out += ["", f"### [{key}]({key}/README.md)", "", repos[key][1].get(year, bh.NONE)]
         out += ["", "| 月 | " + " | ".join(here) + " |", "|---|" + "---|" * len(here)]
         # どこにも変更のなかった月が続けば、マスが同じあいだ 1 行にまとめる（新しい順）
         rows = []

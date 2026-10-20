@@ -36,3 +36,8 @@ Superseded：`build_history.py` は年の要点の分類を `YEAR_DESCRIPTIONS` 
 
 - 2026-10-19 月の主な変更の分類も、decision-log と同じ 11 種から、年表と同じ機能改善・運用改善・バグ対応の 3 つに変えた。目立った不具合の修正は `バグ対応` に書く。decision-log の分類は 11 種のまま（ブランチ month-categories。作成 @MichinaoShimizu）。理由：「年表の各月毎のファイルも、機能改善、運用改善、バグ解消に分類したい」（@MichinaoShimizu、会話 2026-10-19）。名前は年表で使っていた「バグ対応」に揃えた（Claude の判断。「バグ解消」にするかは @MichinaoShimizu に聞く）。途中で「やっぱりカテゴリは一般的なCHANGELOやリリースノートに登場する分類が良いかな」として Keep a Changelog の 6 つ（`Added`・`Changed`・`Deprecated`・`Removed`・`Fixed`・`Security`）を試したが、「いや、やっぱり機能改善・運用改善・バグ対応の方がわかりやすいか」で 3 つに戻した（@MichinaoShimizu、会話 2026-10-19）。互換を壊す変更を行の頭の `BREAKING:` で示す案は Claude が挙げただけで、入れていない。最初に 11 種を選んだ理由（「なぜ」まで要るテーマを同じ分類のまま decision-log に回せる）は、この変更で失われる
 Superseded：`build_history.py` は月と年の両方を `DESCRIPTIONS` の 3 つで確かめる（`skills/change-history/scripts/build_history.py`）。SKILL.md の手順 2 は、分類を機能改善・運用改善・バグ対応の 3 つとする
+
+## 追記 2026-10-20（分類をなくす）
+
+- 2026-10-20 月の主な変更と年の要点の分類（機能改善・運用改善・バグ対応）をなくした。月は日付の順の 1 つの表、年は「- 」の行にする。前の形の `### <分類>` の見出しと説明の文は、作り直すときにスクリプトが外し、月の表は 1 つにまとめ直す。書き手は分類を選ばない（ブランチ change-history-no-categories。作成 @MichinaoShimizu）。理由：「カテゴリって必要？」という問いに、Claude は、月の表では毎月同じ説明の文が並び、書き手の判断が増え、時間の順が分類で切れること、最初に分類を入れた理由（decision-log と同じ分類のまま回せる）は 3 つに変えたときに失われたことを挙げ、年の要点には残す案を出した。@MichinaoShimizu が「年表の分類は月・年ともになくそう」と決めた（会話 2026-10-20）。decision-log の `category` は残す（Claude は、audit の分担と観点ごとに読む入口に効くと答えた）
+Superseded：`build_history.py` は `tidy` で前の形の分類の見出しと説明（`OLD_DESCRIPTIONS`）を外し、`problems` は月を表の行だけ、年を「- 」の行だけとして確かめる（`skills/change-history/scripts/build_history.py`）。SKILL.md と書き手は分類に分けない
