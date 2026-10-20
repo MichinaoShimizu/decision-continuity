@@ -4,12 +4,11 @@
   build_many.py <一覧> <フォルダー> [--cache .cache/change-history] [--since YYYY-MM] [--until YYYY-MM]   取って、書き出す
   build_many.py <一覧> <フォルダー> --check                                                            最新か確かめる（取らない）
 
-一覧（repos.txt など）は 1 行に 1 つ。owner/repo（GitHub）か、clone できる URL。後ろに --branch・--depth を書ける。
-# から後と空の行は読まない。
+一覧（repos.txt など）は 1 行に 1 つ。GitHub の owner/repo か、その URL（https://github.com/… か git@github.com:…）。
+後ろに --branch・--depth を書ける。# から後と空の行は読まない。GitHub でないリポジトリは扱わない（gh が要る）。
 
   pallets/click
   pallets/flask --branch main --branch stable
-  https://gitlab.example.com/team/api.git
 
 リポジトリごとに、--cache の下に bare のクローン（--filter=blob:none。ファイルの中身は取らない）を作るか、取り直し、
 build_history.py（このファイルと同じフォルダーのもの）を --repo で回して <フォルダー>/<owner>/<repo>/ に月の表と年表を書く。
@@ -34,6 +33,8 @@ NAME_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9._-]*$")
 GAP_RE = re.compile(rf"^\| (\d{{4}}-\d{{2}})(?:〜(\d{{4}}-\d{{2}}))? \| 0 \| {bh.NONE} \|$")
 COUNT_RE = re.compile(r"^\| \[(\d{4}-\d{2})\]\(\1\.md\) \| (\d+) \|")
 PASSED = ("--branch", "--depth")
+# GitHub の URL（https://github.com/o/r(.git)、git@github.com:o/r.git）から owner/repo
+GITHUB_RE = re.compile(r"^(?:https://github\.com/|git@github\.com:)([^/]+/[^/]+?)(?:\.git)?/?$")
 
 
 def entries(path):
@@ -44,13 +45,11 @@ def entries(path):
         if not words:
             continue
         spec, rest = words[0], words[1:]
-        if "://" in spec or spec.startswith("git@"):
-            url = spec
-            parts = re.split(r"[/:]", spec.removesuffix("/").removesuffix(".git"))[-2:]
-        else:
-            url, parts = f"https://github.com/{spec}.git", spec.split("/")
-        if len(parts) != 2 or not all(NAME_RE.match(p) for p in parts):
-            sys.exit(f"{path} の {number} 行目：{spec} は owner/repo か clone できる URL で書く")
+        m = GITHUB_RE.match(spec)
+        parts = (m.group(1) if m else spec).split("/")
+        if (not m and ("://" in spec or spec.startswith("git@"))) or len(parts) != 2 or not all(NAME_RE.match(p) for p in parts):
+            sys.exit(f"{path} の {number} 行目：{spec} は GitHub の owner/repo か、その URL で書く")
+        url = f"https://github.com/{'/'.join(parts)}.git"
         key = "/".join(parts)
         if key.lower() in seen:
             sys.exit(f"{path} の {number} 行目：{key} が 2 度ある")
@@ -139,7 +138,6 @@ def main():
                    help="クローンを置く場所（既定 .cache/change-history。中身は git に入れない）")
     p.add_argument("--since", help="この月（YYYY-MM）から書く")
     p.add_argument("--until", help="この月（YYYY-MM）まで書く")
-    p.add_argument("--no-github", action="store_true", help="GitHub に問い合わせない（Author はメールから取る）")
     p.add_argument("--no-fetch", action="store_true", help="取り直さず、いまのクローンを読む")
     p.add_argument("--check", action="store_true", help="取らず、書かずに、最新かを確かめる")
     args = p.parse_args()
@@ -160,11 +158,11 @@ def main():
             bad = True
             continue
         flags = [*extra, *(["--since", args.since] if args.since else []), *(["--until", args.until] if args.until else []),
-                 *(["--no-github"] if args.no_github else []), *(["--check"] if args.check else [])]
-        out = subprocess.run([sys.executable, str(BUILD), str(args.folder / key), "--repo", str(clone), *flags],
+                 *(["--check"] if args.check else [])]
+        out = subprocess.run([sys.executable, str(BUILD), str(args.folder / key), "--repo", str(clone), "--github-repo", key, *flags],
                              capture_output=True, text=True, encoding="utf-8", errors="replace")
-        # 書き手に渡すもの（置き場所・--repo・--branch）を添える
-        print(f"== {key}（置き場所 {args.folder / key}、--repo {clone}{''.join(' ' + w for w in extra)}）")
+        # 書き手に渡すもの（置き場所・--repo・--github-repo・--branch）を添える
+        print(f"== {key}（置き場所 {args.folder / key}、--repo {clone} --github-repo {key}{''.join(' ' + w for w in extra)}）")
         print((out.stdout + out.stderr).rstrip())
         bad = bad or out.returncode != 0
     readme = args.folder / "README.md"

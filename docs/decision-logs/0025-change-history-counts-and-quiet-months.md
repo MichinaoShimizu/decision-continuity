@@ -23,3 +23,8 @@ Active：`build_history.py` の年表の件数は、PR の中のコミットを�
 
 - 「正確な件数」を、PR と直接のコミットの数とした（PR の中のコミットは数えない）。PR の中のコミットまで数えたい人がいるか（@MichinaoShimizu に聞く）。
 - 依存の更新の見分けは件名の形だけで決める（`Bump x from a to b`・`build(deps):`・`chore(deps):`・`Update dependency x`・`[pre-commit.ci] pre-commit autoupdate`）。ほかの形のボットや、手で書いた依存の更新は印が付かない。
+
+## 追記 2026-10-20（件数は PR と直接のコミット）
+
+- 2026-10-20 年表の件数を、その月にデフォルトブランチへマージされた PR と、PR を通さない直接のコミットの数にした。マージの中身や保守ブランチの取り込みの中まで数えるのをやめた（DL-27。ブランチ change-history-from-prs。作成 @MichinaoShimizu）。依存の更新・リリース・ブランチの取り込みだけの月をスクリプトが書く扱いと、変更のない月を載せる扱いは残した
+Superseded：`build_history.py` の `readme_page` は、月の変更の数（`len`）を件数にし、`size` はない（`skills/change-history/scripts/build_history.py`）

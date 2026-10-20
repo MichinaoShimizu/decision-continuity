@@ -1,0 +1,5 @@
+- BREAKING: change-history: GitHub でデフォルトブランチにマージされた PR と、PR を通さない直接のコミットから年表を作る。日付・PR・Author は GitHub の値をそのまま使い、git の件名やメールから推測しない。`gh` が要り、GitHub でないリポジトリは扱わない
+  - `--no-github` をなくし、`build_history.py` に `--github-repo OWNER/REPO` を足した。`build_many.py` の `repos.txt` は GitHub の `owner/repo` か、その URL だけを受け付ける
+  - 年表の件数は、その月の PR と直接のコミットの数になった（マージの中身や保守ブランチの取り込みの中は数えない）
+  - `--check`・`--list` は GitHub に問い合わせず、書き出したときに覚えた分を使う
+  - 書き手は主な変更を `- #12、#13：概要` の行で書き、スクリプトが表にする（前の表の形もそのまま読む）

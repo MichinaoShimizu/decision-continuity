@@ -1,35 +1,27 @@
 #!/usr/bin/env python3
-"""マージされた変更の一覧を、月ごとの Markdown に書き出す（change-history の 1 段目）。
+"""デフォルトブランチに入った変更を、月ごとの Markdown に書き出す（change-history の 1 段目）。
 
-  build_history.py <フォルダー> [--branch develop --branch main] [--depth 2] [--since YYYY-MM] [--until YYYY-MM]   書き出す
-  build_history.py <フォルダー> --check                                                                         最新か確かめる（古ければ終了コード 1）
-  build_history.py <フォルダー> --list YYYY-MM                                                                  その月の全変更を出す（書かない）
-  build_history.py <フォルダー> --show <コミット>                                                               変えたファイルを出す（書かない）
+  build_history.py <フォルダー> [--branch main] [--depth 2] [--since YYYY-MM] [--until YYYY-MM]   GitHub から取り、書き出す
+  build_history.py <フォルダー> --check                                                         最新か確かめる（古ければ終了コード 1）
+  build_history.py <フォルダー> --list YYYY-MM                                                  その月の全変更を出す（書かない）
+  build_history.py <フォルダー> --show <コミット>                                               変えたファイルを出す（書かない）
 
 どれも --repo <クローン> で、いまのディレクトリでないリポジトリを読める（複数のリポジトリをまとめる build_many.py が使う）。
 
-月ごとの YYYY-MM.md（主な変更の表）と、年表を兼ねた索引の README.md を書く。日付は YYYY-MM-DD、月は YYYY-MM で書く。
-全変更の一覧はファイルに書かず、--list で出す（主な変更を選ぶ材料）。マージコミットの下には、取り込んだ側の
-コミット（PR の中のコミットや、release/1.2 などの読んでいないブランチでマージされた PR）を並べる。
-以前の timeline.md があれば、年ごとの要点を README.md に移して消す。
+変更は 2 つ。GitHub でそのブランチにマージされた PR（日付はマージの日、Author は PR の作成者、gh api で取る）と、
+PR を通さずにそのブランチへ入ったコミット（手元の git の --first-parent。Author は GitHub のコミットのアカウント）。
+gh が要る。書き出すときだけ GitHub に問い合わせ、取ったものは .git/decision-continuity-prs.json に覚えておく
+（--check・--list・--show は問い合わせず、覚えておいた分を使う）。
+読むブランチは推測しない。--branch を言わなければ、GitHub のデフォルトブランチだけを読む。
 
-リポジトリのルート（--repo なら、そのクローン）で動かす。手元の git の --first-parent の履歴を読む。ネットワークに出るのは、PR の作成者を取る gh api だけ
-（--no-github で止める）。
-読むブランチはリポジトリごとに違うので、推測しない。--branch を言わなければ、デフォルトブランチだけを読む（origin/HEAD の先。
-bare のクローンは HEAD の先。どちらもなければ gh api で GitHub に聞く）。分からなければ、--branch を求めて止まる。
-どのブランチにも入ったコミットは 1 つにまとめ、ブランチ間のマージ（develop から main へのリリースなど）には印を付ける。
-PR の番号はマージコミットの件名（Merge pull request #12）か、squash の件名の末尾（(#12)）から取る。
-年表の件数は PR と直接のコミットの数（PR の中のコミットは数えず、保守ブランチから取り込んだ変更は数える）。変更のなかった月も
-「変更なし」の行で載せる。依存の更新・リリースだけの終わった月は、主な変更に「- 目立った変更なし（…のみ）」と書く。
+月ごとの YYYY-MM.md（主な変更の表）と、年表を兼ねた索引の README.md を書く。日付は YYYY-MM-DD、月は YYYY-MM で書く。
+全変更の一覧はファイルに書かず、--list で出す（主な変更を選ぶ材料）。年表の件数は、その月の PR と直接のコミットの数。
+変更のなかった月も「変更なし」の行で載せる。依存の更新・リリースだけの終わった月は、主な変更に「- 目立った変更なし（…のみ）」と書く。
 各月の「## 主な変更」と、README.md の各年の要点・各月の要約は、作り直しても残す（人か AI が書く）。月の主な変更は 1 つの表、
-年の要点は「- 」の行で、どちらも分類に分けない（前の形の ### <分類> の見出しと説明の文は外す）。主な変更の表の日付と Author は、
-PR の列の変更から埋め直す（前の形の「- 概要（#12）」の行は表に移す）。
+年の要点は「- 」の行で、どちらも分類に分けない（前の形の ### <分類> の見出しと説明の文は外す）。表は人か AI が概要と
+PR の列だけを書き、日付・Author・PR のリンクはスクリプトが入れる（前の形の Decision log へのリンクは外す）。
 決まった形でなければ、どこが崩れているかを出し、終了コード 1 を返す。標準ライブラリだけを使う。
-主な変更の表の PR の列には、その PR を挙げた Decision log（docs/decision-logs/ の 0001-*.md。--decision-logs で変える）への
-リンクも、あれば PR の後ろに添える（[DL-3](…)）。
-人はアカウント名（@login）で、Author の列にだけ書く。gh が使えれば、PR の作成者を GitHub から取る（gh api の GET だけ）。
-取れない変更は、フォークからのマージの件名（Merge pull request #12 from alice/fix）か、noreply のメール（.mailmap を
-通す）から取る。名前（git の author 名）は書き出さない。
+人はアカウント名（@login）で、Author の列にだけ書く。名前（git の author 名）は書き出さない。
 """
 import argparse
 import collections
@@ -43,11 +35,8 @@ import sys
 import unicodedata
 import zoneinfo
 
-# 番号のないもの（Merge pull request from GHSA-…：セキュリティ修正のマージ）も、本文の 1 行目をタイトルにする
-# 2 つ目のグループは、取り込んだブランチのリポジトリの持ち主（フォークなら PR の作成者）
-MERGE_RE = re.compile(r"^Merge pull request (?:#(\d+) )?from (?:([A-Za-z0-9-]+)/)?\S+")
 SQUASH_RE = re.compile(r"^(.*?)\s*\(#(\d+)\)\s*$")
-# PR を通さないブランチの同期（Merge branch '3.0.x'、Merge remote-tracking branch 'origin/stable'）
+# PR を通さないマージ（Merge branch '3.0.x'、Merge remote-tracking branch 'origin/stable'）
 SYNC_RE = re.compile(r"^Merge (?:remote-tracking )?branch ")
 SYNC = "（ブランチの取り込み）"
 # 版を上げるだけの定型のリリース（Release v1.2.0、Bump version to 1.2.0、chore(release): 1.2.0、v1.2.0）
@@ -58,8 +47,6 @@ RELEASE = "（リリース）"
 DEPS_RE = re.compile(r"^(?:(?:chore|build|fix|ci)\((?:deps|deps-dev)\)!?:|bump \S+ from \S+ to \S+|bump the \S+ group"
                      r"|update dependency \S+|\[pre-commit\.ci\] pre-commit autoupdate)", re.I)
 DEPS = "（依存の更新）"
-# 読んだブランチどうしのマージ。中身は元のブランチの一覧に 1 件ずつ出る
-BETWEEN = "（{} から取り込み）"
 MONTH_RE = re.compile(r"^\d{4}-\d{2}$")
 SUMMARY = "## 主な変更"
 EMPTY = "（まだ書いていない）"
@@ -74,16 +61,13 @@ HEADER, RULE = "| 日付 | 概要 | PR | Author |", "|---|---|---|---|"
 MAX_REFS = 5
 NO_POINT = "まだ"
 ROW_RE = re.compile(r"^\| \[(\d{4}-\d{2})\]\(\1\.md\) \| \d+ \| (.*) \|$")
-# GitHub の noreply のメール（12345+alice@users.noreply.github.com）からアカウント名を取る。取れなければ UNKNOWN
-NOREPLY_RE = re.compile(r"^(?:\d+\+)?([A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\[bot\])?)@users\.noreply\.github\.com$", re.I)
 UNKNOWN = "—"
 CELL_RE = re.compile(r"(?<!\\)\|")
 OLD_LINE_RE = re.compile(r"^- (.*)（([^（）]*)）$")
 # 書くことのない月：取り込みだけ、リリースだけ、依存の更新だけ、など。理由は（…のみ）に書く
 NOTHING_RE = re.compile(r"^- 目立った変更なし（[^（）\n]+のみ）$")
 # 書き手を呼ばずにスクリプトが「目立った変更なし（…のみ）」と書く変更の印と、（…のみ）に書く名前（この順に並べる）
-QUIET = {DEPS: "依存の更新", RELEASE: "リリース"}
-BETWEEN_NAME = "ブランチの取り込み"
+QUIET = {DEPS: "依存の更新", RELEASE: "リリース", SYNC: "ブランチの取り込み"}
 # 変更のなかった月（年表の表の行）と年（年の要点）
 NONE = "変更なし"
 # 月の行の末尾は PR かコミット（リンクでも、なくても）、年の行の末尾は月か期間
@@ -92,40 +76,38 @@ PERIOD_RE = re.compile(r"（\d{4}-\d{2}(?:〜\d{4}-\d{2})?）$")
 # 略した日付（5 月、05-02）。YYYY-MM と YYYY-MM-DD には当たらない
 SHORT_DATE_RE = re.compile(r"\d+\s*月|(?<![\d-])\d{1,2}-\d{1,2}(?![\d-])")
 COMMIT, FIELD = "\x1e", "\x1f"
-# GitHub から取った、PR の番号ごとの作成者（@login）。取れた PR は、メールより先にこれを使う
-PR_AUTHORS = {}
-# GitHub から取った、PR を入れたコミット（merge_commit_sha）から (番号, タイトル)。件名に番号のない変更
-# （Rebase and merge など）を PR に結びつける
-PR_SHAS = {}
-# PR の番号ごとの、その PR を挙げた Decision log の (番号, 月のファイルからの相対パス)。PR の列に PR の後ろに添える
-DECISIONS = {}
-# Decision log のファイル（0001-retry-limit.md）と、その中の PR（[PR #101][pr101] の文か、<origin>/pull/101 のリンク）
-DL_FILE_RE = re.compile(r"^(\d{4})-[^/]*\.md$")
-DL_PR_RE = re.compile(r"\bPR #(\d+)")
-# origin の持ち主（https://github.com/<owner>/...）。フォークからのマージを見分ける
-OWNER = None
-# フォークからのマージでわかった、メールから @login。同じメールで noreply でない変更の Author に使う。
-# 1 つのメールに 2 人以上が当たるか、同じリポジトリのブランチからのマージ（メンテナーが別の人の PR に足したコミットなど）
-# にも出るメールは使わない（None を入れて印にする）
-LEARNED = {}
+# 書き手が書く主な変更の行：- #12、#13：概要（PR のない変更はコミットのハッシュ）。スクリプトが表の行にする
+LINE_RE = re.compile(r"^- ([^：]+?)：\s*(.+)$")
+# GraphQL で 1 回に聞くコミットの数
+BATCH = 50
 # 読むリポジトリ（--repo）。None ならいまのディレクトリ
 REPO = None
 
 
-def git(*args, tz=None, stdin=None):
+def git(*args, tz=None):
     env = dict(os.environ, TZ=tz) if tz else None
-    out = subprocess.run(["git", *args], capture_output=True, text=True, encoding="utf-8", errors="replace", env=env,
-                         input=stdin, cwd=REPO)
+    out = subprocess.run(["git", *args], capture_output=True, text=True, encoding="utf-8", errors="replace", env=env, cwd=REPO)
     if out.returncode != 0:
         sys.exit(f"git {args[0]} が失敗した: {out.stderr.strip()}")
     return out.stdout
 
 
-def repo_url():
-    """origin から https://github.com/<owner>/<repo> の形を作る。作れなければ None。"""
+def gh(*args):
+    """gh api の GET（GraphQL は問い合わせだけ）。gh がないか失敗したら、理由を出して止まる（change-history は gh が要る）。"""
+    try:
+        out = subprocess.run(["gh", "api", *args], capture_output=True, text=True, encoding="utf-8", errors="replace")
+    except FileNotFoundError:
+        sys.exit("change-history は gh が要る（GitHub の PR から作る）。gh を入れ、gh auth login する")
+    if out.returncode != 0:
+        sys.exit(f"gh api {args[0]} が失敗した: {out.stderr.strip()}")
+    return json.loads(out.stdout or "null")
+
+
+def github_repo():
+    """origin の URL から owner/repo。GitHub でなければ None。"""
     out = subprocess.run(["git", "remote", "get-url", "origin"], capture_output=True, text=True, cwd=REPO)
     m = re.search(r"(?:github\.com[:/])([^/]+/[^/]+?)(?:\.git)?/?$", out.stdout.strip())
-    return f"https://github.com/{m.group(1)}" if m else None
+    return m.group(1) if m else None
 
 
 def area(path, depth):
@@ -138,260 +120,150 @@ def has_ref(ref):
     return subprocess.run(["git", "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"], capture_output=True, cwd=REPO).returncode == 0
 
 
-def default_branch(url, online):
-    """デフォルトブランチの (名前, ref)。clone したときに覚えた origin/HEAD の先、bare のクローン（build_many.py が作る）は
-    HEAD の先。どちらもなく online なら、GitHub のリポジトリのデフォルトブランチを gh api で聞き、origin/ のそれを読む。
-    分からなければ None（ほかのブランチを推測しない）。"""
-    def target(ref):
-        out = subprocess.run(["git", "symbolic-ref", "--quiet", ref], capture_output=True, text=True, cwd=REPO)
-        return out.stdout.strip() if out.returncode == 0 else None
-    bare = git("rev-parse", "--is-bare-repository").strip() == "true"
-    ref = target("refs/remotes/origin/HEAD") or (target("HEAD") if bare else None)
-    if not ref and online and url:
-        try:
-            out = subprocess.run(["gh", "api", f"repos/{url.removeprefix('https://github.com/')}", "--jq", ".default_branch"],
-                                 capture_output=True, text=True)
-            ref = f"refs/remotes/origin/{out.stdout.strip()}" if out.returncode == 0 and out.stdout.strip() else None
-        except FileNotFoundError:
-            pass
-    if not ref or not has_ref(ref):
-        return None
-    return re.sub(r"^refs/(?:remotes/origin|heads)/", "", ref), ref
+def local_ref(name):
+    """ブランチの手元の ref。origin/ にあればそれ（手元のものは古いことがある）、なければ手元のもの。なければ None。"""
+    return next((r for r in (f"refs/remotes/origin/{name}", f"refs/heads/{name}") if has_ref(r)), None)
+
+
+def cache_file():
+    """GitHub から取ったものを覚えておく場所。.git の中なので、リポジトリには入らない。"""
+    out = subprocess.run(["git", "rev-parse", "--git-common-dir"], capture_output=True, text=True, cwd=REPO)
+    return pathlib.Path(REPO or ".") / out.stdout.strip() / "decision-continuity-prs.json"
+
+
+def load_cache(slug):
+    path = cache_file()
+    try:
+        saved = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+    except ValueError:
+        saved = {}
+    if saved.get("repo") != slug or saved.get("version") != 2:
+        saved = {}
+    return {"repo": slug, "version": 2, "default": saved.get("default"), "prs": saved.get("prs", {}),
+            "commits": saved.get("commits", {})}
+
+
+def save_cache(cache):
+    try:
+        cache_file().write_text(json.dumps(cache, ensure_ascii=False), encoding="utf-8")
+    except OSError:
+        pass
+
+
+def fetch_prs(slug, base, known):
+    """base にマージされた PR の 番号 → [作成者, マージの日時, PR を入れたコミット, タイトル]（マージされずに閉じた PR は None）。
+    覚えておいた分に、更新の新しい順に 100 件ずつ足し、全部を覚えている PR のページが来たら止める。"""
+    found, page = dict(known), 1
+    while True:
+        rows = gh(f"repos/{slug}/pulls?state=closed&base={base}&sort=updated&direction=desc&per_page=100&page={page}") or []
+        fresh = [r for r in rows if str(r["number"]) not in known]
+        for r in rows:
+            found[str(r["number"])] = [(r.get("user") or {}).get("login") or "", r["merged_at"], r.get("merge_commit_sha") or "",
+                                       r.get("title") or ""] if r.get("merged_at") else None
+        if len(rows) < 100 or not fresh:
+            return found
+        page += 1
+
+
+def fetch_commits(slug, shas, base):
+    """コミットの ハッシュ → [GitHub のアカウント, そのコミットを入れた base への PR の番号（なければ ""）]。
+    Rebase and merge の PR のコミットは、その PR に結びつく。GraphQL で BATCH 件ずつ聞く。"""
+    owner, name = slug.split("/", 1)
+    found = {}
+    for start in range(0, len(shas), BATCH):
+        part = shas[start:start + BATCH]
+        fields = "".join(f' c{i}: object(oid: "{sha}") {{ ... on Commit {{ author {{ user {{ login }} }} '
+                         f'associatedPullRequests(first: 10) {{ nodes {{ number mergedAt baseRefName }} }} }} }}'
+                         for i, sha in enumerate(part))
+        data = gh("graphql", "-f", f'query=query {{ repository(owner: "{owner}", name: "{name}") {{{fields} }} }}')
+        repo = ((data or {}).get("data") or {}).get("repository") or {}
+        for i, sha in enumerate(part):
+            node = repo.get(f"c{i}") or {}
+            login = (((node.get("author") or {}).get("user")) or {}).get("login") or ""
+            prs = [p for p in ((node.get("associatedPullRequests") or {}).get("nodes") or [])
+                   if p.get("mergedAt") and p.get("baseRefName") == base]
+            found[sha] = [login, str(prs[0]["number"]) if prs else ""]
+    return found
 
 
 def first_parent(ref, tz):
-    """ref の --first-parent の各コミットを、古い順に返す。"""
-    # %aE は .mailmap を通したメール、%cd はブランチに入った日（rebase や cherry-pick でも、書いた日ではなく入った日）
-    fmt = FIELD.join(["%H", "%P", "%aE", "%cd", "%s", "%b"])
+    """ref の --first-parent の各コミットを、古い順に (ハッシュ, 親, ブランチに入った日, 入った日時, 件名, 変えたファイル) で返す。"""
+    fmt = FIELD.join(["%H", "%P", "%cd", "%cI", "%s"])
     out = git("log", "--first-parent", "--reverse", "--diff-merges=first-parent", "--name-only",
               "--date=format-local:%Y-%m-%d", f"--format={COMMIT}{fmt}{FIELD}", ref, "--", tz=tz)
-    return [chunk.split(FIELD) for chunk in out.split(COMMIT)[1:]]
-
-
-def cache_file(url):
-    """GitHub から取った PR を覚えておく場所。.git の中なので、リポジトリには入らない。"""
-    out = subprocess.run(["git", "rev-parse", "--git-common-dir"], capture_output=True, text=True, cwd=REPO)
-    found = pathlib.Path(REPO or ".") / out.stdout.strip()  # 相対パスで返るので、読むリポジトリからたどる
-    return found / "decision-continuity-prs.json" if out.returncode == 0 and url else None
-
-
-def github_prs(url, asked, online):
-    """閉じた PR の 番号 → [作成者, PR を入れたコミット, タイトル]。覚えておいた分に、GitHub の REST API（gh api）で
-    更新の新しい順に 100 件ずつ足し、全部を覚えている PR のページが来たら止める（2 回目からは新しい分だけ取る）。
-    --paginate は次のページを repositories/<ID>/… の形で引き、通さない中継があるので使わず、ページを数える。
-    途中で失敗しても、取れた分は使う。online でなければ、覚えておいた分だけを返す。gh がないか origin が GitHub で
-    ないときは、--github と言われたときだけ理由を出す。gh が失敗したときはいつも出す。"""
-    path = cache_file(url)
-    try:
-        saved = json.loads(path.read_text(encoding="utf-8")) if path and path.exists() else {}
-    except ValueError:
-        saved = {}
-    known = saved.get("prs", {}) if saved.get("repo") == url else {}
-    if not online or not url:
-        if asked and not url:
-            print("--github：origin が GitHub でないので、PR の作成者は取らない", file=sys.stderr)
-        return known
-    found, page = dict(known), 1
-    jq = '.[] | [(.number | tostring), .user.login, (if .merged_at then .merge_commit_sha else "" end), .title] | @tsv'
-    while True:
-        api = f"repos/{url.removeprefix('https://github.com/')}/pulls?state=closed&sort=updated&direction=desc&per_page=100&page={page}"
-        try:
-            out = subprocess.run(["gh", "api", api, "--jq", jq], capture_output=True, text=True, encoding="utf-8", errors="replace")
-        except FileNotFoundError:
-            if asked:
-                print("--github：gh がないので、PR の作成者は取らない", file=sys.stderr)
-            break
-        if out.returncode != 0:
-            print(f"gh api が失敗したので、{'以降の ' if page > 1 else ''}PR の作成者は覚えておいた分とメールから取る"
-                  f"（{out.stderr.strip()}。止めるなら --no-github）", file=sys.stderr)
-            break
-        rows = [l.split("\t", 3) for l in out.stdout.splitlines()]
-        rows = [r + [""] * (4 - len(r)) for r in rows if len(r) >= 2]
-        fresh = [r for r in rows if r[0] not in known]
-        found.update((r[0], r[1:]) for r in rows)
-        if len(rows) < 100 or not fresh:
-            break
-        page += 1
-    if path and found != known:
-        try:
-            path.write_text(json.dumps({"repo": url, "prs": found}, ensure_ascii=False), encoding="utf-8")
-        except OSError:
-            pass
+    found = []
+    for chunk in out.split(COMMIT)[1:]:
+        sha, parents, date, at, subject, files = chunk.split(FIELD)
+        found.append((sha, parents.split(), date, at, subject, [f for f in files.splitlines() if f.strip()]))
     return found
 
 
-def use_prs(prs):
-    PR_AUTHORS.update((n, f"@{login}") for n, (login, _, _) in prs.items())
-    PR_SHAS.update((sha, (n, title)) for n, (_, sha, title) in prs.items() if sha)
+def mark(title, merge=False):
+    """定型の変更に印を付ける。PR を通さないマージは（ブランチの取り込み）。"""
+    if merge and SYNC_RE.match(title):
+        return SYNC + title
+    if RELEASE_RE.match(title):
+        return RELEASE + title
+    if DEPS_RE.match(title):
+        return DEPS + title
+    return title
 
 
-def by_pr(item):
-    """件名に番号のない変更は、PR を入れたコミットから PR に結びつける。GitHub から取った PR の作成者があれば、Author にする。"""
-    if not item["pr"] and item.get("sha") in PR_SHAS and not item["title"].startswith(("（", SYNC)):
-        item["pr"], title = PR_SHAS[item["sha"]]
-        item["title"] = title or item["title"]
-    if item["pr"] in PR_AUTHORS:
-        item["author"] = PR_AUTHORS[item["pr"]]
-    elif item["author"] == UNKNOWN and len(found := LEARNED.get(item.get("email", "").lower(), {None})) == 1 \
-            and None not in found:
-        item["author"], = found
-    return item
+def moment(stamp):
+    return datetime.datetime.fromisoformat(stamp.replace("Z", "+00:00"))
 
 
-def decision_logs(logs, folder, url):
-    """Decision log の置き場所から、PR の番号 → [(DL の番号, 月のファイルからの相対パス)]。置き場所がなければ空。"""
-    found = collections.defaultdict(list)
-    if not logs or not logs.is_dir():
-        return found
-    pulls = re.compile(rf"{re.escape(url)}/pull/(\d+)\b") if url else None
-    for path in sorted(logs.iterdir()):
-        m = DL_FILE_RE.match(path.name)
-        if not m:
-            continue
-        text = path.read_text(encoding="utf-8")
-        prs = set(DL_PR_RE.findall(text)) | set(pulls.findall(text) if pulls else ())
-        where = pathlib.PurePath(os.path.relpath(path, folder)).as_posix()
-        for pr in prs:
-            found[pr].append((int(m.group(1)), where))
-    return found
+def local_date(stamp, tz):
+    return moment(stamp).astimezone(zoneinfo.ZoneInfo(tz)).strftime("%Y-%m-%d")
 
 
-def account(email):
-    m = NOREPLY_RE.match(email.strip())
-    return f"@{m.group(1)}" if m else UNKNOWN
-
-
-def changes(tz, branches):
-    """各ブランチの --first-parent の変更を、古い順に返す。マージコミットは 1 つ目の親との差分でファイルを数え、
-    Author は取り込んだ側の先頭（2 つ目の親）のコミットの author から取る。
-    どのブランチにも入ったコミットは 1 つにし、入ったブランチを並べる。"""
-    logs = {name: first_parent(ref, tz) for name, ref in branches}
-    shas = {name: {c[0] for c in log} for name, log in logs.items()}
-    seen, items, tips = {}, [], {}
-    for name, log in logs.items():
-        for sha, parents, email, date, subject, body, files in log:
-            if sha in seen:
-                seen[sha]["branches"].append(name)
-                continue
-            parents = parents.split()
-            item = parse(subject, body, parents, name, shas)
-            item.update(sha=sha, date=date, email=email, author=account(email), branches=[name],
-                        files=[f for f in files.splitlines() if f.strip()])
-            between = item["between"]
-            if len(parents) > 1:
-                tips[sha] = parents[1]
-                if not between:
-                    item["range"] = f"{parents[0]}..{parents[1]}"
-            seen[sha] = item
-            items.append(item)
-    credit(seen, tips)
-    return sorted((by_pr(i) for i in items), key=lambda i: i["date"])
-
-
-def credit(items, tips, learn=True):
-    """マージコミットの Author を決める。フォークからのマージは件名のフォークの持ち主（PR の作成者）、
-    ほかは取り込んだ側の先頭（2 つ目の親）のコミットのメールから。learn なら、フォークの持ち主を先頭のコミットのメールと
-    結びつけて覚える（本流のマージだけから覚え、読む順で Author が変わらないようにする）。"""
-    if not tips:
-        return
-    out = git("log", "--no-walk=unsorted", "--stdin", f"--format=%H{FIELD}%aE", stdin="\n".join(set(tips.values())) + "\n")
-    emails = dict(line.split(FIELD, 1) for line in out.splitlines() if FIELD in line)
-    for sha, tip in tips.items():
-        item, email = items[sha], emails.get(tip, "")
-        item["email"] = email
-        known = email and learn and not NOREPLY_RE.match(email)
-        head = item.get("head")
-        if head and OWNER and head.lower() != OWNER.lower():
-            item["author"] = f"@{head}"
-            if known:
-                LEARNED.setdefault(email.lower(), set()).add(item["author"])
-        else:
-            item["author"] = account(email)
-            if known:
-                LEARNED.setdefault(email.lower(), set()).add(None)
-
-
-def inside(item):
-    """マージコミットが取り込んだ側の --first-parent のコミットを、古い順に返す。PR の中のコミットや、
-    読んでいないブランチ（release/1.2 など）でマージされた PR が、実際の改修の中身として見える。
-    読んだブランチどうしのマージは、中身が元のブランチに 1 件ずつ出るので返さない。日付はマージの日。"""
-    if "inside" not in item:
-        found, tips = [], {}
-        if item.get("range"):
-            fmt = FIELD.join(["%H", "%P", "%aE", "%s", "%b"])
-            out = git("log", "--first-parent", "--reverse", f"--format={COMMIT}{fmt}", item["range"])
-            for sha, parents, email, subject, body in (c.split(FIELD) for c in out.split(COMMIT)[1:]):
-                parents = parents.split()
-                inner = parse(subject, body, parents, None, {})
-                inner.update(sha=sha, date=item["date"], email=email, author=account(email), branches=item["branches"], files=[])
-                if len(parents) > 1:
-                    tips[sha] = parents[1]
-                found.append(inner)
-            credit({i["sha"]: i for i in found}, tips, learn=False)
-        item["inside"] = [by_pr(i) for i in found]
-    return item["inside"]
+def changes(cache, branches, tz, online, slug):
+    """読むブランチの変更を、古い順に返す。PR は GitHub の、直接のコミットは手元の git の --first-parent のもの。"""
+    items = {}
+    for base, ref in branches:
+        if online:
+            cache["prs"][base] = fetch_prs(slug, base, cache["prs"].get(base, {}))
+        prs = {n: v for n, v in cache["prs"].get(base, {}).items() if v}
+        merged = {v[2]: n for n, v in prs.items() if v[2]}
+        for n, (login, at, sha, title) in prs.items():
+            items.setdefault(f"#{n}", dict(pr=n, sha=sha, date=local_date(at, tz), at=moment(at), title=mark(title),
+                                           author=f"@{login}" if login else UNKNOWN, files=[]))
+        log = first_parent(ref, tz)
+        # PR を入れたコミットでも、件名の (#12) が base の PR でもないもの。Rebase and merge のコミットもここに入る
+        rest = [c for c in log if c[0] not in merged and not (SQUASH_RE.match(c[4]) and SQUASH_RE.match(c[4]).group(2) in prs)]
+        unknown = [c[0] for c in rest if c[0] not in cache["commits"]]
+        if online and unknown:
+            cache["commits"].update(fetch_commits(slug, unknown, base))
+        for sha, parents, date, at, subject, files in log:
+            squash = SQUASH_RE.match(subject)
+            pr = merged.get(sha) or (squash.group(2) if squash and squash.group(2) in prs else None) \
+                or (cache["commits"].get(sha) or ["", ""])[1] or None
+            if pr in prs:
+                items[f"#{pr}"]["files"] += files
+            elif sha not in items:
+                login = (cache["commits"].get(sha) or [""])[0]
+                items[sha] = dict(pr=None, sha=sha, date=date, at=moment(at), title=mark(subject, len(parents) > 1),
+                                  author=f"@{login}" if login else UNKNOWN, files=files)
+    return sorted(items.values(), key=lambda i: i["at"])
 
 
 def key(item):
     return f"#{item['pr']}" if item["pr"] else item["sha"]
 
 
-def parse(subject, body, parents, branch, shas):
-    """件名と本文から PR の番号とタイトルを取り、印を付ける。"""
-    m = MERGE_RE.match(subject)
-    if m and len(parents) > 1:
-        item = dict(pr=m.group(1), head=m.group(2), merged_pr=True, title=next((l.strip() for l in body.splitlines() if l.strip()), subject))
-    elif SQUASH_RE.match(subject):
-        title, pr = SQUASH_RE.match(subject).groups()
-        item = dict(pr=pr, title=title)
-    elif SYNC_RE.match(subject):
-        item = dict(pr=None, title=f"{SYNC}{subject}")
-    else:
-        item = dict(pr=None, title=subject)
-    # 2 つ目の親がほかに読んだブランチの本流にあれば、ブランチ間のマージ
-    source = next((n for n in shas if n != branch and len(parents) > 1 and parents[1] in shas[n]), None)
-    item["between"] = bool(source)
-    if source:
-        item["title"] = BETWEEN.format(source) + item["title"].removeprefix(SYNC)
-    elif RELEASE_RE.match(item["title"]):
-        item["title"] = RELEASE + item["title"]
-    elif DEPS_RE.match(item["title"]):
-        item["title"] = DEPS + item["title"]
-    return item
-
-
-def size(item):
-    """1 つの変更（--first-parent の 1 コミット）が入れた変更の数。ブランチ間のマージは元のブランチで数えるので 0。
-    PR のマージは 1 と、中でマージされた別の PR の数。PR を通さないブランチの取り込み（Merge branch '8.1.x'）は、
-    取り込んだ側の変更（そのブランチでマージされた PR と、直接のコミット）の数。その中のブランチの取り込みは数えない
-    （本流を保守ブランチに戻したマージなど。中身はほかで数えている）。"""
-    if item["between"]:
-        return 0
-    if not item.get("range"):
-        return 1
-    if item.get("merged_pr"):
-        return 1 + len({i["pr"] for i in inside(item) if i["pr"] and i["pr"] != item["pr"]})
-    return len([i for i in inside(item) if not i["title"].startswith(SYNC)]) or 1
-
-
-def count(items):
-    return sum(size(i) for i in items)
-
-
 def quiet(items):
-    """依存の更新・ブランチ間の取り込み・リリースだけの月なら、「- 目立った変更なし（…のみ）」の文。ほかがあれば None。"""
-    kinds = {BETWEEN_NAME if i["between"] else next((n for mark, n in QUIET.items() if i["title"].startswith(mark)), None)
-             for i in items}
+    """依存の更新・ブランチの取り込み・リリースだけの月なら、「- 目立った変更なし（…のみ）」の文。ほかがあれば None。"""
+    kinds = {next((n for mark_, n in QUIET.items() if i["title"].startswith(mark_)), None) for i in items}
     if not kinds or None in kinds:
         return None
-    return f"- 目立った変更なし（{'・'.join(n for n in (*QUIET.values(), BETWEEN_NAME) if n in kinds)}のみ）"
+    return f"- 目立った変更なし（{'・'.join(n for n in QUIET.values() if n in kinds)}のみ）"
 
 
 def link(item, url):
     if item["pr"]:
-        return f"[#{item['pr']}]({url}/pull/{item['pr']})" if url else f"#{item['pr']}"
+        return f"[#{item['pr']}]({url}/pull/{item['pr']})"
     short = item.get("short") or item["sha"][:7]  # どこにもないハッシュは、書かれたまま（作り直しても変わらない）
-    return f"[{short}]({url}/commit/{item['sha']})" if url else short
+    return f"[{short}]({url}/commit/{item['sha']})"
 
 
 def summary_of(path):
@@ -402,21 +274,14 @@ def summary_of(path):
     return m.group(1).strip() if m else None
 
 
-def list_lines(items, depth, url, many):
-    """その月の全変更を日付の順に。各行に、いちばん多く変えた置き場所と Author を添え、マージコミットの下には
-    取り込んだ側のコミット（inside）を字下げして並べる（--list が出す）。"""
+def list_lines(items, depth, url):
+    """その月の全変更を日付の順に。各行に、いちばん多く変えた置き場所と Author を添える（--list が出す）。"""
     lines = []
     for item in items:
         counts = collections.Counter(area(f, depth) for f in item["files"])
         places = sorted(counts, key=lambda a: (-counts[a], a))
         where = f"、{places[0]}" + (f" ほか {len(places) - 1}" if len(places) > 1 else "") if places else ""
-        into = f"、{'・'.join(item['branches'])} へ" if many else ""
-        lines.append(f"- {item['date']} {item['title']}（{link(item, url)}{where}、{item['author']}{into}）")
-        inner = inside(item)
-        # 1 コミットだけの PR（中のコミットが同じタイトル）は、同じ行を 2 度出さない
-        if len(inner) == 1 and inner[0]["title"] == item["title"] and inner[0]["pr"] in (None, item["pr"]):
-            inner = []
-        lines += [f"  - {i['title']}（{link(i, url)}、{i['author']}）" for i in inner]
+        lines.append(f"- {item['date']} {item['title']}（{link(item, url)}{where}、{item['author']}）")
     return lines
 
 
@@ -428,16 +293,6 @@ def cells(line):
     return [c.strip() for c in CELL_RE.split(line.strip())[1:-1]]
 
 
-def pr_cells(summary):
-    """主な変更の表の PR の列と、前の形の行の括弧の中だけ（概要の言葉の #12 や英数字を参照と取り違えない）。"""
-    found = []
-    for line in summary.splitlines():
-        parts = cells(line) if line.strip().startswith("|") else []
-        m = OLD_LINE_RE.match(line.strip())
-        found += [parts[2]] if len(parts) == 4 and is_row(parts) else [m.group(2)] if m else []
-    return "\n".join(found)
-
-
 def is_row(parts):
     """表の中身の行か（見出しの行と区切りの行は除く）。"""
     return len(parts) == 4 and parts[0] != "日付" and not all(c and set(c) <= set("-:") for c in parts)
@@ -445,14 +300,20 @@ def is_row(parts):
 
 def ref_text(text):
     """PR の列の文を、参照（#12 かコミットのハッシュ）を拾える形にする。リンク先の URL の中は見ない。書き方の揺れも読む：
-    全角（＃１２）、PR の URL（…/pull/12）、数字だけの列（12、13）。"""
+    全角（＃１２）、PR の URL（…/pull/12）、数字だけの列（12、13）。7 桁以上の数字は、数字だけのコミットのハッシュとして残す。"""
     text = unicodedata.normalize("NFKC", re.sub(r"\]\([^)]*\)", "]", text))
     text = re.sub(r"https?://\S*?/pull/(\d+)\S*", r"#\1", text)
-    return re.sub(r"\d+", r"#\g<0>", text) if re.fullmatch(r"[\d\s、,]+", text) else text
+    return re.sub(r"(?<!\d)\d{1,6}(?!\d)", r"#\g<0>", text) if re.fullmatch(r"[\d\s、,]+", text) else text
+
+
+def refs_only(text):
+    """参照（#12・ハッシュ）と区切りだけの文か。「- #12、#13：概要」の前半を見分ける。"""
+    text = ref_text(text)
+    return bool(KEY_RE.search(text)) and not re.sub(r"[\s、,]", "", KEY_RE.sub("", text))
 
 
 def lookup(text, index):
-    """PR の列の文から、その月の変更を順に返す。見つからない参照は None。ハッシュは、PR から入ったコミットにも当てる。"""
+    """PR の列の文から、その月の変更を順に返す。見つからない参照は None。ハッシュは、PR を入れたコミットにも当てる。"""
     found = []
     for m in KEY_RE.finditer(ref_text(text)):
         pr, sha = m.groups()
@@ -464,35 +325,28 @@ def lookup(text, index):
 
 def resolve(text, index, everything):
     """PR の列の参照を、その月の変更、なければ全部の月の変更から探す。どこにもなければ、番号かハッシュだけの変更にする
-    （リンクと、GitHub から取れた Author は入れる）。その月にない参照は、problems が崩れとして知らせる。"""
+    （リンクは入れる）。その月にない参照は、problems が崩れとして知らせる。"""
     found = []
     for m in KEY_RE.finditer(ref_text(text)):  # 参照ごとに探す（重なっても、後ろの参照を落とさない）
         pr, sha = m.groups()
         item = lookup(m.group(0), index)[0] or lookup(m.group(0), everything)[0] or {
-            "pr": pr, "sha": sha or "", "short": sha, "date": "", "author": PR_AUTHORS.get(pr, UNKNOWN) if pr else UNKNOWN}
+            "pr": pr, "sha": sha or "", "short": sha, "date": "", "author": UNKNOWN}
         if item not in found:
             found.append(item)
     return found
 
 
-def row(summary, items, url, written=""):
-    """日付は最初の変更の日、Author は変更ごとのアカウント名（重なりは 1 つ）。GitHub から取れなかった変更があり、
-    書いてある Author のほうが取れていない（—）が少なければ、書いてある方を残す（gh が使えるかどうかで --check の
-    結果が変わらないように。取れるようになった名前は、— の代わりに入る）。"""
+def row(summary, items, url):
+    """日付は最初の変更の日、Author は変更ごとのアカウント名（重なりは 1 つ）。"""
     authors = "、".join(dict.fromkeys(i["author"] for i in items))
-    if written and not all(i["pr"] in PR_AUTHORS for i in items) \
-            and written.split("、").count(UNKNOWN) < authors.split("、").count(UNKNOWN):
-        authors = written
     date = next((i["date"] for i in items if i["date"]), "")
-    # PR を挙げた Decision log は、PR の後ろに番号の順に添える（参照の数には入れない）
-    logs = sorted({d for i in items for d in DECISIONS.get(i["pr"] or "", ())})
-    refs = [link(i, url) for i in items] + [f"[DL-{n}]({where})" for n, where in logs]
-    return f"| {date} | {summary} | {'、'.join(refs)} | {authors} |"
+    return f"| {date} | {summary} | {'、'.join(link(i, url) for i in items)} | {authors} |"
 
 
 def tidy(text, kind, index=None, url=None, everything=None):
-    """月の表の日付・Author・PR の列を、その月の変更から埋め直し、日付の順に 1 つの表に並べる。前の形の「- 概要（#12）」の行は
-    表の行に移し、前の形の ### <分類> の見出しと説明の文は外す。中身の言葉（概要・年の要点）は変えない。"""
+    """月の主な変更を、日付の順の 1 つの表にする。書き手が書いた「- #12、#13：概要」の行と、前の形の「- 概要（#12）」の行は
+    表の行にし、表の行は日付・Author・PR の列をその月の変更から埋め直す。前の形の ### <分類> の見出しと説明の文は外す。
+    中身の言葉（概要・年の要点）は変えない。"""
     if text in (None, "", EMPTY, NONE) or NOTHING_RE.match(text):
         return text
     lines = [l.strip() for l in text.splitlines()]
@@ -503,9 +357,13 @@ def tidy(text, kind, index=None, url=None, everything=None):
     for line in lines:
         m = OLD_LINE_RE.match(line)
         parts = cells(line) if line.startswith("|") else None
-        if parts and is_row(parts):
+        written = LINE_RE.match(line)
+        if written and refs_only(written.group(1)):
+            found = resolve(written.group(1), index, everything or {})
+            rows.append(row(written.group(2).replace("|", "\\|"), found, url))
+        elif parts and is_row(parts):
             found = resolve(parts[2], index, everything or {})
-            rows.append(row(parts[1], found, url, parts[3]) if found else line)
+            rows.append(row(parts[1], found, url) if found else line)
         elif m:
             found = resolve(m.group(2), index, everything or {})
             summary = m.group(1).replace("|", "\\|")
@@ -518,7 +376,7 @@ def tidy(text, kind, index=None, url=None, everything=None):
 
 
 def read_from(branches):
-    """main（origin/main）、develop（origin/develop）の形。"""
+    """main（origin/main）の形。"""
     shown = [(name, ref.removeprefix("refs/remotes/").removeprefix("refs/heads/")) for name, ref in branches]
     return "、".join(f"{name}（{ref}）" if ref != name else name for name, ref in shown)
 
@@ -620,26 +478,23 @@ def readme_page(months, folder, summaries, shown):
                 break
             summary = summaries[month]
             point = summary[2:] if summary and NOTHING_RE.match(summary) else points.get(month) if needs_point(summary) else None
-            out.append(f"| [{month}]({month}.md) | {count(months[month])} | {point or NO_POINT} |")
+            out.append(f"| [{month}]({month}.md) | {len(months[month])} | {point or NO_POINT} |")
     return "\n".join(out) + "\n"
 
 
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("folder", type=pathlib.Path)
-    p.add_argument("--branch", action="append", help="読むブランチ（何度でも。既定はデフォルトブランチだけ）")
+    p.add_argument("--branch", action="append", help="読むブランチ（何度でも。既定は GitHub のデフォルトブランチだけ）")
     p.add_argument("--depth", type=int, default=2, help="置き場所として数えるフォルダーの段数（既定 2）")
     p.add_argument("--since", help="この月（YYYY-MM）から書く")
     p.add_argument("--until", help="この月（YYYY-MM）まで書く")
     p.add_argument("--tz", default="Asia/Tokyo", help="日付の時間帯（既定 Asia/Tokyo）")
-    p.add_argument("--github", action="store_true", help="PR の作成者が取れないとき、理由を出す（既定でも gh があれば取る）")
-    p.add_argument("--no-github", action="store_true", help="GitHub に問い合わせない（Author はメールから取る）")
-    p.add_argument("--check", action="store_true", help="書かずに、最新かを確かめる")
-    p.add_argument("--list", metavar="YYYY-MM", help="書かずに、その月の全変更を出す")
+    p.add_argument("--check", action="store_true", help="書かずに、最新かを確かめる（GitHub に問い合わせない）")
+    p.add_argument("--list", metavar="YYYY-MM", help="書かずに、その月の全変更を出す（GitHub に問い合わせない）")
     p.add_argument("--show", metavar="コミット", help="書かずに、そのコミットの件名・本文と変えたファイルを出す（人の名前は出さない）")
     p.add_argument("--repo", type=pathlib.Path, help="読むリポジトリ（既定はいまのディレクトリ）")
-    p.add_argument("--decision-logs", type=pathlib.Path,
-                   help="PR の列にリンクを添える Decision log の置き場所（既定は docs/decision-logs。--repo のときは言われたときだけ）")
+    p.add_argument("--github-repo", metavar="OWNER/REPO", help="GitHub のリポジトリ（既定は origin の URL から）")
     args = p.parse_args()
     global REPO
     if args.repo:
@@ -653,51 +508,51 @@ def main():
     for flag, value in (("--since", args.since), ("--until", args.until), ("--list", args.list)):
         if value and not MONTH_RE.match(value):
             p.error(f"{flag} は YYYY-MM で書く")
-    for name in args.branch or []:
-        if not has_ref(name):
-            p.error(f"ブランチ {name} が見つからない")
-    if not args.branch and not has_ref("HEAD"):
+    if not has_ref("HEAD") and not args.branch:
         print("コミットがまだないので、書くものはない")
         return 0
-    global OWNER
-    url = repo_url()
-    branches = [(name, name) for name in args.branch] if args.branch else [default_branch(url, not args.no_github)]
-    if branches == [None]:
-        p.error("デフォルトブランチが分からない（origin/HEAD がなく、GitHub にも聞けない）。git remote set-head origin --auto で"
-                "覚えさせるか、--branch で読むブランチを言う")
-    OWNER = url.split("/")[3] if url else None
-    if not args.no_github:
-        # --list（書き手が月ごとに呼ぶ）は問い合わせず、覚えておいた分だけを使う
-        use_prs(github_prs(url, args.github, online=not args.list))
-    # --repo のクローン（中央にまとめるとき）は git に入らないので、その中の Decision log へは既定でリンクしない
-    DECISIONS.update(decision_logs(args.decision_logs or (None if REPO else pathlib.Path("docs/decision-logs")), args.folder, url))
+    slug = args.github_repo or github_repo()
+    if not slug:
+        p.error("origin が GitHub でない（change-history は GitHub の PR から作る）。--github-repo OWNER/REPO で言う")
+    url = f"https://github.com/{slug}"
+    online = not (args.check or args.list)
+    cache = load_cache(slug)
+    if online and not args.branch:
+        cache["default"] = (gh(f"repos/{slug}") or {}).get("default_branch")
+    names = args.branch or ([cache["default"]] if cache["default"] else [])
+    if not names or (not online and any(n not in cache["prs"] for n in names)):
+        flags = "".join(f" --branch {n}" for n in args.branch or [])
+        p.error(f"まだ GitHub から取っていない。先に build_history.py {args.folder}{flags} を回す")
+    branches = []
+    for name in names:
+        ref = local_ref(name)
+        if not ref:
+            p.error(f"ブランチ {name} が手元にない（git fetch origin {name}）")
+        branches.append((name, ref))
+    items = changes(cache, branches, args.tz, online, slug)
+    if online:
+        save_cache(cache)
     months = collections.defaultdict(list)
-    for item in changes(args.tz, branches):
+    for item in items:
         months[item["date"][:7]].append(item)
     # --since・--until は書き直す月を絞る。年表には、その月と前から載っている月を載せる（人が書いた行と要約を消さない）
     shown = sorted(m for m in months if (not args.since or m >= args.since) and (not args.until or m <= args.until))
     if args.list:
-        for line in list_lines(months.get(args.list, []), args.depth, url, len(branches) > 1):
+        for line in list_lines(months.get(args.list, []), args.depth, url):
             print(line)
-        print(f"{args.list}：{count(months.get(args.list, []))} 件。読んだブランチ：{read_from(branches)}")
+        print(f"{args.list}：{len(months.get(args.list, []))} 件。読んだブランチ：{read_from(branches)}")
         return 0
     indexes, summaries = {}, {}
     this_month = datetime.datetime.now(zoneinfo.ZoneInfo(args.tz)).strftime("%Y-%m")
-    everything = {key(i): i for items in months.values() for i in items}
-    for m, items in months.items():
-        index = {key(i): i for i in items}
+    everything = {key(i): i for i in items}
+    for m, month_items in months.items():
+        indexes[m] = {key(i): i for i in month_items}
         summary = summary_of(args.folder / f"{m}.md")
-        # 表の PR の列がマージの中の PR やコミットを指していれば、そこまで探す（マージごとに git を 1 回回すので、要るときだけ）
-        if summary and None in lookup(pr_cells(summary), index):
-            for i in items:
-                for j in inside(i):
-                    index.setdefault(key(j), j)
-        indexes[m] = index
-        # 依存の更新・リリース・ブランチ間の取り込みだけの月は、書き手を呼ばずにスクリプトが書く
+        # 依存の更新・リリース・ブランチの取り込みだけの月は、書き手を呼ばずにスクリプトが書く
         # （終わっていない月は、あとから変更が増えるので書き手に任せる）
         if summary in (None, "", EMPTY) and m < this_month and m in shown:
-            summary = quiet(items) or summary
-        summaries[m] = tidy(summary, "month", index, url, everything)
+            summary = quiet(month_items) or summary
+        summaries[m] = tidy(summary, "month", indexes[m], url, everything)
     pages = {f"{m}.md": month_page(m, summaries[m]) for m in shown}
     pages["README.md"] = readme_page(months, args.folder, summaries, shown)
     old = args.folder / "timeline.md"
@@ -730,7 +585,7 @@ def main():
         (args.folder / name).write_text(pages[name], encoding="utf-8")
     if old.exists():
         old.unlink()  # 年ごとの要点は README.md に移した
-    total = sum(count(months[m]) for m in shown)
+    total = sum(len(months[m]) for m in shown)
     print(f"{args.folder}：{len(shown)} か月、{total} 件（書き換え {len(stale)} ファイル、形の崩れ {len(broken)} 件）。"
           f"読んだブランチ：{read_from(branches)}")
     return 1 if broken else 0

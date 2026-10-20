@@ -11,6 +11,7 @@
 - 2026-10-18 [DL-13](0013-delegation.md) 洗い出しと読むことをサブエージェントに任せ、メインの会話はコマンドをほとんど回さない形になった
 - 2026-10-19 [DL-24](0024-change-history-writer.md) change-history の月ごとの表を、専用のサブエージェントに任せることにした
 - 2026-10-20 [DL-26](0026-change-history-many-repos.md) change-history で、一覧にした複数のリポジトリの年表を中央のリポジトリにまとめられるようにした
+- 2026-10-20 [DL-27](0027-change-history-from-github-prs.md) change-history を、手元の git の推測から、GitHub のマージ済み PR を事実として作る形に変えた
 
 ## 認証・権限・セキュリティ（security）
 

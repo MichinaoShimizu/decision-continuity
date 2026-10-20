@@ -33,3 +33,8 @@ Superseded：`build_history.py` の `inside` がマージコミットの `<1 つ
 
 - 2026-10-20 長く続くブランチ（`main`・`master`・`develop`・`development`・`dev`・`production`）を名前で探して全部読むのをやめ、言われなければデフォルトブランチだけを読むことにした。change-history の `build_history.py` は `origin/HEAD` の先（bare のクローンは `HEAD` の先。どちらもなければ `gh api` で GitHub のデフォルトブランチ）を読み、分からなければ `--branch` を求めて止まる。`decision-log-planner` も `git rev-parse --abbrev-ref origin/HEAD` のブランチだけを読み、分からなければ読むブランチを聞くよう返す。ほかのブランチは、言われたものを全部読む（ブランチ default-branch-only。作成 @MichinaoShimizu）。理由：「リポジトリによって対象のブランチがことなる。勝手に推測しない。デフォルトはデフォルトブランチへの変更のみをみる。」（@MichinaoShimizu、会話 2026-10-20）。planner にも同じ決まりを当てたのは、この Decision log が 2 つで同じブランチを読むと決めていたことに合わせた Claude の判断
 Superseded：`build_history.py` は `default_branch` でデフォルトブランチだけを読み、`LONG_LIVED` はない（`skills/change-history/scripts/build_history.py`）。`decision-log-planner` の手順 2 は、言われたブランチか `origin/HEAD` のブランチだけを読む（`agents/claude/decision-log-planner.md`）
+
+## 追記 2026-10-20（GitHub のデフォルトブランチ）
+
+- 2026-10-20 change-history は、デフォルトブランチを `origin/HEAD` ではなく GitHub のリポジトリの設定（`gh api repos/<owner>/<repo>`）から取ることにした。change-history が GitHub の PR から作る形になった（DL-27）ので、GitHub の値をそのまま使う（ブランチ change-history-from-prs。作成 @MichinaoShimizu）。decision-log-planner は今までどおり `origin/HEAD` を読む
+Superseded：`build_history.py` は `gh api repos/<owner>/<repo>` の `default_branch` を読み、`origin/` のそれ（なければ手元のもの）の履歴を読む（`skills/change-history/scripts/build_history.py` の `main`・`local_ref`）

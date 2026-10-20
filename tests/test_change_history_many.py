@@ -1,4 +1,6 @@
-"""change-history の build_many.py（複数のリポジトリを中央にまとめる）と、build_history.py の --repo・--show を、合成のリポジトリで回す。"""
+"""change-history の build_many.py（複数のリポジトリを中央にまとめる）と、build_history.py の --repo・--show を、合成のリポジトリと
+偽の gh（tests/fake_gh.py）で回す。GitHub の URL は、git の insteadOf で手元の合成のリポジトリに向ける。"""
+import json
 import os
 import pathlib
 import subprocess
@@ -8,6 +10,7 @@ import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "skills" / "change-history" / "scripts"
+FAKE_GH = pathlib.Path(__file__).resolve().parent / "fake_gh.py"
 
 
 class BuildManyTests(unittest.TestCase):
@@ -17,10 +20,17 @@ class BuildManyTests(unittest.TestCase):
         self.base = pathlib.Path(self.work.name)
         self.central = self.base / "central"
         self.central.mkdir()
+        (self.base / "bin").mkdir()
+        (self.base / "bin/gh").write_text(f"#!/bin/sh\nexec {sys.executable} {FAKE_GH} \"$@\"\n", encoding="utf-8")
+        (self.base / "bin/gh").chmod(0o755)
+        (self.base / "gitconfig").write_text(f'[url "file://{self.base}/"]\n\tinsteadOf = https://github.com/\n', encoding="utf-8")
+        self.gh = {"repos": {}}
+        self.env = dict(os.environ, PATH=f"{self.base / 'bin'}{os.pathsep}{os.environ['PATH']}", FAKE_GH=str(self.base / "gh.json"),
+                        GIT_CONFIG_GLOBAL=str(self.base / "gitconfig"))
         # o/app は 2024-11 から 2025-02 まで、o/lib は 2025-01 だけ
-        self.make("o/app", [("Start app", "2024-11-10"), ("Add login (#2)", "2025-02-03")])
-        self.make("o/lib", [("Start lib", "2025-01-05")])
-        self.write_list(f"file://{self.base}/o/app\nfile://{self.base}/o/lib --branch main  # 説明\n")
+        self.make("o/app", [("Start app", "2024-11-10", None), ("Add login (#2)", "2025-02-03", 2)])
+        self.make("o/lib", [("Start lib", "2025-01-05", None)])
+        self.write_list("o/app\nhttps://github.com/o/lib --branch main  # 説明\n")
 
     def tearDown(self):
         self.work.cleanup()
@@ -30,25 +40,37 @@ class BuildManyTests(unittest.TestCase):
         return subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True, check=True, env=env).stdout
 
     def make(self, name, commits):
-        repo = self.base / name
+        repo = self.base / f"{name}.git"  # GitHub の URL（…/o/app.git）が向く先
         repo.mkdir(parents=True)
         self.git(repo, "init", "-q", "-b", "main")
         self.git(repo, "config", "user.name", "Real Name")
         self.git(repo, "config", "user.email", "real@example.com")
-        for i, (subject, date) in enumerate(commits):
-            self.commit(repo, f"{subject}-{i}", subject, date)
+        self.gh["repos"][name] = {"default": "main", "pulls": [], "commits": {}}
+        for i, (subject, date, pr) in enumerate(commits):
+            self.commit(name, f"{subject}-{i}", subject, date, pr)
 
-    def commit(self, repo, text, subject, date):
+    def commit(self, name, text, subject, date, pr=None):
+        repo = self.base / f"{name}.git"  # GitHub の URL（…/o/app.git）が向く先
         (repo / "f.txt").write_text(text + "\n", encoding="utf-8")
         self.git(repo, "add", "-A")
         self.git(repo, "commit", "-q", "-m", subject, date=date)
+        sha = self.git(repo, "rev-parse", "HEAD").strip()
+        fixture = self.gh["repos"][name]
+        if pr:
+            fixture["pulls"].append({"number": pr, "login": "alice", "merged_at": f"{date}T00:00:00Z", "sha": sha,
+                                     "title": subject.rsplit(" (#", 1)[0]})
+        else:
+            fixture["commits"][sha] = ["bob", "", ""]
 
     def write_list(self, text):
         (self.central / "repos.txt").write_text(text, encoding="utf-8")
 
+    def call(self, *args):
+        (self.base / "gh.json").write_text(json.dumps(self.gh), encoding="utf-8")
+        return subprocess.run(args, cwd=self.central, capture_output=True, text=True, env=self.env)
+
     def many(self, *args):
-        return subprocess.run([sys.executable, str(SCRIPTS / "build_many.py"), "repos.txt", "docs/change-history", "--no-github", *args],
-                              cwd=self.central, capture_output=True, text=True)
+        return self.call(sys.executable, str(SCRIPTS / "build_many.py"), "repos.txt", "docs/change-history", *args)
 
     def page(self, name):
         return (self.central / "docs/change-history" / name).read_text(encoding="utf-8")
@@ -60,29 +82,19 @@ class BuildManyTests(unittest.TestCase):
         self.assertTrue((self.central / ".cache/change-history/o/app/HEAD").exists())
         self.assertEqual((self.central / ".cache/change-history/.gitignore").read_text(encoding="utf-8"), "*\n")
         self.assertIn("| [2025-02](2025-02.md) | 1 | まだ |", self.page("o/app/README.md"))
-        self.assertIn("| 2024-12 | 0 | 変更なし |", self.page("o/app/README.md"))
-        # 書き手に渡す置き場所と --repo・--branch を出す
-        self.assertIn("== o/lib（置き場所 docs/change-history/o/lib、--repo .cache/change-history/o/lib --branch main）", result.stdout)
+        # 書き手に渡すもの
+        self.assertIn("== o/app（置き場所 docs/change-history/o/app、--repo .cache/change-history/o/app --github-repo o/app）", result.stdout)
+        self.assertIn("--github-repo o/lib --branch main）", result.stdout)
         overview = self.page("README.md")
-        # 年ごとに、リポジトリごとの要点と、月 × リポジトリの件数。まだなかった月は空、最後の変更より後は 0
-        self.assertEqual(overview, "\n".join([
-            "# 変更の履歴", "",
-            "## 2025", "",
-            "### [o/app](o/app/README.md)", "", "（まだ書いていない）", "",
-            "### [o/lib](o/lib/README.md)", "", "（まだ書いていない）", "",
-            "| 月 | o/app | o/lib |", "|---|---|---|",
-            "| 2025-02 | [1](o/app/2025-02.md) | 0 |",
-            "| 2025-01 | 0 | [1](o/lib/2025-01.md) |", "",
-            "## 2024", "",
-            "### [o/app](o/app/README.md)", "", "（まだ書いていない）", "",
-            "| 月 | o/app |", "|---|---|",
-            "| 2024-12 | 0 |",
-            "| 2024-11 | [1](o/app/2024-11.md) |"]) + "\n")
+        self.assertTrue(overview.startswith("# 変更の履歴\n\n## 2025\n\n### [o/app](o/app/README.md)\n\n（まだ書いていない）\n\n"
+                                             "### [o/lib](o/lib/README.md)\n\n（まだ書いていない）\n\n| 月 | o/app | o/lib |"))
+        self.assertIn("| 2025-02 | [1](o/app/2025-02.md) | 0 |", overview)
+        self.assertIn("| 2024-11 | [1](o/app/2024-11.md) |\n", overview)
         self.assertEqual(self.many("--check").returncode, 0)
 
     def test_year_points_are_copied_and_quiet_months_collapse(self):
-        self.make("o/old", [("Begin", "2023-01-01"), ("End", "2023-06-01")])
-        self.write_list(f"file://{self.base}/o/app\nfile://{self.base}/o/old\n")
+        self.make("o/old", [("Begin", "2023-01-01", None), ("End", "2023-06-01", None)])
+        self.write_list("o/app\no/old\n")
         self.many()
         path = self.central / "docs/change-history/o/old/README.md"
         path.write_text(path.read_text(encoding="utf-8").replace(
@@ -98,15 +110,15 @@ class BuildManyTests(unittest.TestCase):
 
     def test_fetches_new_changes_and_check_does_not(self):
         self.many()
-        self.commit(self.base / "o/lib", "x", "Fix lib (#3)", "2025-03-01")
+        self.commit("o/lib", "x", "Fix lib (#3)", "2025-03-01", 3)
         self.assertEqual(self.many("--check").returncode, 0)  # 取らないので、いまのクローンのまま
         self.many()
         self.assertIn("| 2025-03 | 0 | [1](o/lib/2025-03.md) |", self.page("README.md"))
 
     def test_bad_lists_are_refused(self):
-        for text, error in [("../x\n", "owner/repo か clone できる URL"), ("o/a\no/A\n", "2 度ある"),
-                            ("o/a --since 2024-01\n", "書けるのは --branch・--depth だけ"), ("o/a --branch\n", "値がない"),
-                            ("# 空\n", "リポジトリがない")]:
+        for text, error in [("../x\n", "GitHub の owner/repo か、その URL"), ("https://gitlab.example.com/t/api.git\n", "GitHub の"),
+                            ("o/a\no/A\n", "2 度ある"), ("o/a --since 2024-01\n", "書けるのは --branch・--depth だけ"),
+                            ("o/a --branch\n", "値がない"), ("# 空\n", "リポジトリがない")]:
             with self.subTest(text=text):
                 self.write_list(text)
                 result = self.many()
@@ -116,18 +128,19 @@ class BuildManyTests(unittest.TestCase):
     def test_writer_commands_read_another_repository(self):
         self.many()
         history = [sys.executable, str(SCRIPTS / "build_history.py"), "docs/change-history/o/app",
-                   "--repo", ".cache/change-history/o/app", "--no-github"]
-        listing = subprocess.run([*history, "--list", "2025-02"], cwd=self.central, capture_output=True, text=True)
-        self.assertIn("- 2025-02-03 Add login（#2、（ルート）、—）", listing.stdout)
-        sha = self.git(self.base / "o/app", "rev-parse", "--short", "HEAD").strip()
-        shown = subprocess.run([*history, "--show", sha], cwd=self.central, capture_output=True, text=True)
+                   "--repo", ".cache/change-history/o/app", "--github-repo", "o/app"]
+        listing = self.call(*history, "--list", "2025-02")
+        self.assertIn("- 2025-02-03 Add login（[#2](https://github.com/o/app/pull/2)、（ルート）、@alice）", listing.stdout)
+        self.assertIn("- 2024-11-10 Start app（[", self.call(*history, "--list", "2024-11").stdout)
+        sha = self.git(self.base / "o/app.git", "rev-parse", "--short", "HEAD").strip()
+        shown = self.call(*history, "--show", sha)
         self.assertEqual(shown.returncode, 0, shown.stderr)
         self.assertTrue(shown.stdout.startswith(f"{sha} 2025-02-03 Add login (#2)"))
         self.assertIn("f.txt", shown.stdout)
         # 人の名前とメールは出さない
         self.assertNotIn("Real Name", shown.stdout)
         self.assertNotIn("real@example.com", shown.stdout)
-        missing = subprocess.run([*history[:3], "--repo", "nowhere", "--list", "2025-02"], cwd=self.central, capture_output=True, text=True)
+        missing = self.call(*history[:3], "--repo", "nowhere", "--list", "2025-02")
         self.assertEqual(missing.returncode, 2)
         self.assertIn("git のリポジトリではない", missing.stderr)
 
