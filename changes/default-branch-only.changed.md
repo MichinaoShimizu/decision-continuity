@@ -1,2 +1,0 @@
-- change-history・decision-log: 読むブランチを推測しない。言われなければデフォルトブランチ（`origin/HEAD` の先）だけを読み、`develop`・`production` などは `--branch` で言われたときだけ読む
-  - change-history は、`origin/HEAD` がなければ `gh` で GitHub のデフォルトブランチを聞く。それでも分からなければ止まる。`git remote set-head origin --auto` で覚えさせるか、`--branch` で言う
