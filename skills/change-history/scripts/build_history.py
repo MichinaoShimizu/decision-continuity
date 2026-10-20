@@ -15,9 +15,8 @@
 
 リポジトリのルート（--repo なら、そのクローン）で動かす。手元の git の --first-parent の履歴を読む。ネットワークに出るのは、PR の作成者を取る gh api だけ
 （--no-github で止める）。
-開発の本流と本番の適用先のようにブランチが分かれていても取りこぼさないよう、--branch を言わなければ
-長く続くブランチ（main・master・develop・development・dev・production）を全部読む。手元のものは古いことがあるので、
-origin/ にあればそちらを読む。
+読むブランチはリポジトリごとに違うので、推測しない。--branch を言わなければ、デフォルトブランチだけを読む（origin/HEAD の先。
+bare のクローンは HEAD の先。どちらもなければ gh api で GitHub に聞く）。分からなければ、--branch を求めて止まる。
 どのブランチにも入ったコミットは 1 つにまとめ、ブランチ間のマージ（develop から main へのリリースなど）には印を付ける。
 PR の番号はマージコミットの件名（Merge pull request #12）か、squash の件名の末尾（(#12)）から取る。
 年表の件数は PR と直接のコミットの数（PR の中のコミットは数えず、保守ブランチから取り込んだ変更は数える）。変更のなかった月も
@@ -60,7 +59,6 @@ DEPS_RE = re.compile(r"^(?:(?:chore|build|fix|ci)\((?:deps|deps-dev)\)!?:|bump \
 DEPS = "（依存の更新）"
 # 読んだブランチどうしのマージ。中身は元のブランチの一覧に 1 件ずつ出る
 BETWEEN = "（{} から取り込み）"
-LONG_LIVED = ("main", "master", "develop", "development", "dev", "production")
 MONTH_RE = re.compile(r"^\d{4}-\d{2}$")
 SUMMARY = "## 主な変更"
 EMPTY = "（まだ書いていない）"
@@ -139,14 +137,25 @@ def has_ref(ref):
     return subprocess.run(["git", "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"], capture_output=True, cwd=REPO).returncode == 0
 
 
-def long_lived():
-    """長く続くブランチの (名前, ref)。origin/ にあればそれを、なければ手元のものを使う。どれもなければ HEAD。"""
-    found = []
-    for name in LONG_LIVED:
-        ref = next((r for r in (f"refs/remotes/origin/{name}", f"refs/heads/{name}") if has_ref(r)), None)
-        if ref:
-            found.append((name, ref))
-    return found or [("HEAD", "HEAD")]
+def default_branch(url, online):
+    """デフォルトブランチの (名前, ref)。clone したときに覚えた origin/HEAD の先、bare のクローン（build_many.py が作る）は
+    HEAD の先。どちらもなく online なら、GitHub のリポジトリのデフォルトブランチを gh api で聞き、origin/ のそれを読む。
+    分からなければ None（ほかのブランチを推測しない）。"""
+    def target(ref):
+        out = subprocess.run(["git", "symbolic-ref", "--quiet", ref], capture_output=True, text=True, cwd=REPO)
+        return out.stdout.strip() if out.returncode == 0 else None
+    bare = git("rev-parse", "--is-bare-repository").strip() == "true"
+    ref = target("refs/remotes/origin/HEAD") or (target("HEAD") if bare else None)
+    if not ref and online and url:
+        try:
+            out = subprocess.run(["gh", "api", f"repos/{url.removeprefix('https://github.com/')}", "--jq", ".default_branch"],
+                                 capture_output=True, text=True)
+            ref = f"refs/remotes/origin/{out.stdout.strip()}" if out.returncode == 0 and out.stdout.strip() else None
+        except FileNotFoundError:
+            pass
+    if not ref or not has_ref(ref):
+        return None
+    return re.sub(r"^refs/(?:remotes/origin|heads)/", "", ref), ref
 
 
 def first_parent(ref, tz):
@@ -609,7 +618,7 @@ def readme_page(months, folder, summaries, shown):
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("folder", type=pathlib.Path)
-    p.add_argument("--branch", action="append", help="読むブランチ（何度でも。既定は長く続くブランチを全部）")
+    p.add_argument("--branch", action="append", help="読むブランチ（何度でも。既定はデフォルトブランチだけ）")
     p.add_argument("--depth", type=int, default=2, help="置き場所として数えるフォルダーの段数（既定 2）")
     p.add_argument("--since", help="この月（YYYY-MM）から書く")
     p.add_argument("--until", help="この月（YYYY-MM）まで書く")
@@ -638,12 +647,15 @@ def main():
     for name in args.branch or []:
         if not has_ref(name):
             p.error(f"ブランチ {name} が見つからない")
-    branches = [(name, name) for name in args.branch] if args.branch else long_lived()
-    if branches == [("HEAD", "HEAD")] and not has_ref("HEAD"):
+    if not args.branch and not has_ref("HEAD"):
         print("コミットがまだないので、書くものはない")
         return 0
     global OWNER
     url = repo_url()
+    branches = [(name, name) for name in args.branch] if args.branch else [default_branch(url, not args.no_github)]
+    if branches == [None]:
+        p.error("デフォルトブランチが分からない（origin/HEAD がなく、GitHub にも聞けない）。git remote set-head origin --auto で"
+                "覚えさせるか、--branch で読むブランチを言う")
     OWNER = url.split("/")[3] if url else None
     if not args.no_github:
         # --list（書き手が月ごとに呼ぶ）は問い合わせず、覚えておいた分だけを使う

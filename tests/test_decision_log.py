@@ -39,6 +39,7 @@ class PlannerAgentTests(unittest.TestCase):
     """decision-log-planner に固有の検査。メインの会話でコマンドを回さずに済むよう、手順 0〜1 のコマンドが確認なしで通るか。"""
     ROOT = pathlib.Path(__file__).resolve().parents[1]
     COMMANDS = ("git remote get-url origin", "git rev-parse HEAD", "git rev-parse --is-shallow-repository",
+                "git rev-parse --abbrev-ref origin/HEAD",
                 "TZ=Asia/Tokyo git log --first-parent --date=short-local --format='@@ %h %ad %s' --name-only -- src/payment/",
                 "git log --first-parent --merges --format='@@ %h %b'",
                 "git log --first-parent -i -G 'timeout|retr(y|ies)|limit' --format='%h' -- . ':(exclude)*lock*' ':(exclude)*.snap'",
