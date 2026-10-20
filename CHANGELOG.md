@@ -2,6 +2,17 @@
 
 decision-continuity の主な変更。[Keep a Changelog](https://keepachangelog.com/) の形で書く。変更は `changes/` の断片に書き（[changes/README.md](changes/README.md)）、リリースのときに版の節にまとめる。版は中身から決まり（[Semantic Versioning](https://semver.org/)、`sh tools/next-version.sh`）、各版の節がそのまま GitHub のリリースノートになる。手順は [docs/release.md](docs/release.md)。
 
+## v0.13.1 - 2026-10-20
+
+### Changed
+
+- change-history・decision-log: 読むブランチを推測しない。言われなければデフォルトブランチ（`origin/HEAD` の先）だけを読み、`develop`・`production` などは `--branch` で言われたときだけ読む
+  - change-history は、`origin/HEAD` がなければ `gh` で GitHub のデフォルトブランチを聞く。それでも分からなければ止まる。`git remote set-head origin --auto` で覚えさせるか、`--branch` で言う
+
+### Fixed
+
+- change-history: 主な変更の表の PR の列に、全角の `＃12`、PR の URL、`#` のない数字だけ（`12、13`）、PR から入ったコミットのハッシュを書いた行は、PR として読めず、日付・Author が空で PR もリンクにならないまま残っていた。どれも PR として読み、日付・リンク・Author を入れる
+
 ## v0.13.0 - 2026-10-20
 
 ### Added
