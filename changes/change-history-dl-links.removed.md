@@ -1,1 +1,0 @@
-- change-history: 主な変更の表の PR の列に、Decision log へのリンクを添えるのをやめた（v0.13.0 で足したもの）。`--decision-logs` もなくした。前に入ったリンクは、次に作り直すときに外れる

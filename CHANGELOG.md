@@ -2,6 +2,20 @@
 
 decision-continuity の主な変更。[Keep a Changelog](https://keepachangelog.com/) の形で書く。変更は `changes/` の断片に書き（[changes/README.md](changes/README.md)）、リリースのときに版の節にまとめる。版は中身から決まり（[Semantic Versioning](https://semver.org/)、`sh tools/next-version.sh`）、各版の節がそのまま GitHub のリリースノートになる。手順は [docs/release.md](docs/release.md)。
 
+## v0.14.0 - 2026-10-20
+
+### Changed
+
+- BREAKING: change-history: GitHub でデフォルトブランチにマージされた PR と、PR を通さない直接のコミットから年表を作る。日付・PR・Author は GitHub の値をそのまま使い、git の件名やメールから推測しない。`gh` が要り、GitHub でないリポジトリは扱わない
+  - `--no-github` をなくし、`build_history.py` に `--github-repo OWNER/REPO` を足した。`build_many.py` の `repos.txt` は GitHub の `owner/repo` か、その URL だけを受け付ける
+  - 年表の件数は、その月の PR と直接のコミットの数になった（マージの中身や保守ブランチの取り込みの中は数えない）
+  - `--check`・`--list` は GitHub に問い合わせず、書き出したときに覚えた分を使う
+  - 書き手は主な変更を `- #12、#13：概要` の行で書き、スクリプトが表にする（前の表の形もそのまま読む）
+
+### Removed
+
+- change-history: 主な変更の表の PR の列に、Decision log へのリンクを添えるのをやめた（v0.13.0 で足したもの）。`--decision-logs` もなくした。前に入ったリンクは、次に作り直すときに外れる
+
 ## v0.13.1 - 2026-10-20
 
 ### Changed
