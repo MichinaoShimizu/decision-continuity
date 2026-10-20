@@ -26,6 +26,8 @@ PR の番号はマージコミットの件名（Merge pull request #12）か、s
 年の要点は「- 」の行で、どちらも分類に分けない（前の形の ### <分類> の見出しと説明の文は外す）。主な変更の表の日付と Author は、
 PR の列の変更から埋め直す（前の形の「- 概要（#12）」の行は表に移す）。
 決まった形でなければ、どこが崩れているかを出し、終了コード 1 を返す。標準ライブラリだけを使う。
+主な変更の表の PR の列には、その PR を挙げた Decision log（docs/decision-logs/ の 0001-*.md。--decision-logs で変える）への
+リンクも、あれば PR の後ろに添える（[DL-3](…)）。
 人はアカウント名（@login）で、Author の列にだけ書く。gh が使えれば、PR の作成者を GitHub から取る（gh api の GET だけ）。
 取れない変更は、フォークからのマージの件名（Merge pull request #12 from alice/fix）か、noreply のメール（.mailmap を
 通す）から取る。名前（git の author 名）は書き出さない。
@@ -96,6 +98,11 @@ PR_AUTHORS = {}
 # GitHub から取った、PR を入れたコミット（merge_commit_sha）から (番号, タイトル)。件名に番号のない変更
 # （Rebase and merge など）を PR に結びつける
 PR_SHAS = {}
+# PR の番号ごとの、その PR を挙げた Decision log の (番号, 月のファイルからの相対パス)。PR の列に PR の後ろに添える
+DECISIONS = {}
+# Decision log のファイル（0001-retry-limit.md）と、その中の PR（[PR #101][pr101] の文か、<origin>/pull/101 のリンク）
+DL_FILE_RE = re.compile(r"^(\d{4})-[^/]*\.md$")
+DL_PR_RE = re.compile(r"\bPR #(\d+)")
 # origin の持ち主（https://github.com/<owner>/...）。フォークからのマージを見分ける
 OWNER = None
 # フォークからのマージでわかった、メールから @login。同じメールで noreply でない変更の Author に使う。
@@ -219,6 +226,24 @@ def by_pr(item):
             and None not in found:
         item["author"], = found
     return item
+
+
+def decision_logs(logs, folder, url):
+    """Decision log の置き場所から、PR の番号 → [(DL の番号, 月のファイルからの相対パス)]。置き場所がなければ空。"""
+    found = collections.defaultdict(list)
+    if not logs or not logs.is_dir():
+        return found
+    pulls = re.compile(rf"{re.escape(url)}/pull/(\d+)\b") if url else None
+    for path in sorted(logs.iterdir()):
+        m = DL_FILE_RE.match(path.name)
+        if not m:
+            continue
+        text = path.read_text(encoding="utf-8")
+        prs = set(DL_PR_RE.findall(text)) | set(pulls.findall(text) if pulls else ())
+        where = pathlib.PurePath(os.path.relpath(path, folder)).as_posix()
+        for pr in prs:
+            found[pr].append((int(m.group(1)), where))
+    return found
 
 
 def account(email):
@@ -441,7 +466,10 @@ def row(summary, items, url, written=""):
             and written.split("、").count(UNKNOWN) < authors.split("、").count(UNKNOWN):
         authors = written
     date = next((i["date"] for i in items if i["date"]), "")
-    return f"| {date} | {summary} | {'、'.join(link(i, url) for i in items)} | {authors} |"
+    # PR を挙げた Decision log は、PR の後ろに番号の順に添える（参照の数には入れない）
+    logs = sorted({d for i in items for d in DECISIONS.get(i["pr"] or "", ())})
+    refs = [link(i, url) for i in items] + [f"[DL-{n}]({where})" for n, where in logs]
+    return f"| {date} | {summary} | {'、'.join(refs)} | {authors} |"
 
 
 def tidy(text, kind, index=None, url=None, everything=None):
@@ -592,6 +620,8 @@ def main():
     p.add_argument("--list", metavar="YYYY-MM", help="書かずに、その月の全変更を出す")
     p.add_argument("--show", metavar="コミット", help="書かずに、そのコミットの件名・本文と変えたファイルを出す（人の名前は出さない）")
     p.add_argument("--repo", type=pathlib.Path, help="読むリポジトリ（既定はいまのディレクトリ）")
+    p.add_argument("--decision-logs", type=pathlib.Path,
+                   help="PR の列にリンクを添える Decision log の置き場所（既定は docs/decision-logs。--repo のときは言われたときだけ）")
     args = p.parse_args()
     global REPO
     if args.repo:
@@ -618,6 +648,8 @@ def main():
     if not args.no_github:
         # --list（書き手が月ごとに呼ぶ）は問い合わせず、覚えておいた分だけを使う
         use_prs(github_prs(url, args.github, online=not args.list))
+    # --repo のクローン（中央にまとめるとき）は git に入らないので、その中の Decision log へは既定でリンクしない
+    DECISIONS.update(decision_logs(args.decision_logs or (None if REPO else pathlib.Path("docs/decision-logs")), args.folder, url))
     months = collections.defaultdict(list)
     for item in changes(args.tz, branches):
         months[item["date"][:7]].append(item)

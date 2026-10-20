@@ -27,7 +27,7 @@ https://gitlab.example.com/team/api.git
 ## 手順
 
 1. 作る：`python3 .claude/skills/change-history/scripts/build_many.py repos.txt docs/change-history`（Kiro は `.kiro/skills/…`、プラグインは `${CLAUDE_SKILL_DIR}/scripts/…`）。リポジトリごとに、ファイルの中身を取らない bare のクローンを作るか取り直し、`build_history.py` を回し、全体の `README.md` を作る。期間は `--since`・`--until` で絞る。出力の `== <owner>/<repo>（置き場所 …、--repo …）` が、そのリポジトリの書き手に渡すもの。
-2. 主な変更を書く：SKILL.md の手順 2 を、リポジトリごとに回す。書き手には、出力の置き場所・`--repo`・`--branch` をそのまま渡す。返った要約は、そのリポジトリの `README.md` の表に入れる（全体の `README.md` は書かない）。
+2. 主な変更を書く：SKILL.md の手順 2 を、リポジトリごとに回す。書き手には、出力の置き場所・`--repo`・`--branch` をそのまま渡す。返った要約は、そのリポジトリの `README.md` の表に入れる（全体の `README.md` は書かない）。クローンは git に入らないので、各リポジトリの Decision log へのリンクは PR の列に入らない。
 3. 作り直す：手順 1 のコマンドを `--no-fetch` を付けて回す（取り直すと、書いている間に増えた月が混ざる）。崩れが 0 件になるまで直す。
 4. 年の要点を書く：SKILL.md の手順 4 を、各リポジトリの `README.md` に回す。全体の `README.md` には、スクリプトがそれを写す。最後に `--check` で確かめる（取り直さない）。
 5. 報告する：リポジトリごとの読んだブランチ、期間、件数、書いた月と年。書いたら、中央のリポジトリでブランチを切って PR を出す。
