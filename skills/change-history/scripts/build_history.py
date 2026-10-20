@@ -4,13 +4,16 @@
   build_history.py <フォルダー> [--branch develop --branch main] [--depth 2] [--since YYYY-MM] [--until YYYY-MM]   書き出す
   build_history.py <フォルダー> --check                                                                         最新か確かめる（古ければ終了コード 1）
   build_history.py <フォルダー> --list YYYY-MM                                                                  その月の全変更を出す（書かない）
+  build_history.py <フォルダー> --show <コミット>                                                               変えたファイルを出す（書かない）
+
+どれも --repo <クローン> で、いまのディレクトリでないリポジトリを読める（複数のリポジトリをまとめる build_many.py が使う）。
 
 月ごとの YYYY-MM.md（主な変更の表）と、年表を兼ねた索引の README.md を書く。日付は YYYY-MM-DD、月は YYYY-MM で書く。
 全変更の一覧はファイルに書かず、--list で出す（主な変更を選ぶ材料）。マージコミットの下には、取り込んだ側の
 コミット（PR の中のコミットや、release/1.2 などの読んでいないブランチでマージされた PR）を並べる。
 以前の timeline.md があれば、年ごとの要点を README.md に移して消す。
 
-リポジトリのルートで動かす。手元の git の --first-parent の履歴を読む。ネットワークに出るのは、PR の作成者を取る gh api だけ
+リポジトリのルート（--repo なら、そのクローン）で動かす。手元の git の --first-parent の履歴を読む。ネットワークに出るのは、PR の作成者を取る gh api だけ
 （--no-github で止める）。
 開発の本流と本番の適用先のようにブランチが分かれていても取りこぼさないよう、--branch を言わなければ
 長く続くブランチ（main・master・develop・development・dev・production）を全部読む。手元のものは古いことがあるので、
@@ -99,12 +102,14 @@ OWNER = None
 # 1 つのメールに 2 人以上が当たるか、同じリポジトリのブランチからのマージ（メンテナーが別の人の PR に足したコミットなど）
 # にも出るメールは使わない（None を入れて印にする）
 LEARNED = {}
+# 読むリポジトリ（--repo）。None ならいまのディレクトリ
+REPO = None
 
 
 def git(*args, tz=None, stdin=None):
     env = dict(os.environ, TZ=tz) if tz else None
     out = subprocess.run(["git", *args], capture_output=True, text=True, encoding="utf-8", errors="replace", env=env,
-                         input=stdin)
+                         input=stdin, cwd=REPO)
     if out.returncode != 0:
         sys.exit(f"git {args[0]} が失敗した: {out.stderr.strip()}")
     return out.stdout
@@ -112,7 +117,7 @@ def git(*args, tz=None, stdin=None):
 
 def repo_url():
     """origin から https://github.com/<owner>/<repo> の形を作る。作れなければ None。"""
-    out = subprocess.run(["git", "remote", "get-url", "origin"], capture_output=True, text=True)
+    out = subprocess.run(["git", "remote", "get-url", "origin"], capture_output=True, text=True, cwd=REPO)
     m = re.search(r"(?:github\.com[:/])([^/]+/[^/]+?)(?:\.git)?/?$", out.stdout.strip())
     return f"https://github.com/{m.group(1)}" if m else None
 
@@ -124,7 +129,7 @@ def area(path, depth):
 
 
 def has_ref(ref):
-    return subprocess.run(["git", "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"], capture_output=True).returncode == 0
+    return subprocess.run(["git", "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"], capture_output=True, cwd=REPO).returncode == 0
 
 
 def long_lived():
@@ -148,8 +153,9 @@ def first_parent(ref, tz):
 
 def cache_file(url):
     """GitHub から取った PR を覚えておく場所。.git の中なので、リポジトリには入らない。"""
-    out = subprocess.run(["git", "rev-parse", "--git-common-dir"], capture_output=True, text=True)
-    return pathlib.Path(out.stdout.strip()) / "decision-continuity-prs.json" if out.returncode == 0 and url else None
+    out = subprocess.run(["git", "rev-parse", "--git-common-dir"], capture_output=True, text=True, cwd=REPO)
+    found = pathlib.Path(REPO or ".") / out.stdout.strip()  # 相対パスで返るので、読むリポジトリからたどる
+    return found / "decision-continuity-prs.json" if out.returncode == 0 and url else None
 
 
 def github_prs(url, asked, online):
@@ -615,7 +621,18 @@ def main():
     p.add_argument("--no-github", action="store_true", help="GitHub に問い合わせない（Author はメールから取る）")
     p.add_argument("--check", action="store_true", help="書かずに、最新かを確かめる")
     p.add_argument("--list", metavar="YYYY-MM", help="書かずに、その月の全変更を出す")
+    p.add_argument("--show", metavar="コミット", help="書かずに、そのコミットの件名・本文と変えたファイルを出す（人の名前は出さない）")
+    p.add_argument("--repo", type=pathlib.Path, help="読むリポジトリ（既定はいまのディレクトリ）")
     args = p.parse_args()
+    global REPO
+    if args.repo:
+        if not (args.repo / "HEAD").exists() and not (args.repo / ".git").exists():
+            p.error(f"{args.repo} は git のリポジトリではない")
+        REPO = args.repo
+    if args.show:
+        # git show --stat と同じ中身。author の名前とメールは出さない。マージは 1 つ目の親との差分
+        print(git("show", "--stat", "--diff-merges=first-parent", "--date=short", "--format=%h %cd %s%n%n%b", args.show), end="")
+        return 0
     for flag, value in (("--since", args.since), ("--until", args.until), ("--list", args.list)):
         if value and not MONTH_RE.match(value):
             p.error(f"{flag} は YYYY-MM で書く")
