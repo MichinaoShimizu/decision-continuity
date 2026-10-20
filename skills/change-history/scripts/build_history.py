@@ -321,10 +321,10 @@ def is_row(parts):
 
 def ref_text(text):
     """PR の列の文を、参照（#12 かコミットのハッシュ）を拾える形にする。リンク先の URL の中は見ない。書き方の揺れも読む：
-    全角（＃１２）、PR の URL（…/pull/12）、数字だけの列（12、13）。"""
+    全角（＃１２）、PR の URL（…/pull/12）、数字だけの列（12、13）。7 桁以上の数字は、数字だけのコミットのハッシュとして残す。"""
     text = unicodedata.normalize("NFKC", re.sub(r"\]\([^)]*\)", "]", text))
     text = re.sub(r"https?://\S*?/pull/(\d+)\S*", r"#\1", text)
-    return re.sub(r"\d+", r"#\g<0>", text) if re.fullmatch(r"[\d\s、,]+", text) else text
+    return re.sub(r"(?<!\d)\d{1,6}(?!\d)", r"#\g<0>", text) if re.fullmatch(r"[\d\s、,]+", text) else text
 
 
 def lookup(text, index):

@@ -26,6 +26,10 @@ class BuildHistoryTests(unittest.TestCase):
         self.bin.mkdir()
         (self.bin / "gh").write_text(f"#!/bin/sh\nexec {sys.executable} {FAKE_GH} \"$@\"\n", encoding="utf-8")
         (self.bin / "gh").chmod(0o755)
+        # gh のない PATH（git だけを置く）
+        self.nogh = pathlib.Path(self.work.name) / "nogh"
+        self.nogh.mkdir()
+        (self.nogh / "git").symlink_to(shutil.which("git"))
         self.fixture = pathlib.Path(self.work.name) / "gh.json"
         self.gh = {"default": "main", "pulls": [], "commits": {}}
         self.git("init", "-q", "-b", "main")
@@ -79,8 +83,7 @@ class BuildHistoryTests(unittest.TestCase):
 
     def run_script(self, *args, gh=True):
         self.fixture.write_text(json.dumps(self.gh), encoding="utf-8")
-        path = f"{self.bin}{os.pathsep}{os.environ['PATH']}" if gh else os.pathsep.join(
-            p for p in os.environ["PATH"].split(os.pathsep) if not (pathlib.Path(p) / "gh").exists())
+        path = f"{self.bin}{os.pathsep}{os.environ['PATH']}" if gh else str(self.nogh)
         env = dict(os.environ, PATH=path, FAKE_GH=str(self.fixture))
         return subprocess.run([sys.executable, str(SCRIPT), "docs/change-history", *args], cwd=self.repo,
                               capture_output=True, text=True, check=False, env=env)
@@ -110,6 +113,12 @@ class BuildHistoryTests(unittest.TestCase):
 
     def page(self, name):
         return (self.repo / "docs/change-history" / name).read_text(encoding="utf-8")
+
+    @staticmethod
+    def ref_text(text):
+        sys.path.insert(0, str(SCRIPT.parent))
+        import build_history
+        return build_history.ref_text(text)
 
     def test_prs_and_direct_commits(self):
         result = self.run_script()
@@ -180,6 +189,9 @@ class BuildHistoryTests(unittest.TestCase):
             "|  | 数字だけ | 2、3 |  |",
             f"|  | PR のコミットのハッシュ | {squash} |  |",
             "|  | 概要の数字は PR にしない | #3 ほか 2 件 |  |"]))
+        # 7 桁以上の数字は、数字だけのハッシュ（PR の番号にしない）
+        self.assertEqual(self.ref_text("1234567"), "1234567")
+        self.assertEqual(self.ref_text("12、345678"), "#12、#345678")
         self.fill("2025-01", f"|  | 直接のコミット | {sha[:9]} |  |")
         result = self.run_script()
         self.assertNotIn("参照", result.stdout)
